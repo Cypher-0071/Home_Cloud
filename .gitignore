@@ -1,0 +1,63 @@
+# Dependencies
+node_modules/
+
+# Build and production outputs
+dist/
+dist-ssr/
+build/
+out/
+tsconfig.tsbuildinfo
+
+# Debug logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Environment variables, local configs, and secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*.local
+*.env
+*.env.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/launch.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS metadata files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Test coverage and cache
+coverage/
+.nyc_output/
+.eslintcache
+.npm/
+
+# AI / LLM coding assistant directories and logs
+.antigravity/
+.gemini/
+.cursor/
+.continue/
+.aider*
+.copilot/

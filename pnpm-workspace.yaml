@@ -1,0 +1,8 @@
+packages:
+  - 'agent'
+  - 'dashboard'
+allowBuilds:
+  cpu-features: true
+  node-pty: true
+  protobufjs: true
+  ssh2: true

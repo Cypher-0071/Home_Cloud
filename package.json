@@ -1,0 +1,25 @@
+{
+	"name": "home_cloud",
+	"version": "1.0.0",
+	"description": "",
+	"main": "index.js",
+	"scripts": {
+		"dev": "concurrently \"pnpm --filter agent dev\" \"pnpm --filter dashboard dev\"",
+		"build": "pnpm --filter dashboard build",
+		"start": "pnpm --filter agent start"
+	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"devEngines": {
+		"packageManager": {
+			"name": "pnpm",
+			"version": "11.5.1",
+			"onFail": "download"
+		}
+	},
+	"type": "module",
+	"devDependencies": {
+		"concurrently": "^10.0.3"
+	}
+}
