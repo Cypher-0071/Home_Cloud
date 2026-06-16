@@ -61,3 +61,5 @@ coverage/
 .continue/
 .aider*
 .copilot/
+*.pem
+.cloudflared/
