@@ -4,13 +4,19 @@ const app = express();
 const http = require('http');
 const ws = require('ws');
 const path = require('path')
-const port = 3000
 const { startTunnel } = require('./tunnel')
+const cookieParser = require('cookie-parser');
+const auth = require('./routes/auth')
 
+const port = 3000
 const server = http.createServer(app)
 const WebSocketServer = ws.WebSocketServer
 const wss = new WebSocketServer({server})
 
+app.use(express.json())
+app.use(cookieParser())
+app.use('/api/auth', auth)
+app.use(express.static(path.join(__dirname, '../dashboard/dist')))
 
 wss.on('connection', (ws)=>{
     console.log('client connected')
@@ -19,8 +25,6 @@ wss.on('connection', (ws)=>{
 app.get('/api/health', (req, res) => {
     res.json({status: "ok"})
 });
-
-app.use(express.static(path.join(__dirname, '../dashboard/dist')))
 
 app.get('/{*path}', (req, res) => {
   res.sendFile(path.join(__dirname, '../dashboard/dist', 'index.html'))
