@@ -12,13 +12,19 @@ function startTunnel() {
 			"home-cloud",
 		]);
 		child.stderr.on("data", (data) => {
-			const url = data
-				.toString()
-				.match(/https:\/\/[^\s]+trycloudflare\.com/)?.[0];
-			if (url) resolve(url);
+			console.log(data.toString());
+			if (
+				data
+					.toString()
+					.includes("Registered tunnel connection connIndex=3")
+			) {
+				resolve("https://home-cloud.live");
+			}
 		});
-        child.on('error', (err) => reject(err))
-        child.on('close', (code) => reject(new Error(`Cloudflare exited with code ${code}`)))
+		child.on("error", (err) => reject(err));
+		child.on("close", (code) =>
+			reject(new Error(`Cloudflare exited with code ${code}`)),
+		);
 	});
 }
 
