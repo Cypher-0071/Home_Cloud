@@ -7,6 +7,7 @@ const path = require('path')
 const { startTunnel } = require('./tunnel')
 const cookieParser = require('cookie-parser');
 const auth = require('./routes/auth')
+const authMiddleware = require('./middleware/auth')
 
 const port = 3000
 const server = http.createServer(app)
@@ -22,7 +23,7 @@ wss.on('connection', (ws)=>{
     console.log('client connected')
 })
 
-app.get('/api/health', (req, res) => {
+app.get('/api/health', authMiddleware,(req, res) => {
     res.json({status: "ok"})
 });
 
