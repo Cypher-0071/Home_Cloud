@@ -8,20 +8,18 @@ const { startTunnel } = require('./tunnel')
 const cookieParser = require('cookie-parser');
 const auth = require('./routes/auth')
 const authMiddleware = require('./middleware/auth')
+const {setupTerminal} = require('./sockets/terminal')
 
 const port = 3000
 const server = http.createServer(app)
 const WebSocketServer = ws.WebSocketServer
 const wss = new WebSocketServer({server})
+setupTerminal(wss)
 
 app.use(express.json())
 app.use(cookieParser())
 app.use('/api/auth', auth)
 app.use(express.static(path.join(__dirname, '../dashboard/dist')))
-
-wss.on('connection', (ws)=>{
-    console.log('client connected')
-})
 
 app.get('/api/health', authMiddleware,(req, res) => {
     res.json({status: "ok"})
