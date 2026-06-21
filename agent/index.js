@@ -19,9 +19,10 @@ setupTerminal(wss)
 app.use(express.json())
 app.use(cookieParser())
 app.use('/api/auth', auth)
+app.use('/api', authMiddleware)
 app.use(express.static(path.join(__dirname, '../dashboard/dist')))
 
-app.get('/api/health', authMiddleware,(req, res) => {
+app.get('/api/health',(req, res) => {
     res.json({status: "ok"})
 });
 
