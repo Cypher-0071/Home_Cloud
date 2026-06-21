@@ -11,6 +11,7 @@
 	"author": "",
 	"license": "ISC",
 	"dependencies": {
+		"cookie": "^1.1.1",
 		"cookie-parser": "^1.4.7",
 		"dockerode": "^5.0.0",
 		"dotenv": "^17.4.2",
