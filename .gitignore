@@ -63,3 +63,4 @@ coverage/
 .copilot/
 *.pem
 .cloudflared/
+cookies.txt
