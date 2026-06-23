@@ -13,4 +13,9 @@ router.post('/login', (req,res)=>{
     }
 })
 
+router.post('/logout', (req, res) => {
+    res.clearCookie('token');
+    res.json({ success: true });
+});
+
 module.exports = router
