@@ -4,12 +4,14 @@ import {
   Activity,
   Terminal as TerminalIcon,
   LogOut,
-  Wifi
+  Wifi,
+  Folder
 } from 'lucide-react';
 
 import OSWindow from '../components/OSWindow';
 import SystemMonitorApp from '../components/apps/SystemMonitorApp';
 import TerminalApp from '../components/apps/TerminalApp';
+import FileExplorer from './files';
 
 interface WindowState {
   id: string;
@@ -50,7 +52,7 @@ export default function Desktop() {
   // Deep-linking from router path to open corresponding OS window
   useEffect(() => {
     const path = window.location.pathname.replace(/^\//, '');
-    const validPaths = ['terminal', 'metrics'];
+    const validPaths = ['terminal', 'metrics', 'files'];
     if (path && validPaths.includes(path)) {
       const targetId = path === 'metrics' ? 'metrics' : path;
       const newZ = maxZIndex + 1;
@@ -79,6 +81,20 @@ export default function Desktop() {
       width: 760,
       height: 520,
       zIndex: 10,
+    },
+    {
+      id: 'files',
+      title: 'File Explorer',
+      icon: <Folder size={18} />,
+      component: <FileExplorer />,
+      isOpen: false,
+      isMinimized: false,
+      isMaximized: false,
+      x: 90,
+      y: 75,
+      width: 820,
+      height: 500,
+      zIndex: 2,
     },
     {
       id: 'terminal',

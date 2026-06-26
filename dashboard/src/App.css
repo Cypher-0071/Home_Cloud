@@ -4,7 +4,8 @@
   width: 100vw;
   height: 100vh;
   overflow: hidden;
-  background: #09090b;
+  background: #09090b url('./assets/desktop_wallpaper.jpg') no-repeat center center;
+  background-size: cover;
   display: flex;
   flex-direction: column;
   color: var(--text);

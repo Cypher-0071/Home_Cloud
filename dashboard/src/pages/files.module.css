@@ -1,0 +1,641 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background: #000000;
+  color: #e4e4e7;
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+  user-select: none;
+  overflow: hidden;
+}
+
+/* --- Address Bar Area --- */
+.addressBarArea {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #070708;
+  border-bottom: 1px solid #1c1c1f;
+}
+
+.navButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: transparent;
+  border: none;
+  color: #e4e4e7;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.navButton:hover:not(:disabled) {
+  background: #1c1c1f;
+}
+
+.navButton:disabled {
+  color: #3f3f46;
+  cursor: not-allowed;
+}
+
+.addressInputWrapper {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #121214;
+  border: 1px solid #27272a;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 13px;
+  height: 28px;
+  box-sizing: border-box;
+  color: #d4d4d8;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.addressInputWrapper:focus-within {
+  border-color: #a855f7;
+  background: #161619;
+}
+
+.breadcrumbSegment {
+  display: flex;
+  align-items: center;
+  color: #a1a1aa;
+  cursor: pointer;
+}
+
+.breadcrumbSegment:hover {
+  color: #f4f4f5;
+}
+
+.breadcrumbDivider {
+  margin: 0 4px;
+  color: #52525b;
+}
+
+.addressInput {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #f4f4f5;
+  font-size: 13px;
+  outline: none;
+}
+
+.searchWrapper {
+  width: 240px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #121214;
+  border: 1px solid #27272a;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 13px;
+  height: 28px;
+  box-sizing: border-box;
+  color: #a1a1aa;
+  transition: border-color 0.2s;
+}
+
+.searchWrapper:focus-within {
+  border-color: #a855f7;
+}
+
+.searchInput {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #f4f4f5;
+  font-size: 13px;
+  outline: none;
+}
+
+/* --- Command Bar --- */
+.commandBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background: #0a0a0c;
+  border-bottom: 1px solid #1c1c1f;
+}
+
+.commandGroup {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.commandDivider {
+  width: 1px;
+  height: 18px;
+  background: #27272a;
+  margin: 0 8px;
+}
+
+.commandButton {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: #d4d4d8;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.commandButton:hover:not(:disabled) {
+  background: #1c1c1f;
+  color: #f4f4f5;
+}
+
+.commandButton:disabled {
+  color: #3f3f46;
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.accentButton {
+  color: #a855f7;
+  font-weight: 500;
+}
+
+.accentButton:hover {
+  background: #231530 !important;
+  color: #c084fc !important;
+}
+
+/* --- Main Layout Workspace --- */
+.workspace {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+/* --- Sidebar --- */
+.sidebar {
+  width: 220px;
+  background: #070708;
+  border-right: 1px solid #1c1c1f;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 12px 6px;
+  box-sizing: border-box;
+}
+
+.sidebarSectionTitle {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #52525b;
+  margin: 8px 10px 4px 10px;
+}
+
+.sidebarItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #a1a1aa;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-bottom: 2px;
+}
+
+.sidebarItem:hover {
+  background: #121214;
+  color: #e4e4e7;
+}
+
+.sidebarItemActive {
+  background: #231530;
+  border: 1px solid #58208c;
+  color: #f4f4f5;
+  font-weight: 500;
+}
+
+.storageIndicator {
+  margin: 16px 10px 8px 10px;
+  padding: 10px;
+  background: #0f0f11;
+  border: 1px solid #1c1c1f;
+  border-radius: 8px;
+}
+
+.storageTitle {
+  font-size: 11px;
+  color: #a1a1aa;
+  margin-bottom: 6px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.storageBar {
+  height: 5px;
+  background: #27272a;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.storageProgress {
+  height: 100%;
+  background: linear-gradient(90deg, #a855f7, #6366f1);
+  border-radius: 3px;
+}
+
+.storageText {
+  font-size: 10px;
+  color: #71717a;
+}
+
+/* --- Main File Area --- */
+.contentArea {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #000000;
+}
+
+.fileListHeader {
+  display: grid;
+  grid-template-columns: 2.5fr 1fr 1.2fr;
+  padding: 8px 16px;
+  border-bottom: 1px solid #121214;
+  font-size: 11px;
+  font-weight: 600;
+  color: #71717a;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.fileListHeaderCol {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.fileListHeaderCol:hover {
+  color: #d4d4d8;
+}
+
+.fileItemsContainer {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* List View */
+.fileItemRow {
+  display: grid;
+  grid-template-columns: 2.5fr 1fr 1.2fr;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #d4d4d8;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  border: 1px solid transparent;
+  margin-bottom: 2px;
+}
+
+.fileItemRow:hover {
+  background: #0c0c0e;
+  color: #f4f4f5;
+}
+
+.fileItemRowSelected {
+  background: #1b1028 !important;
+  border-color: #58208c !important;
+  color: #f4f4f5;
+}
+
+.fileNameCell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fileIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+.iconFolder {
+  color: #f59e0b;
+}
+
+.iconFile {
+  color: #3b82f6;
+}
+
+.iconCode {
+  color: #a855f7;
+}
+
+.iconImage {
+  color: #10b981;
+}
+
+.iconDoc {
+  color: #ef4444;
+}
+
+.iconZip {
+  color: #06b6d4;
+}
+
+.fileSizeCell {
+  color: #71717a;
+}
+
+.fileModifiedCell {
+  color: #71717a;
+}
+
+.fileItemRowSelected .fileSizeCell,
+.fileItemRowSelected .fileModifiedCell {
+  color: #a1a1aa;
+}
+
+/* Grid/Tiles View */
+.gridContainer {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: 12px;
+  padding: 12px;
+}
+
+.gridCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 12px 8px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.gridCard:hover {
+  background: #0c0c0e;
+}
+
+.gridCardSelected {
+  background: #1b1028 !important;
+  border-color: #58208c !important;
+}
+
+.gridIcon {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.gridIconBig {
+  font-size: 32px;
+}
+
+.gridName {
+  font-size: 11px;
+  color: #e4e4e7;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-height: 1.2;
+}
+
+/* Empty View */
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #71717a;
+  gap: 12px;
+}
+
+.emptyStateText {
+  font-size: 14px;
+}
+
+/* --- Detail Pane --- */
+.detailPane {
+  width: 260px;
+  background: #070708;
+  border-left: 1px solid #1c1c1f;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.detailHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #121214;
+  padding-bottom: 8px;
+}
+
+.detailHeaderTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: #f4f4f5;
+}
+
+.detailCloseBtn {
+  background: transparent;
+  border: none;
+  color: #71717a;
+  cursor: pointer;
+}
+
+.detailCloseBtn:hover {
+  color: #f4f4f5;
+}
+
+.previewContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 0;
+  border-bottom: 1px solid #121214;
+  margin-bottom: 16px;
+  background: #0c0c0e;
+  border-radius: 8px;
+}
+
+.previewIcon {
+  font-size: 64px;
+  margin-bottom: 12px;
+}
+
+.previewName {
+  font-size: 14px;
+  font-weight: 600;
+  color: #f4f4f5;
+  text-align: center;
+  word-break: break-all;
+  padding: 0 10px;
+}
+
+.previewType {
+  font-size: 11px;
+  color: #71717a;
+  margin-top: 4px;
+}
+
+.infoSection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.infoRow {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.infoLabel {
+  font-size: 10px;
+  color: #52525b;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.infoValue {
+  font-size: 12px;
+  color: #d4d4d8;
+  word-break: break-all;
+}
+
+/* --- Status Bar --- */
+.statusBar {
+  height: 28px;
+  background: #070708;
+  border-top: 1px solid #1c1c1f;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  font-size: 11px;
+  color: #71717a;
+}
+
+.statusLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.statusRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.statusViewToggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  background: transparent;
+  border: none;
+  color: #71717a;
+  cursor: pointer;
+}
+
+.statusViewToggle:hover {
+  background: #1c1c1f;
+  color: #d4d4d8;
+}
+
+.statusViewToggleActive {
+  background: #27272a;
+  color: #a855f7;
+}
+
+/* --- Context Menu (Mock) --- */
+.contextMenu {
+  position: absolute;
+  z-index: 9999;
+  width: 170px;
+  background: #0a0a0c;
+  border: 1px solid #27272a;
+  border-radius: 8px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.8);
+  padding: 4px;
+  animation: fadeIn 0.1s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.contextMenuItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #d4d4d8;
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+
+.contextMenuItem:hover {
+  background: #231530;
+  color: #f4f4f5;
+}
+
+.contextMenuDivider {
+  height: 1px;
+  background: #1c1c1f;
+  margin: 4px 0;
+}
