@@ -231,6 +231,9 @@ importers:
       jsonwebtoken:
         specifier: ^9.0.3
         version: 9.0.3
+      mime-types:
+        specifier: ^3.0.2
+        version: 3.0.2
       multer:
         specifier: ^2.1.1
         version: 2.1.1
