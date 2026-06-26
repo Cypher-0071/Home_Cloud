@@ -3,8 +3,20 @@ const router = express.Router();
 const path = require("path");
 const fs = require("fs/promises");
 const mime = require("mime-types");
+const multer = require("multer")
 
 const BASE_DIR = "/home/rudra-unix";
+
+const storage = multer.diskStorage({
+	destination: (req, file, cb) =>{
+		cb(null, req.query.path || BASE_DIR)
+	},
+	filename: (req, file, cb) =>{
+		cb(null, file.originalname)
+	}
+})
+
+const upload = multer({storage})
 
 router.get("/", async (req, res) => {
 	const userPath = (req.query.path || "").replace(/^\//, "");
@@ -37,5 +49,8 @@ router.get("/", async (req, res) => {
 	}
 });
 
+router.post("/upload", upload.single('file'), async (req, res)=>{
+	res.json("file uploaded successfully")
+});
 
 module.exports = router;
