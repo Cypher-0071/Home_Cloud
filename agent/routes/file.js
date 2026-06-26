@@ -3,20 +3,21 @@ const router = express.Router();
 const path = require("path");
 const fs = require("fs/promises");
 const mime = require("mime-types");
-const multer = require("multer")
+const multer = require("multer");
+const { ok } = require("assert");
 
 const BASE_DIR = "/home/rudra-unix";
 
 const storage = multer.diskStorage({
-	destination: (req, file, cb) =>{
-		cb(null, req.query.path || BASE_DIR)
+	destination: (req, file, cb) => {
+		cb(null, req.query.path || BASE_DIR);
 	},
-	filename: (req, file, cb) =>{
-		cb(null, file.originalname)
-	}
-})
+	filename: (req, file, cb) => {
+		cb(null, file.originalname);
+	},
+});
 
-const upload = multer({storage})
+const upload = multer({ storage });
 
 router.get("/", async (req, res) => {
 	const userPath = (req.query.path || "").replace(/^\//, "");
@@ -49,8 +50,36 @@ router.get("/", async (req, res) => {
 	}
 });
 
-router.post("/upload", upload.single('file'), async (req, res)=>{
-	res.json("file uploaded successfully")
+router.post("/upload", upload.single("file"), async (req, res) => {
+	res.json("file uploaded successfully");
+});
+
+router.get("/download", async (req, res) => {
+	const userPath = (req.query.path || "").replace(/^\//, "");
+	const requestedPath = path.resolve(BASE_DIR, userPath);
+	if (!requestedPath.startsWith(BASE_DIR)) {
+		return res.status(403).json({ error: "Access denied" });
+	} else {
+		res.download(requestedPath);
+	}
+});
+
+router.delete("/delete", async (req, res) => {
+	const userPath = (req.query.path || "").replace(/^\//, "");
+	const requestedPath = path.resolve(BASE_DIR, userPath);
+	if (!requestedPath.startsWith(BASE_DIR)) {
+		return res.status(403).json({ error: "Access denied" });
+	} else {
+		try {
+			await fs.rm(requestedPath, { recursive: true, force: true });
+			res.json({ success: "ok" });
+		} catch (err) {
+			console.error(err);
+			return res.status(500).json({
+				error: "Error deleting file",
+			});
+		}
+	}
 });
 
 module.exports = router;
