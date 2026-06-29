@@ -108,30 +108,63 @@ export default function SystemMonitorApp() {
   const [data, setData] = useState<MetricsPayload | null>(null);
   const [connected, setConnected] = useState(false);
   const eventSourceRef = useRef<EventSource | null>(null);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mountedRef = useRef(true);
 
   useEffect(() => {
-    const es = new EventSource('/api/metrics');
-    eventSourceRef.current = es;
+    mountedRef.current = true;
 
-    es.onopen = () => setConnected(true);
+    const connect = () => {
+      if (!mountedRef.current) return;
 
-    es.onmessage = (event) => {
-      try {
-        const parsed: MetricsPayload = JSON.parse(event.data);
-        setData(parsed);
-        setConnected(true);
-      } catch (err) {
-        console.error('SSE JSON parsing error', err);
+      // Clean up any existing connection
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
       }
+
+      const es = new EventSource('/api/metrics');
+      eventSourceRef.current = es;
+
+      es.onopen = () => {
+        if (mountedRef.current) setConnected(true);
+      };
+
+      es.onmessage = (event) => {
+        if (!mountedRef.current) return;
+        try {
+          const parsed: MetricsPayload = JSON.parse(event.data);
+          setData(parsed);
+          setConnected(true);
+        } catch (err) {
+          console.error('SSE JSON parsing error', err);
+        }
+      };
+
+      es.onerror = () => {
+        if (!mountedRef.current) return;
+        setConnected(false);
+        // Explicitly close to prevent browser's native instant-reconnect loop
+        // which hammers the Cloudflare Tunnel and causes stream cancellations
+        es.close();
+        eventSourceRef.current = null;
+        // Schedule a clean reconnect after 5 seconds
+        reconnectTimerRef.current = setTimeout(connect, 5000);
+      };
     };
 
-    es.onerror = () => {
-      setConnected(false);
-    };
+    connect();
 
     return () => {
-      es.close();
-      eventSourceRef.current = null;
+      mountedRef.current = false;
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
     };
   }, []);
 

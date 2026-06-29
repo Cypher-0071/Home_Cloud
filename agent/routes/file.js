@@ -4,7 +4,7 @@ const path = require("path");
 const fs = require("fs/promises");
 const mime = require("mime-types");
 const multer = require("multer");
-const { ok } = require("assert");
+const si = require('systeminformation')
 
 const BASE_DIR = "/home/rudra-unix";
 
@@ -80,6 +80,11 @@ router.delete("/delete", async (req, res) => {
 			});
 		}
 	}
+});
+
+router.get('/drives', async (req, res)=>{
+	const drives = await si.fsSize();
+	res.json(drives);
 });
 
 module.exports = router;

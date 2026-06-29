@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Component } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Activity,
@@ -12,6 +12,54 @@ import OSWindow from '../components/OSWindow';
 import SystemMonitorApp from '../components/apps/SystemMonitorApp';
 import TerminalApp from '../components/apps/TerminalApp';
 import FileExplorer from './files';
+
+// Error boundary prevents a crashing child component from blacking out the whole page
+class ErrorBoundary extends Component<
+  { children: React.ReactNode; label?: string },
+  { hasError: boolean; error?: string }
+> {
+  constructor(props: { children: React.ReactNode; label?: string }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error: error.message };
+  }
+
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error(`[ErrorBoundary:${this.props.label}]`, error, info);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center',
+          justifyContent: 'center', height: '100%', gap: '12px',
+          color: 'var(--text)', padding: '24px', textAlign: 'center'
+        }}>
+          <span style={{ fontSize: '28px' }}>⚠️</span>
+          <p style={{ margin: 0, fontWeight: 600, color: 'var(--text-h)' }}>
+            {this.props.label ?? 'App'} encountered an error
+          </p>
+          <p style={{ margin: 0, fontSize: '12px', opacity: 0.6 }}>{this.state.error}</p>
+          <button
+            onClick={() => this.setState({ hasError: false })}
+            style={{
+              marginTop: '8px', padding: '6px 14px', borderRadius: '6px',
+              background: 'rgba(168,85,247,0.15)', border: '1px solid rgba(168,85,247,0.4)',
+              color: 'var(--accent)', cursor: 'pointer', fontSize: '12px'
+            }}
+          >
+            Retry
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 interface WindowState {
   id: string;
@@ -72,7 +120,7 @@ export default function Desktop() {
       id: 'metrics',
       title: 'Activity Monitor',
       icon: <Activity size={18} />,
-      component: <SystemMonitorApp />,
+      component: <ErrorBoundary label="Activity Monitor"><SystemMonitorApp /></ErrorBoundary>,
       isOpen: true,
       isMinimized: false,
       isMaximized: false,
@@ -86,7 +134,7 @@ export default function Desktop() {
       id: 'files',
       title: 'File Explorer',
       icon: <Folder size={18} />,
-      component: <FileExplorer />,
+      component: <ErrorBoundary label="File Explorer"><FileExplorer /></ErrorBoundary>,
       isOpen: false,
       isMinimized: false,
       isMaximized: false,
@@ -100,7 +148,7 @@ export default function Desktop() {
       id: 'terminal',
       title: 'Secure Shell terminal (bash)',
       icon: <TerminalIcon size={18} />,
-      component: <TerminalApp />,
+      component: <ErrorBoundary label="Terminal"><TerminalApp /></ErrorBoundary>,
       isOpen: false,
       isMinimized: false,
       isMaximized: false,
