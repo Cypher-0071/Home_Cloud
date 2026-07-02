@@ -112,4 +112,15 @@ router.get('/drives', async (req, res) => {
 	res.json(filtered);
 });
 
+router.get('/view', async (req, res) => {
+	const requestedPath = resolvePath(req.query.path);
+	if (!requestedPath.startsWith(BASE_DIR)) {
+		return res.status(403).json({ error: 'Access denied' });
+	}
+	const mimeType = mime.lookup(requestedPath) || 'application/octet-stream';
+	res.setHeader('Content-Disposition', 'inline');
+	res.setHeader('Content-Type', mimeType);
+	res.sendFile(requestedPath);
+})
+
 module.exports = router;
