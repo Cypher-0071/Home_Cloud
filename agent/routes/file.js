@@ -8,6 +8,14 @@ const si = require('systeminformation')
 
 const BASE_DIR = "/home/rudra-unix";
 
+// Resolve an incoming path param safely.
+// Accepts both absolute paths (/home/rudra-unix/foo) and relative ones (foo).
+// Always blocks traversal outside BASE_DIR.
+function resolvePath(userPath) {
+	const p = String(userPath || '');
+	return path.isAbsolute(p) ? path.resolve(p) : path.resolve(BASE_DIR, p);
+}
+
 const storage = multer.diskStorage({
 	destination: (req, file, cb) => {
 		cb(null, req.query.path || BASE_DIR);
@@ -20,8 +28,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 router.get("/", async (req, res) => {
-	const userPath = (req.query.path || "").replace(/^\//, "");
-	const requestedPath = path.resolve(BASE_DIR, userPath);
+	const requestedPath = resolvePath(req.query.path);
 	if (!requestedPath.startsWith(BASE_DIR)) {
 		return res.status(403).json({ error: "Access denied" });
 	} else {
@@ -55,8 +62,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
 });
 
 router.get("/download", async (req, res) => {
-	const userPath = (req.query.path || "").replace(/^\//, "");
-	const requestedPath = path.resolve(BASE_DIR, userPath);
+	const requestedPath = resolvePath(req.query.path);
 	if (!requestedPath.startsWith(BASE_DIR)) {
 		return res.status(403).json({ error: "Access denied" });
 	} else {
@@ -65,8 +71,7 @@ router.get("/download", async (req, res) => {
 });
 
 router.delete("/delete", async (req, res) => {
-	const userPath = (req.query.path || "").replace(/^\//, "");
-	const requestedPath = path.resolve(BASE_DIR, userPath);
+	const requestedPath = resolvePath(req.query.path);
 	if (!requestedPath.startsWith(BASE_DIR)) {
 		return res.status(403).json({ error: "Access denied" });
 	} else {
