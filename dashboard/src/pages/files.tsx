@@ -41,7 +41,7 @@ export interface DriveInfo {
 
 export const fetchDrives = async (): Promise<DriveInfo[]> => {
   try {
-    const response = await axios.get<DriveInfo[]>('/api/file/drives');
+    const response = await axios.get<DriveInfo[]>('/api/files/drives');
     return Array.isArray(response.data) ? response.data : [];
   } catch (error) {
     console.error('Error fetching drives:', error);

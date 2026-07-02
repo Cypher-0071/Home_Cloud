@@ -82,9 +82,29 @@ router.delete("/delete", async (req, res) => {
 	}
 });
 
-router.get('/drives', async (req, res)=>{
+router.get('/drives', async (req, res) => {
 	const drives = await si.fsSize();
-	res.json(drives);
+
+	// Filesystem types that represent real, user-relevant storage
+	const REAL_FS_TYPES = new Set([
+		'ext4', 'ext3', 'ext2',  // Standard Linux
+		'btrfs', 'xfs', 'zfs', 'f2fs', 'jfs', // Advanced Linux
+		'drvfs',                  // WSL Windows drive mounts (/mnt/c, /mnt/e, etc.)
+		'ntfs', 'exfat', 'vfat', 'fat32', 'fat16', // Windows/USB filesystems
+		'apfs', 'hfs+',          // macOS
+	]);
+
+	const filtered = drives.filter(d => {
+		// Must be a recognised real filesystem type
+		if (!REAL_FS_TYPES.has((d.type || '').toLowerCase())) return false;
+		// Drop WSLg paths (GUI subsystem internals)
+		if (d.mount && d.mount.includes('wslg')) return false;
+		// Drop paths that look like files rather than directories (e.g. /mnt/wslg/versions.txt)
+		if (d.mount && /\.\w+$/.test(d.mount)) return false;
+		return true;
+	});
+
+	res.json(filtered);
 });
 
 module.exports = router;
