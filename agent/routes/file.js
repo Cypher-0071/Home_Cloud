@@ -18,7 +18,12 @@ function resolvePath(userPath) {
 
 const storage = multer.diskStorage({
 	destination: (req, file, cb) => {
-		cb(null, req.query.path || BASE_DIR);
+		const dest = resolvePath(req.query.path);
+		// Block uploads outside BASE_DIR
+		if (!dest.startsWith(BASE_DIR)) {
+			return cb(new Error('Access denied: upload destination is outside allowed directory'));
+		}
+		cb(null, dest);
 	},
 	filename: (req, file, cb) => {
 		cb(null, file.originalname);
@@ -122,5 +127,7 @@ router.get('/view', async (req, res) => {
 	res.setHeader('Content-Type', mimeType);
 	res.sendFile(requestedPath);
 })
+
+
 
 module.exports = router;

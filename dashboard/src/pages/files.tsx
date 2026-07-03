@@ -335,6 +335,24 @@ export default function FileExplorer() {
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [uploadingFileName, setUploadingFileName] = useState<string>('');
 
+  // Context menu state
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    item: FileItem;
+  } | null>(null);
+
+  // Close context menu on any click outside
+  useEffect(() => {
+    const close = () => setContextMenu(null);
+    window.addEventListener('click', close);
+    window.addEventListener('contextmenu', close);
+    return () => {
+      window.removeEventListener('click', close);
+      window.removeEventListener('contextmenu', close);
+    };
+  }, []);
+
   // ─── Load directory ───
   const loadDirectory = useCallback(async (dirPath: string) => {
     setLoading(true);
@@ -423,11 +441,40 @@ export default function FileExplorer() {
 
   // ─── Operations ───
   const handleCreateNew = (type: 'folder' | 'file') => console.log(`Create new ${type} in ${currentPath}`);
-  const handleDelete    = () => { console.log(`Delete ${selectedItemName}`); setSelectedItemName(null); };
-  const handleStartRename = () => { if (selectedItem) setRenamingItem({ oldName: selectedItem.name, newName: selectedItem.name }); };
+
+  const handleDelete = async (itemName?: string) => {
+    const target = itemName ?? selectedItemName;
+    if (!target) return;
+    const confirmed = window.confirm(`Delete "${target}"? This cannot be undone.`);
+    if (!confirmed) return;
+    try {
+      await axios.delete('/api/files/delete', {
+        params: { path: `${currentPath}/${target}` },
+      });
+      setSelectedItemName(null);
+      loadDirectory(currentPath);
+    } catch {
+      alert(`Failed to delete "${target}".`);
+    }
+  };
+
+  const handleStartRename = (itemName?: string) => {
+    const target = itemName
+      ? currentFiles.find(f => f.name === itemName) ?? null
+      : selectedItem;
+    if (target) setRenamingItem({ oldName: target.name, newName: target.name });
+  };
   const handleFinishRename = () => { console.log(`Rename: ${renamingItem?.oldName} → ${renamingItem?.newName}`); setRenamingItem(null); };
   const handleCopy  = () => { if (selectedItem) setClipboard({ item: selectedItem, sourcePath: currentPath }); };
   const handlePaste = () => console.log(`Paste ${clipboard?.item.name} to ${currentPath}`);
+
+  // ─── Context menu ───
+  const handleContextMenu = (e: React.MouseEvent, item: FileItem) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setSelectedItemName(item.name);
+    setContextMenu({ x: e.clientX, y: e.clientY, item });
+  };
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -507,8 +554,8 @@ export default function FileExplorer() {
 
           <button className={styles.commandButton} onClick={handleCopy} disabled={!selectedItem}><Copy size={13} /><span>Copy</span></button>
           <button className={styles.commandButton} onClick={handlePaste} disabled={!clipboard}><Clipboard size={13} /><span>Paste</span></button>
-          <button className={styles.commandButton} onClick={handleStartRename} disabled={!selectedItem}><Edit2 size={13} /><span>Rename</span></button>
-          <button className={styles.commandButton} onClick={handleDelete} disabled={!selectedItem} style={{ color: selectedItem ? '#f87171' : '' }}><Trash2 size={13} /><span>Delete</span></button>
+          <button className={styles.commandButton} onClick={() => handleStartRename()} disabled={!selectedItem}><Edit2 size={13} /><span>Rename</span></button>
+          <button className={styles.commandButton} onClick={() => handleDelete()} disabled={!selectedItem} style={{ color: selectedItem ? '#f87171' : '' }}><Trash2 size={13} /><span>Delete</span></button>
 
           <div className={styles.commandDivider} />
 
@@ -609,8 +656,9 @@ export default function FileExplorer() {
                     <div
                       key={item.name}
                       className={`${styles.fileItemRow} ${isSelected ? styles.fileItemRowSelected : ''}`}
-                      onClick={e => { e.stopPropagation(); setSelectedItemName(item.name); if (!isRenamingThis) setRenamingItem(null); }}
+                      onClick={e => { e.stopPropagation(); setContextMenu(null); setSelectedItemName(item.name); if (!isRenamingThis) setRenamingItem(null); }}
                       onDoubleClick={e => { e.stopPropagation(); handleItemDoubleClick(item); }}
+                      onContextMenu={e => handleContextMenu(e, item)}
                     >
                       <div className={styles.fileNameCell}>
                         <div className={styles.fileIcon}>{getFileIcon(item)}</div>
@@ -653,7 +701,7 @@ export default function FileExplorer() {
           </div>
         )}
 
-        {/* ─── File Viewer overlay (sits inside .workspace so it's scoped to the window) ─── */}
+        {/* ─── File Viewer overlay ─── */}
         {viewingFile && (
           <FileViewer
             filePath={viewingFile.path}
@@ -661,6 +709,81 @@ export default function FileExplorer() {
             ext={viewingFile.ext}
             onClose={() => setViewingFile(null)}
           />
+        )}
+
+        {/* ─── Right-click Context Menu ─── */}
+        {contextMenu && (
+          <div
+            className={styles.contextMenu}
+            style={{
+              position: 'fixed',
+              top: contextMenu.y,
+              // Flip left if near the right edge of the viewport
+              left: contextMenu.x + 180 > window.innerWidth
+                ? contextMenu.x - 180
+                : contextMenu.x,
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* View / Open — depends on type */}
+            {contextMenu.item.type === 'file' && (
+              <div
+                className={styles.contextMenuItem}
+                onClick={() => {
+                  setViewingFile({ path: `${currentPath}/${contextMenu.item.name}`, name: contextMenu.item.name, ext: contextMenu.item.ext || '' });
+                  setContextMenu(null);
+                }}
+              >
+                <Eye size={13} /> View
+              </div>
+            )}
+            {contextMenu.item.type === 'folder' && (
+              <div
+                className={styles.contextMenuItem}
+                onClick={() => { navigateToPath(`${currentPath}/${contextMenu.item.name}`); setContextMenu(null); }}
+              >
+                <Folder size={13} /> Open
+              </div>
+            )}
+
+            <div className={styles.contextMenuDivider} />
+
+            <div
+              className={styles.contextMenuItem}
+              onClick={() => { handleStartRename(contextMenu.item.name); setContextMenu(null); }}
+            >
+              <Edit2 size={13} /> Rename
+            </div>
+            <div
+              className={styles.contextMenuItem}
+              onClick={() => { handleCopy(); setContextMenu(null); }}
+            >
+              <Copy size={13} /> Copy
+            </div>
+
+            {/* Download — files only */}
+            {contextMenu.item.type === 'file' && (
+              <a
+                className={styles.contextMenuItem}
+                href={`/api/files/download?path=${encodeURIComponent(`${currentPath}/${contextMenu.item.name}`)}`}
+                download={contextMenu.item.name}
+                style={{ textDecoration: 'none' }}
+                onClick={() => setContextMenu(null)}
+              >
+                <Download size={13} /> Download
+              </a>
+            )}
+
+            <div className={styles.contextMenuDivider} />
+
+            <div
+              className={styles.contextMenuItem}
+              style={{ color: '#f87171' }}
+              onClick={() => { handleDelete(contextMenu.item.name); setContextMenu(null); }}
+            >
+              <Trash2 size={13} /> Delete
+            </div>
+          </div>
         )}
       </div>
 
