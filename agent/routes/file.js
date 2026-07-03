@@ -4,7 +4,7 @@ const path = require("path");
 const fs = require("fs/promises");
 const mime = require("mime-types");
 const multer = require("multer");
-const si = require('systeminformation')
+const si = require("systeminformation");
 
 const BASE_DIR = "/home/rudra-unix";
 
@@ -12,7 +12,7 @@ const BASE_DIR = "/home/rudra-unix";
 // Accepts both absolute paths (/home/rudra-unix/foo) and relative ones (foo).
 // Always blocks traversal outside BASE_DIR.
 function resolvePath(userPath) {
-	const p = String(userPath || '');
+	const p = String(userPath || "");
 	return path.isAbsolute(p) ? path.resolve(p) : path.resolve(BASE_DIR, p);
 }
 
@@ -21,7 +21,11 @@ const storage = multer.diskStorage({
 		const dest = resolvePath(req.query.path);
 		// Block uploads outside BASE_DIR
 		if (!dest.startsWith(BASE_DIR)) {
-			return cb(new Error('Access denied: upload destination is outside allowed directory'));
+			return cb(
+				new Error(
+					"Access denied: upload destination is outside allowed directory",
+				),
+			);
 		}
 		cb(null, dest);
 	},
@@ -92,23 +96,34 @@ router.delete("/delete", async (req, res) => {
 	}
 });
 
-router.get('/drives', async (req, res) => {
+router.get("/drives", async (req, res) => {
 	const drives = await si.fsSize();
 
 	// Filesystem types that represent real, user-relevant storage
 	const REAL_FS_TYPES = new Set([
-		'ext4', 'ext3', 'ext2',  // Standard Linux
-		'btrfs', 'xfs', 'zfs', 'f2fs', 'jfs', // Advanced Linux
-		'drvfs',                  // WSL Windows drive mounts (/mnt/c, /mnt/e, etc.)
-		'ntfs', 'exfat', 'vfat', 'fat32', 'fat16', // Windows/USB filesystems
-		'apfs', 'hfs+',          // macOS
+		"ext4",
+		"ext3",
+		"ext2", // Standard Linux
+		"btrfs",
+		"xfs",
+		"zfs",
+		"f2fs",
+		"jfs", // Advanced Linux
+		"drvfs", // WSL Windows drive mounts (/mnt/c, /mnt/e, etc.)
+		"ntfs",
+		"exfat",
+		"vfat",
+		"fat32",
+		"fat16", // Windows/USB filesystems
+		"apfs",
+		"hfs+", // macOS
 	]);
 
-	const filtered = drives.filter(d => {
+	const filtered = drives.filter((d) => {
 		// Must be a recognised real filesystem type
-		if (!REAL_FS_TYPES.has((d.type || '').toLowerCase())) return false;
+		if (!REAL_FS_TYPES.has((d.type || "").toLowerCase())) return false;
 		// Drop WSLg paths (GUI subsystem internals)
-		if (d.mount && d.mount.includes('wslg')) return false;
+		if (d.mount && d.mount.includes("wslg")) return false;
 		// Drop paths that look like files rather than directories (e.g. /mnt/wslg/versions.txt)
 		if (d.mount && /\.\w+$/.test(d.mount)) return false;
 		return true;
@@ -117,17 +132,46 @@ router.get('/drives', async (req, res) => {
 	res.json(filtered);
 });
 
-router.get('/view', async (req, res) => {
+router.get("/view", async (req, res) => {
 	const requestedPath = resolvePath(req.query.path);
 	if (!requestedPath.startsWith(BASE_DIR)) {
-		return res.status(403).json({ error: 'Access denied' });
+		return res.status(403).json({ error: "Access denied" });
 	}
-	const mimeType = mime.lookup(requestedPath) || 'application/octet-stream';
-	res.setHeader('Content-Disposition', 'inline');
-	res.setHeader('Content-Type', mimeType);
+	const mimeType = mime.lookup(requestedPath) || "application/octet-stream";
+	res.setHeader("Content-Disposition", "inline");
+	res.setHeader("Content-Type", mimeType);
 	res.sendFile(requestedPath);
-})
+});
 
+router.post("/copy", async (req, res) => {
+	const src  = resolvePath(req.body.src);
+	const dest = resolvePath(req.body.dest);
 
+	if (!src.startsWith(BASE_DIR) || !dest.startsWith(BASE_DIR)) {
+		return res.status(403).json({ error: "Access denied" });
+	}
+
+	// Enforce same-path check on the server
+	if (src === dest) {
+		return res.status(400).json({ error: "Source and destination are the same path" });
+	}
+
+	// Enforce destination-exists check on the server
+	// fs.access resolves if the path exists, throws if it doesn't
+	try {
+		await fs.access(dest);
+		// If we reach here, dest exists — reject
+		return res.status(409).json({ error: `"${path.basename(dest)}" already exists at the destination` });
+	} catch {
+		// dest does not exist — safe to proceed
+	}
+
+	try {
+		await fs.cp(src, dest, { recursive: true });
+		res.json({ success: true });
+	} catch (err) {
+		res.status(500).json({ error: err.message });
+	}
+});
 
 module.exports = router;

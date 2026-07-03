@@ -339,7 +339,7 @@ export default function FileExplorer() {
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
-    item: FileItem;
+    item: FileItem | null;  // null = right-clicked on empty background
   } | null>(null);
 
   // Close context menu on any click outside
@@ -358,6 +358,7 @@ export default function FileExplorer() {
     setLoading(true);
     setLoadError(null);
     setSelectedItemName(null);
+    setCurrentFiles([]);   // clear stale data immediately so checks against currentFiles don't use the old folder's list
     try {
       const files = await fetchFiles(dirPath);
       setCurrentFiles(files);
@@ -371,6 +372,24 @@ export default function FileExplorer() {
 
   useEffect(() => { loadDirectory(currentPath); }, [currentPath, loadDirectory]);
   useEffect(() => { fetchDrives().then(setDrives); }, []);
+
+  // Ctrl+C / Ctrl+V keyboard shortcuts
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      // Don't intercept when user is typing in an input or textarea
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
+      if (e.ctrlKey && e.key === 'c') {
+        if (selectedItemName) handleCopy();
+      }
+      if (e.ctrlKey && e.key === 'v') {
+        if (clipboard) handlePaste();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [selectedItemName, clipboard]); // re-bind when these change so handlers see latest values
 
   // ─── Derived ───
   const currentFolderTitle = currentPath.split('/').pop() || currentPath;
@@ -466,7 +485,32 @@ export default function FileExplorer() {
   };
   const handleFinishRename = () => { console.log(`Rename: ${renamingItem?.oldName} → ${renamingItem?.newName}`); setRenamingItem(null); };
   const handleCopy  = () => { if (selectedItem) setClipboard({ item: selectedItem, sourcePath: currentPath }); };
-  const handlePaste = () => console.log(`Paste ${clipboard?.item.name} to ${currentPath}`);
+  const handlePaste = async () => {
+    if (!clipboard) return;
+    const src  = `${clipboard.sourcePath}/${clipboard.item.name}`;
+    const dest = `${currentPath}/${clipboard.item.name}`;
+
+    // Warn if pasting into the same folder it was copied from
+    if (src === dest) {
+      alert('Source and destination are the same folder. Navigate to a different folder to paste.');
+      return;
+    }
+
+    // Check if a file/folder with the same name already exists at the destination
+    const alreadyExists = currentFiles.some(f => f.name === clipboard.item.name);
+    if (alreadyExists) {
+      const ok = window.confirm(`"${clipboard.item.name}" already exists here. Overwrite?`);
+      if (!ok) return;
+    }
+
+    try {
+      await axios.post('/api/files/copy', { src, dest });
+      loadDirectory(currentPath);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Copy failed';
+      alert(`Error: ${msg}`);
+    }
+  };
 
   // ─── Context menu ───
   const handleContextMenu = (e: React.MouseEvent, item: FileItem) => {
@@ -474,6 +518,12 @@ export default function FileExplorer() {
     e.stopPropagation();
     setSelectedItemName(item.name);
     setContextMenu({ x: e.clientX, y: e.clientY, item });
+  };
+
+  const handleBackgroundContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setSelectedItemName(null);
+    setContextMenu({ x: e.clientX, y: e.clientY, item: null });
   };
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -619,7 +669,11 @@ export default function FileExplorer() {
         </div>
 
         {/* File area */}
-        <div className={styles.contentArea} onClick={() => { setSelectedItemName(null); setRenamingItem(null); }}>
+        <div
+          className={styles.contentArea}
+          onClick={() => { setSelectedItemName(null); setRenamingItem(null); setContextMenu(null); }}
+          onContextMenu={handleBackgroundContextMenu}
+        >
           {loading && (
             <div className={styles.emptyState}>
               <Loader2 size={32} style={{ opacity: 0.4, animation: 'spin 0.8s linear infinite' }} />
@@ -718,71 +772,104 @@ export default function FileExplorer() {
             style={{
               position: 'fixed',
               top: contextMenu.y,
-              // Flip left if near the right edge of the viewport
               left: contextMenu.x + 180 > window.innerWidth
                 ? contextMenu.x - 180
                 : contextMenu.x,
             }}
             onClick={e => e.stopPropagation()}
           >
-            {/* View / Open — depends on type */}
-            {contextMenu.item.type === 'file' && (
-              <div
-                className={styles.contextMenuItem}
-                onClick={() => {
-                  setViewingFile({ path: `${currentPath}/${contextMenu.item.name}`, name: contextMenu.item.name, ext: contextMenu.item.ext || '' });
-                  setContextMenu(null);
-                }}
-              >
-                <Eye size={13} /> View
-              </div>
-            )}
-            {contextMenu.item.type === 'folder' && (
-              <div
-                className={styles.contextMenuItem}
-                onClick={() => { navigateToPath(`${currentPath}/${contextMenu.item.name}`); setContextMenu(null); }}
-              >
-                <Folder size={13} /> Open
-              </div>
-            )}
+            {/* ── Background menu (right-clicked on empty space) ── */}
+            {contextMenu.item === null && (
+              <>
+                <div
+                  className={styles.contextMenuItem}
+                  style={{ opacity: clipboard ? 1 : 0.4, pointerEvents: clipboard ? 'auto' : 'none' }}
+                  onClick={() => { handlePaste(); setContextMenu(null); }}
+                >
+                  <Clipboard size={13} /> Paste {clipboard ? `"${clipboard.item.name}"` : ''}
+                </div>
 
-            <div className={styles.contextMenuDivider} />
+                <div className={styles.contextMenuDivider} />
 
-            <div
-              className={styles.contextMenuItem}
-              onClick={() => { handleStartRename(contextMenu.item.name); setContextMenu(null); }}
-            >
-              <Edit2 size={13} /> Rename
-            </div>
-            <div
-              className={styles.contextMenuItem}
-              onClick={() => { handleCopy(); setContextMenu(null); }}
-            >
-              <Copy size={13} /> Copy
-            </div>
-
-            {/* Download — files only */}
-            {contextMenu.item.type === 'file' && (
-              <a
-                className={styles.contextMenuItem}
-                href={`/api/files/download?path=${encodeURIComponent(`${currentPath}/${contextMenu.item.name}`)}`}
-                download={contextMenu.item.name}
-                style={{ textDecoration: 'none' }}
-                onClick={() => setContextMenu(null)}
-              >
-                <Download size={13} /> Download
-              </a>
+                <div
+                  className={styles.contextMenuItem}
+                  onClick={() => { handleCreateNew('folder'); setContextMenu(null); }}
+                >
+                  <Plus size={13} /> New Folder
+                </div>
+                <div
+                  className={styles.contextMenuItem}
+                  onClick={() => { handleCreateNew('file'); setContextMenu(null); }}
+                >
+                  <Plus size={13} /> New File
+                </div>
+              </>
             )}
 
-            <div className={styles.contextMenuDivider} />
+            {/* ── File / Folder menu ── */}
+            {contextMenu.item !== null && (() => {
+              const item = contextMenu.item!;
+              return (
+                <>
+                  {item.type === 'file' && (
+                    <div
+                      className={styles.contextMenuItem}
+                      onClick={() => {
+                        setViewingFile({ path: `${currentPath}/${item.name}`, name: item.name, ext: item.ext || '' });
+                        setContextMenu(null);
+                      }}
+                    >
+                      <Eye size={13} /> View
+                    </div>
+                  )}
+                  {item.type === 'folder' && (
+                    <div
+                      className={styles.contextMenuItem}
+                      onClick={() => { navigateToPath(`${currentPath}/${item.name}`); setContextMenu(null); }}
+                    >
+                      <Folder size={13} /> Open
+                    </div>
+                  )}
 
-            <div
-              className={styles.contextMenuItem}
-              style={{ color: '#f87171' }}
-              onClick={() => { handleDelete(contextMenu.item.name); setContextMenu(null); }}
-            >
-              <Trash2 size={13} /> Delete
-            </div>
+                  <div className={styles.contextMenuDivider} />
+
+                  <div
+                    className={styles.contextMenuItem}
+                    onClick={() => { handleStartRename(item.name); setContextMenu(null); }}
+                  >
+                    <Edit2 size={13} /> Rename
+                  </div>
+                  <div
+                    className={styles.contextMenuItem}
+                    onClick={() => { handleCopy(); setContextMenu(null); }}
+                  >
+                    <Copy size={13} /> Copy
+                  </div>
+
+                  {item.type === 'file' && (
+                    <a
+                      className={styles.contextMenuItem}
+                      href={`/api/files/download?path=${encodeURIComponent(`${currentPath}/${item.name}`)}`}
+                      download={item.name}
+                      style={{ textDecoration: 'none' }}
+                      onClick={() => setContextMenu(null)}
+                    >
+                      <Download size={13} /> Download
+                    </a>
+                  )}
+
+                  <div className={styles.contextMenuDivider} />
+
+                  <div
+                    className={styles.contextMenuItem}
+                    style={{ color: '#f87171' }}
+                    onClick={() => { handleDelete(item.name); setContextMenu(null); }}
+                  >
+                    <Trash2 size={13} /> Delete
+                  </div>
+                </>
+              );
+            })()}
           </div>
         )}
       </div>
