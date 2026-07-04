@@ -335,7 +335,11 @@ export default function FileExplorer() {
   const [viewingFile, setViewingFile] = useState<{ path: string; name: string; ext: string } | null>(null);
 
   const [clipboard, setClipboard] = useState<{ item: FileItem; sourcePath: string } | null>(null);
-  const [renamingItem, setRenamingItem] = useState<{ oldName: string; newName: string } | null>(null);
+  const [renamingItem, setRenamingItem] = useState<{
+    oldName: string;
+    newName: string;
+    path?: string; // absolute path if available (for search results)
+  } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
@@ -544,9 +548,46 @@ export default function FileExplorer() {
     const target = targetName
       ? displayedFiles.find(f => f.name === targetName) ?? null
       : selectedItem;
-    if (target) setRenamingItem({ oldName: target.name, newName: target.name });
+    if (target) {
+      setRenamingItem({
+        oldName: target.name,
+        newName: target.name,
+        path: target.path,
+      });
+    }
   };
-  const handleFinishRename = () => { console.log(`Rename: ${renamingItem?.oldName} → ${renamingItem?.newName}`); setRenamingItem(null); };
+
+  const handleFinishRename = async () => {
+    if (!renamingItem) return;
+
+    const oldName = renamingItem.oldName.trim();
+    const newName = renamingItem.newName.trim();
+
+    if (!newName || oldName === newName) {
+      setRenamingItem(null);
+      return;
+    }
+
+    const oldPath = renamingItem.path || `${currentPath}/${oldName}`;
+    const targetDir = renamingItem.path
+      ? renamingItem.path.substring(0, renamingItem.path.lastIndexOf('/'))
+      : currentPath;
+    const newPath = `${targetDir}/${newName}`;
+
+    try {
+      await axios.patch('/api/files/rename', { oldPath, newPath });
+      setRenamingItem(null);
+      if (searchQuery) {
+        setSearchRefreshTrigger(prev => prev + 1);
+      } else {
+        loadDirectory(currentPath);
+      }
+    } catch (err: any) {
+      const msg = err.response?.data?.error ?? 'Rename failed';
+      alert(`Error: ${msg}`);
+      setRenamingItem(null);
+    }
+  };
   
   const handleCopy = () => {
     if (selectedItem) {

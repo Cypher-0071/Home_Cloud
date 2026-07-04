@@ -253,4 +253,35 @@ router.get("/search", async (req, res) => {
 		if (fzf.killed === false) fzf.kill();
 	});
 });
+
+router.patch("/rename", async (req, res) => {
+	const oldPath = resolvePath(req.body.oldPath);
+	const newPath = resolvePath(req.body.newPath);
+
+	// Validate both paths are inside BASE_DIR
+	if (!oldPath.startsWith(BASE_DIR) || !newPath.startsWith(BASE_DIR)) {
+		return res.status(403).json({ error: "Access denied" });
+	}
+
+	// Prevent renaming to the same name/path
+	if (oldPath === newPath) {
+		return res.status(400).json({ error: "New path is identical to the old path" });
+	}
+
+	// Verify destination does not already exist
+	try {
+		await fs.access(newPath);
+		return res.status(409).json({ error: `A file or folder named "${path.basename(newPath)}" already exists` });
+	} catch {
+		// safe to rename
+	}
+
+	try {
+		await fs.rename(oldPath, newPath);
+		res.json({ success: true });
+	} catch (error) {
+		console.error(error);
+		res.status(500).json({ error: error.message });
+	}
+});
 module.exports = router;
