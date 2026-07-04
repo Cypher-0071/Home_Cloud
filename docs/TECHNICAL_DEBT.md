@@ -17,3 +17,7 @@ This document outlines the current technical limitations, security tradeoffs, an
 ### 4. Direct WebSocket Connections without Auto-Reconnect
 * **Debt**: The dashboard WebSocket connection for terminal sessions in `TerminalApp.tsx` closes permanently on network hiccups.
 * **Tradeoff**: There is no automatic exponential backoff reconnection mechanism; users must refresh the browser page or re-open the terminal window if the connection drops.
+
+### 5. Search in file explorer
+
+--- try karo ek baar kuch gadbad hai shyd se ("go" likhne par 2 duplicate folder aare and ranking bhi kuch khas badia ni hai baki search results ki)
