@@ -46,6 +46,7 @@ interface FileItem {
   ext?: string;
   mimeType?: string | null;
   path?: string; // absolute path for search results
+  isNewPlaceholder?: boolean; // temporary placeholder for inline creation
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -341,6 +342,11 @@ export default function FileExplorer() {
     path?: string; // absolute path if available (for search results)
   } | null>(null);
 
+  const [newItem, setNewItem] = useState<{
+    type: 'folder' | 'file';
+    name: string;
+  } | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [uploadingFileName, setUploadingFileName] = useState<string>('');
@@ -452,7 +458,22 @@ export default function FileExplorer() {
   const currentFolderTitle = currentPath.split('/').pop() || currentPath;
   const isLoading = loading || searchLoading;
   const displayedFiles = searchQuery ? searchResults : currentFiles;
-  const selectedItem = displayedFiles.find(item => item.name === selectedItemName) || null;
+  
+  const itemsToRender = newItem
+    ? [
+        {
+          name: newItem.name,
+          type: newItem.type,
+          size: '--',
+          sizeRaw: 0,
+          modified: '--',
+          isNewPlaceholder: true,
+        } as FileItem,
+        ...displayedFiles,
+      ]
+    : displayedFiles;
+
+  const selectedItem = itemsToRender.find(item => item.name === selectedItemName) || null;
 
   // ─── Navigation ───
   const navigateToPath = (newPath: string) => {
@@ -515,7 +536,33 @@ export default function FileExplorer() {
   };
 
   // ─── Operations ───
-  const handleCreateNew = (type: 'folder' | 'file') => console.log(`Create new ${type} in ${currentPath}`);
+  const handleCreateNew = (type: 'folder' | 'file') => {
+    const defaultName = type === 'folder' ? 'New Folder' : 'New File';
+    setNewItem({ type, name: defaultName });
+  };
+
+  const handleFinishCreate = async () => {
+    if (!newItem) return;
+    const name = newItem.name.trim();
+    const type = newItem.type;
+
+    setNewItem(null); // Remove placeholder immediately for snappy UI
+
+    if (!name) return;
+
+    try {
+      const endpoint = type === 'folder' ? '/api/files/folder' : '/api/files/file';
+      await axios.post(endpoint, {
+        name,
+        path: currentPath,
+      });
+      loadDirectory(currentPath);
+    } catch (err: any) {
+      const msg = err.response?.data?.error ?? `Failed to create ${type}`;
+      alert(`Error: ${msg}`);
+      loadDirectory(currentPath);
+    }
+  };
 
   const handleDelete = async (itemName?: string) => {
     const targetName = itemName ?? selectedItemName;
@@ -798,7 +845,7 @@ export default function FileExplorer() {
             </div>
           )}
 
-          {!isLoading && !loadError && displayedFiles.length === 0 && (
+          {!isLoading && !loadError && itemsToRender.length === 0 && (
             <div className={styles.emptyState}>
               <Folder size={48} style={{ opacity: 0.15 }} />
               <div className={styles.emptyStateText}>
@@ -807,7 +854,7 @@ export default function FileExplorer() {
             </div>
           )}
 
-          {!isLoading && !loadError && displayedFiles.length > 0 && (
+          {!isLoading && !loadError && itemsToRender.length > 0 && (
             <>
               <div className={styles.fileListHeader} onClick={e => e.stopPropagation()}>
                 <div className={styles.fileListHeaderCol}>Name</div>
@@ -815,20 +862,54 @@ export default function FileExplorer() {
                 <div className={styles.fileListHeaderCol}>Date Modified</div>
               </div>
               <div className={styles.fileItemsContainer}>
-                {displayedFiles.map(item => {
+                {itemsToRender.map(item => {
                   const isSelected    = selectedItemName === item.name;
                   const isRenamingThis = renamingItem && renamingItem.oldName === item.name;
+                  const isNewThis = item.isNewPlaceholder;
+
                   return (
                     <div
-                      key={item.name}
+                      key={isNewThis ? '__new_item_placeholder__' : item.name}
                       className={`${styles.fileItemRow} ${isSelected ? styles.fileItemRowSelected : ''}`}
-                      onClick={e => { e.stopPropagation(); setContextMenu(null); setSelectedItemName(item.name); if (!isRenamingThis) setRenamingItem(null); }}
-                      onDoubleClick={e => { e.stopPropagation(); handleItemDoubleClick(item); }}
-                      onContextMenu={e => handleContextMenu(e, item)}
+                      onClick={e => {
+                        e.stopPropagation();
+                        if (isNewThis) return;
+                        setContextMenu(null);
+                        setSelectedItemName(item.name);
+                        if (!isRenamingThis) setRenamingItem(null);
+                      }}
+                      onDoubleClick={e => {
+                        e.stopPropagation();
+                        if (isNewThis) return;
+                        handleItemDoubleClick(item);
+                      }}
+                      onContextMenu={e => {
+                        if (isNewThis) return;
+                        handleContextMenu(e, item);
+                      }}
                     >
                       <div className={styles.fileNameCell}>
                         <div className={styles.fileIcon}>{getFileIcon(item)}</div>
-                        {isRenamingThis ? (
+                        {isNewThis ? (
+                          <input
+                            type="text"
+                            value={newItem?.name || ''}
+                            onChange={e => setNewItem({ ...newItem!, name: e.target.value })}
+                            onBlur={handleFinishCreate}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter') handleFinishCreate();
+                              if (e.key === 'Escape') setNewItem(null);
+                            }}
+                            autoFocus
+                            onFocus={e => e.target.select()}
+                            onClick={e => e.stopPropagation()}
+                            style={{
+                              background: '#141416', border: '1px solid #a855f7',
+                              color: '#fff', borderRadius: '4px', padding: '2px 6px',
+                              fontSize: '13px', width: '80%', outline: 'none',
+                            }}
+                          />
+                        ) : isRenamingThis ? (
                           <input
                             type="text"
                             value={renamingItem.newName}

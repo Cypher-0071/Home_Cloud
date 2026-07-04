@@ -284,4 +284,65 @@ router.patch("/rename", async (req, res) => {
 		res.status(500).json({ error: error.message });
 	}
 });
+
+router.post("/folder", async (req, res) => {
+	const folderName = String(req.body.name || "").trim();
+	const destination = resolvePath(req.body.path);
+	const targetDir = resolvePath(path.join(destination, folderName));
+
+	if (!targetDir.startsWith(BASE_DIR)) {
+		return res.status(403).json({ error: "Access denied" });
+	}
+
+	if (!folderName) {
+		return res.status(400).json({ error: "Folder name is required" });
+	}
+
+	// Verify folder doesn't already exist
+	try {
+		await fs.access(targetDir);
+		return res.status(409).json({ error: `A file or folder named "${folderName}" already exists here` });
+	} catch {
+		// safe to create
+	}
+
+	try {
+		await fs.mkdir(targetDir, { recursive: true });
+		res.json({ success: true });
+	} catch (error) {
+		console.error(error);
+		res.status(500).json({ error: error.message });
+	}
+});
+
+router.post("/file", async (req, res) => {
+	const fileName = String(req.body.name || "").trim();
+	const destination = resolvePath(req.body.path);
+	const targetFile = resolvePath(path.join(destination, fileName));
+
+	if (!targetFile.startsWith(BASE_DIR)) {
+		return res.status(403).json({ error: "Access denied" });
+	}
+
+	if (!fileName) {
+		return res.status(400).json({ error: "File name is required" });
+	}
+
+	// Verify file doesn't already exist
+	try {
+		await fs.access(targetFile);
+		return res.status(409).json({ error: `A file or folder named "${fileName}" already exists here` });
+	} catch {
+		// safe to create
+	}
+
+	try {
+		await fs.writeFile(targetFile, "");
+		res.json({ success: true });
+	} catch (error) {
+		console.error(error);
+		res.status(500).json({ error: error.message });
+	}
+});
+
 module.exports = router;
