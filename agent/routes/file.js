@@ -5,7 +5,7 @@ const fs = require("fs/promises");
 const mime = require("mime-types");
 const multer = require("multer");
 const si = require("systeminformation");
-const exec = require("child_process");
+const { spawn } = require("child_process");
 const { stdout, stderr } = require("process");
 const BASE_DIR = "/home/rudra-unix";
 
@@ -192,32 +192,33 @@ router.get("/search", async (req, res) => {
 	if (!query) {
 		return res.json([]);
 	}
+	// Spawn fd to recursively list all file paths (colorless, starting at currentDir)
+	const fd = spawn("fdfind", ["--color", "never", ".", currentDir]);
+	// Spawn fzf in filter mode to perform fast fuzzy matching on the incoming file list
+	const fzf = spawn("fzf", ["-f", query]);
 
-	const { spawn } = require("child_process");
-	// fd -i -p <query> <dir>
-	const child = spawn("fdfind", ["-i", "-p", query, currentDir]);
+	// Pipe the output of fd directly into fzf's input
+	fd.stdout.pipe(fzf.stdin);
 
 	let stdout = "";
 	let stderr = "";
 
-	child.stdout.on("data", (data) => {
+	fzf.stdout.on("data", (data) => {
 		stdout += data;
 	});
 
-	child.stderr.on("data", (data) => {
+	fzf.stderr.on("data", (data) => {
 		stderr += data;
 	});
 
-	child.on("close", async (code) => {
-		if (code !== 0 && stderr) {
-			console.error(`fd search error: ${stderr}`);
-			if (code === 1) {
-				return res.json([]);
-			}
+	fzf.on("close", async (code) => {
+		// fzf exits with code 1 if no matches are found, which is a normal state
+		if (code !== 0 && code !== 1 && stderr) {
+			console.error(`fzf search error: ${stderr}`);
 			return res.status(500).json({ error: "Search failed" });
 		}
 		
-		const filePaths = stdout.split("\n").filter(Boolean).slice(0, 50); // limit to top 50 for performance
+		const filePaths = stdout.split("\n").filter(Boolean).slice(0, 50); // limit to top 50 matches
 		
 		try {
 			const metadata = await Promise.all(
@@ -226,7 +227,7 @@ router.get("/search", async (req, res) => {
 						const stat = await fs.stat(filepath);
 						return {
 							name: path.basename(filepath),
-							path: filepath, // send absolute path for double-click viewing/navigation
+							path: filepath,
 							isDirectory: stat.isDirectory(),
 							size: stat.size,
 							modified: stat.mtime,
@@ -235,7 +236,7 @@ router.get("/search", async (req, res) => {
 								: mime.lookup(filepath) || "application/octet-stream",
 						};
 					} catch {
-						return null; // skip files that disappeared or failed to stat
+						return null;
 					}
 				})
 			);
@@ -246,10 +247,10 @@ router.get("/search", async (req, res) => {
 		}
 	});
 
+	// If the client aborts the request, kill both processes immediately
 	req.on("close", () => {
-		if (child.killed === false) {
-			child.kill();
-		}
+		if (fd.killed === false) fd.kill();
+		if (fzf.killed === false) fzf.kill();
 	});
 });
 module.exports = router;
