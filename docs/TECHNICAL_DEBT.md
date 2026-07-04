@@ -18,6 +18,22 @@ This document outlines the current technical limitations, security tradeoffs, an
 * **Debt**: The dashboard WebSocket connection for terminal sessions in `TerminalApp.tsx` closes permanently on network hiccups.
 * **Tradeoff**: There is no automatic exponential backoff reconnection mechanism; users must refresh the browser page or re-open the terminal window if the connection drops.
 
-### 5. Search in file explorer
+### 5. File Explorer Usability & Navigation (Deferred)
+* **Debt**: Keyboard navigation (Arrow keys, Enter to open, Delete/Backspace to delete) is not implemented.
+* **Tradeoff**: Users must perform all navigation and operations via mouse actions, limiting efficiency.
 
---- try karo ek baar kuch gadbad hai shyd se ("go" likhne par 2 duplicate folder aare and ranking bhi kuch khas badia ni hai baki search results ki)
+### 6. Multi-Select & Batch Operations (Deferred)
+* **Debt**: The explorer only allows single-item selection and single-item copy, cut, delete, and rename.
+* **Tradeoff**: Standard batch operations (such as selecting multiple files with Ctrl/Shift for batch copy or delete) are not supported.
+
+### 7. Grid / Tiles View Toggle (Deferred)
+* **Debt**: The file list is locked to the tabular list row layout.
+* **Tradeoff**: Alternate visual layouts (such as grid or tiles view) are not implemented, making browsing visual media (like images) less convenient.
+
+### 8. Column Header Sorting (Deferred)
+* **Debt**: Clicking on the column headers ("Name", "Size", "Date Modified") does not sort the files.
+* **Tradeoff**: The user cannot change the sort order of files dynamically in-memory.
+
+### 9. Details Info Pane (Deferred)
+* **Debt**: The side info pane for displaying file details, large previews, and extended metadata is not rendered.
+* **Tradeoff**: Users cannot inspect detailed file properties without viewing or opening the file.
