@@ -45,6 +45,7 @@ interface FileItem {
   modified: string;
   ext?: string;
   mimeType?: string | null;
+  path?: string; // absolute path for search results
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -325,6 +326,11 @@ export default function FileExplorer() {
   const [loading, setLoading] = useState<boolean>(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
+  // Search state
+  const [searchResults, setSearchResults] = useState<FileItem[]>([]);
+  const [searchLoading, setSearchLoading] = useState<boolean>(false);
+  const [searchRefreshTrigger, setSearchRefreshTrigger] = useState<number>(0);
+
   // Viewer state
   const [viewingFile, setViewingFile] = useState<{ path: string; name: string; ext: string } | null>(null);
 
@@ -391,12 +397,58 @@ export default function FileExplorer() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [selectedItemName, clipboard]); // re-bind when these change so handlers see latest values
 
+  // ─── Backend search trigger effect with debounce & cancellation ───
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      setSearchLoading(false);
+      return;
+    }
+
+    setSearchLoading(true);
+    const controller = new AbortController();
+
+    const delayDebounceFn = setTimeout(async () => {
+      try {
+        const response = await axios.get('/api/files/search', {
+          params: { search: searchQuery, path: currentPath },
+          signal: controller.signal,
+        });
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const mappedResults = response.data.map((f: any): FileItem => ({
+          name: f.name,
+          type: f.isDirectory ? 'folder' : 'file',
+          size: f.isDirectory ? '--' : formatBytes(f.size),
+          sizeRaw: f.size ?? 0,
+          modified: formatDate(f.modified),
+          ext: f.isDirectory ? undefined : getExt(f.name),
+          mimeType: f.mimeType ?? null,
+          path: f.path,
+        }));
+
+        setSearchResults(mappedResults);
+      } catch (err: any) {
+        if (axios.isCancel(err)) {
+          return; // Ignore cancelled requests
+        }
+        console.error(err);
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 300); // 300ms debounce
+
+    return () => {
+      clearTimeout(delayDebounceFn);
+      controller.abort(); // Cancel the request if searchQuery changes
+    };
+  }, [searchQuery, currentPath, searchRefreshTrigger]);
+
   // ─── Derived ───
   const currentFolderTitle = currentPath.split('/').pop() || currentPath;
-  const filteredFiles = currentFiles.filter(item =>
-    item.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-  const selectedItem = currentFiles.find(item => item.name === selectedItemName) || null;
+  const isLoading = loading || searchLoading;
+  const displayedFiles = searchQuery ? searchResults : currentFiles;
+  const selectedItem = displayedFiles.find(item => item.name === selectedItemName) || null;
 
   // ─── Navigation ───
   const navigateToPath = (newPath: string) => {
@@ -462,41 +514,59 @@ export default function FileExplorer() {
   const handleCreateNew = (type: 'folder' | 'file') => console.log(`Create new ${type} in ${currentPath}`);
 
   const handleDelete = async (itemName?: string) => {
-    const target = itemName ?? selectedItemName;
-    if (!target) return;
-    const confirmed = window.confirm(`Delete "${target}"? This cannot be undone.`);
+    const targetName = itemName ?? selectedItemName;
+    if (!targetName) return;
+
+    const targetItem = displayedFiles.find(f => f.name === targetName);
+    if (!targetItem) return;
+
+    const targetPath = targetItem.path || `${currentPath}/${targetName}`;
+
+    const confirmed = window.confirm(`Delete "${targetName}"? This cannot be undone.`);
     if (!confirmed) return;
     try {
       await axios.delete('/api/files/delete', {
-        params: { path: `${currentPath}/${target}` },
+        params: { path: targetPath },
       });
       setSelectedItemName(null);
-      loadDirectory(currentPath);
+      if (searchQuery) {
+        setSearchRefreshTrigger(prev => prev + 1);
+      } else {
+        loadDirectory(currentPath);
+      }
     } catch {
-      alert(`Failed to delete "${target}".`);
+      alert(`Failed to delete "${targetName}".`);
     }
   };
 
   const handleStartRename = (itemName?: string) => {
-    const target = itemName
-      ? currentFiles.find(f => f.name === itemName) ?? null
+    const targetName = itemName ?? selectedItemName;
+    const target = targetName
+      ? displayedFiles.find(f => f.name === targetName) ?? null
       : selectedItem;
     if (target) setRenamingItem({ oldName: target.name, newName: target.name });
   };
   const handleFinishRename = () => { console.log(`Rename: ${renamingItem?.oldName} → ${renamingItem?.newName}`); setRenamingItem(null); };
-  const handleCopy  = () => { if (selectedItem) setClipboard({ item: selectedItem, sourcePath: currentPath }); };
+  
+  const handleCopy = () => {
+    if (selectedItem) {
+      const srcPath = selectedItem.path
+        ? selectedItem.path.substring(0, selectedItem.path.lastIndexOf('/'))
+        : currentPath;
+      setClipboard({ item: selectedItem, sourcePath: srcPath });
+    }
+  };
+
   const handlePaste = async () => {
     if (!clipboard) return;
     const src  = `${clipboard.sourcePath}/${clipboard.item.name}`;
     const dest = `${currentPath}/${clipboard.item.name}`;
 
-    // Warn if pasting into the same folder it was copied from
     if (src === dest) {
       alert('Source and destination are the same folder. Navigate to a different folder to paste.');
       return;
     }
 
-    // Check if a file/folder with the same name already exists at the destination
     const alreadyExists = currentFiles.some(f => f.name === clipboard.item.name);
     if (alreadyExists) {
       const ok = window.confirm(`"${clipboard.item.name}" already exists here. Overwrite?`);
@@ -601,7 +671,6 @@ export default function FileExplorer() {
           <input type="file" ref={fileInputRef} style={{ display: 'none' }} onChange={handleUpload} />
 
           <div className={styles.commandDivider} />
-
           <button className={styles.commandButton} onClick={handleCopy} disabled={!selectedItem}><Copy size={13} /><span>Copy</span></button>
           <button className={styles.commandButton} onClick={handlePaste} disabled={!clipboard}><Clipboard size={13} /><span>Paste</span></button>
           <button className={styles.commandButton} onClick={() => handleStartRename()} disabled={!selectedItem}><Edit2 size={13} /><span>Rename</span></button>
@@ -674,28 +743,30 @@ export default function FileExplorer() {
           onClick={() => { setSelectedItemName(null); setRenamingItem(null); setContextMenu(null); }}
           onContextMenu={handleBackgroundContextMenu}
         >
-          {loading && (
+          {isLoading && (
             <div className={styles.emptyState}>
               <Loader2 size={32} style={{ opacity: 0.4, animation: 'spin 0.8s linear infinite' }} />
               <div className={styles.emptyStateText}>Loading...</div>
             </div>
           )}
 
-          {!loading && loadError && (
+          {!isLoading && loadError && (
             <div className={styles.emptyState}>
               <AlertTriangle size={36} style={{ opacity: 0.4, color: '#f87171' }} />
               <div className={styles.emptyStateText}>{loadError}</div>
             </div>
           )}
 
-          {!loading && !loadError && filteredFiles.length === 0 && (
+          {!isLoading && !loadError && displayedFiles.length === 0 && (
             <div className={styles.emptyState}>
               <Folder size={48} style={{ opacity: 0.15 }} />
-              <div className={styles.emptyStateText}>This folder is empty.</div>
+              <div className={styles.emptyStateText}>
+                {searchQuery ? 'No matches found.' : 'This folder is empty.'}
+              </div>
             </div>
           )}
 
-          {!loading && !loadError && filteredFiles.length > 0 && (
+          {!isLoading && !loadError && displayedFiles.length > 0 && (
             <>
               <div className={styles.fileListHeader} onClick={e => e.stopPropagation()}>
                 <div className={styles.fileListHeaderCol}>Name</div>
@@ -703,7 +774,7 @@ export default function FileExplorer() {
                 <div className={styles.fileListHeaderCol}>Date Modified</div>
               </div>
               <div className={styles.fileItemsContainer}>
-                {filteredFiles.map(item => {
+                {displayedFiles.map(item => {
                   const isSelected    = selectedItemName === item.name;
                   const isRenamingThis = renamingItem && renamingItem.oldName === item.name;
                   return (
@@ -877,7 +948,7 @@ export default function FileExplorer() {
       {/* ─── Status Bar ─── */}
       <div className={styles.statusBar}>
         <div className={styles.statusLeft}>
-          <span>{filteredFiles.length} items</span>
+          <span>{displayedFiles.length} items</span>
           {selectedItemName && (
             <>
               <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#71717a' }} />

@@ -5,7 +5,8 @@ const fs = require("fs/promises");
 const mime = require("mime-types");
 const multer = require("multer");
 const si = require("systeminformation");
-
+const exec = require("child_process");
+const { stdout, stderr } = require("process");
 const BASE_DIR = "/home/rudra-unix";
 
 // Resolve an incoming path param safely.
@@ -144,7 +145,7 @@ router.get("/view", async (req, res) => {
 });
 
 router.post("/copy", async (req, res) => {
-	const src  = resolvePath(req.body.src);
+	const src = resolvePath(req.body.src);
 	const dest = resolvePath(req.body.dest);
 
 	if (!src.startsWith(BASE_DIR) || !dest.startsWith(BASE_DIR)) {
@@ -153,7 +154,9 @@ router.post("/copy", async (req, res) => {
 
 	// Enforce same-path check on the server
 	if (src === dest) {
-		return res.status(400).json({ error: "Source and destination are the same path" });
+		return res
+			.status(400)
+			.json({ error: "Source and destination are the same path" });
 	}
 
 	// Enforce destination-exists check on the server
@@ -161,7 +164,11 @@ router.post("/copy", async (req, res) => {
 	try {
 		await fs.access(dest);
 		// If we reach here, dest exists — reject
-		return res.status(409).json({ error: `"${path.basename(dest)}" already exists at the destination` });
+		return res
+			.status(409)
+			.json({
+				error: `"${path.basename(dest)}" already exists at the destination`,
+			});
 	} catch {
 		// dest does not exist — safe to proceed
 	}
@@ -174,4 +181,75 @@ router.post("/copy", async (req, res) => {
 	}
 });
 
+router.get("/search", async (req, res) => {
+	const query = String(req.query.search || "");
+	const currentDir = resolvePath(req.query.path);
+
+	if (!currentDir.startsWith(BASE_DIR)) {
+		return res.status(403).json({ error: "Access denied" });
+	}
+
+	if (!query) {
+		return res.json([]);
+	}
+
+	const { spawn } = require("child_process");
+	// fd -i -p <query> <dir>
+	const child = spawn("fdfind", ["-i", "-p", query, currentDir]);
+
+	let stdout = "";
+	let stderr = "";
+
+	child.stdout.on("data", (data) => {
+		stdout += data;
+	});
+
+	child.stderr.on("data", (data) => {
+		stderr += data;
+	});
+
+	child.on("close", async (code) => {
+		if (code !== 0 && stderr) {
+			console.error(`fd search error: ${stderr}`);
+			if (code === 1) {
+				return res.json([]);
+			}
+			return res.status(500).json({ error: "Search failed" });
+		}
+		
+		const filePaths = stdout.split("\n").filter(Boolean).slice(0, 50); // limit to top 50 for performance
+		
+		try {
+			const metadata = await Promise.all(
+				filePaths.map(async (filepath) => {
+					try {
+						const stat = await fs.stat(filepath);
+						return {
+							name: path.basename(filepath),
+							path: filepath, // send absolute path for double-click viewing/navigation
+							isDirectory: stat.isDirectory(),
+							size: stat.size,
+							modified: stat.mtime,
+							mimeType: stat.isDirectory()
+								? null
+								: mime.lookup(filepath) || "application/octet-stream",
+						};
+					} catch {
+						return null; // skip files that disappeared or failed to stat
+					}
+				})
+			);
+			res.json(metadata.filter(Boolean));
+		} catch (err) {
+			console.error(err);
+			res.status(500).json({ error: "Failed to gather file metadata" });
+		}
+	});
+
+	req.on("close", () => {
+		if (child.killed === false) {
+			child.kill();
+		}
+	});
+});
 module.exports = router;
