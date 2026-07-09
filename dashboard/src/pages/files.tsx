@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import styles from './files.module.css';
 import axios from 'axios';
+import { Highlight, themes } from 'prism-react-renderer';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -124,6 +125,18 @@ const fetchFiles = async (dirPath: string): Promise<FileItem[]> => {
 // Build the URL for the /view endpoint
 function viewUrl(filePath: string): string {
   return `/api/files/view?path=${encodeURIComponent(filePath)}`;
+}
+
+// Map file extensions to languages supported by prism-react-renderer
+function mapExtensionToLanguage(ext: string): string {
+  const e = ext.toLowerCase();
+  if (e === 'js' || e === 'jsx') return 'javascript';
+  if (e === 'ts' || e === 'tsx') return 'typescript';
+  if (e === 'py') return 'python';
+  if (e === 'json') return 'json';
+  if (e === 'css') return 'css';
+  if (e === 'html') return 'html';
+  return 'text'; // Fallback
 }
 
 // ─── File Viewer Modal ────────────────────────────────────────────────────────
@@ -271,22 +284,52 @@ function FileViewer({ filePath, fileName, ext, onClose }: ViewerProps) {
               </div>
             )}
             {textContent !== null && (
-              <pre style={{
-                margin: 0,
-                padding: '16px',
-                fontSize: '13px',
-                lineHeight: '1.6',
-                fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace",
-                color: '#d4d4d8',
-                background: '#070708',
-                borderRadius: '8px',
-                border: '1px solid #1c1c1f',
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-word',
-                minHeight: '100%',
-              }}>
-                {textContent}
-              </pre>
+              <Highlight
+                theme={themes.vsDark}
+                code={textContent}
+                language={mapExtensionToLanguage(ext)}
+              >
+                {({ className, style, tokens, getLineProps, getTokenProps }) => (
+                  <pre
+                    className={className}
+                    style={{
+                      ...style,
+                      margin: 0,
+                      padding: '16px',
+                      fontSize: '13px',
+                      lineHeight: '1.6',
+                      fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace",
+                      borderRadius: '8px',
+                      border: '1px solid #1c1c1f',
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
+                      minHeight: '100%',
+                      background: '#070708',
+                    }}
+                  >
+                    {tokens.map((line, i) => (
+                      <div key={i} {...getLineProps({ line })} style={{ display: 'flex' }}>
+                        {/* Line number */}
+                        <span style={{
+                          display: 'inline-block',
+                          width: '28px',
+                          userSelect: 'none',
+                          opacity: 0.35,
+                          fontSize: '11px',
+                          textAlign: 'right',
+                          paddingRight: '12px',
+                          color: '#858585',
+                        }}>{i + 1}</span>
+                        <div>
+                          {line.map((token, key) => (
+                            <span key={key} {...getTokenProps({ token })} />
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </pre>
+                )}
+              </Highlight>
             )}
           </div>
         )}
