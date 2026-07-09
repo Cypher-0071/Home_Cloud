@@ -7,6 +7,7 @@ const multer = require("multer");
 const si = require("systeminformation");
 const { spawn } = require("child_process");
 const { stdout, stderr } = require("process");
+const { error } = require("console");
 const BASE_DIR = "/home/rudra-unix";
 
 // Resolve an incoming path param safely.
@@ -164,11 +165,9 @@ router.post("/copy", async (req, res) => {
 	try {
 		await fs.access(dest);
 		// If we reach here, dest exists — reject
-		return res
-			.status(409)
-			.json({
-				error: `"${path.basename(dest)}" already exists at the destination`,
-			});
+		return res.status(409).json({
+			error: `"${path.basename(dest)}" already exists at the destination`,
+		});
 	} catch {
 		// dest does not exist — safe to proceed
 	}
@@ -217,9 +216,9 @@ router.get("/search", async (req, res) => {
 			console.error(`fzf search error: ${stderr}`);
 			return res.status(500).json({ error: "Search failed" });
 		}
-		
+
 		const filePaths = stdout.split("\n").filter(Boolean).slice(0, 50); // limit to top 50 matches
-		
+
 		try {
 			const metadata = await Promise.all(
 				filePaths.map(async (filepath) => {
@@ -233,12 +232,13 @@ router.get("/search", async (req, res) => {
 							modified: stat.mtime,
 							mimeType: stat.isDirectory()
 								? null
-								: mime.lookup(filepath) || "application/octet-stream",
+								: mime.lookup(filepath) ||
+									"application/octet-stream",
 						};
 					} catch {
 						return null;
 					}
-				})
+				}),
 			);
 			res.json(metadata.filter(Boolean));
 		} catch (err) {
@@ -265,13 +265,19 @@ router.patch("/rename", async (req, res) => {
 
 	// Prevent renaming to the same name/path
 	if (oldPath === newPath) {
-		return res.status(400).json({ error: "New path is identical to the old path" });
+		return res
+			.status(400)
+			.json({ error: "New path is identical to the old path" });
 	}
 
 	// Verify destination does not already exist
 	try {
 		await fs.access(newPath);
-		return res.status(409).json({ error: `A file or folder named "${path.basename(newPath)}" already exists` });
+		return res
+			.status(409)
+			.json({
+				error: `A file or folder named "${path.basename(newPath)}" already exists`,
+			});
 	} catch {
 		// safe to rename
 	}
@@ -301,7 +307,11 @@ router.post("/folder", async (req, res) => {
 	// Verify folder doesn't already exist
 	try {
 		await fs.access(targetDir);
-		return res.status(409).json({ error: `A file or folder named "${folderName}" already exists here` });
+		return res
+			.status(409)
+			.json({
+				error: `A file or folder named "${folderName}" already exists here`,
+			});
 	} catch {
 		// safe to create
 	}
@@ -331,7 +341,11 @@ router.post("/file", async (req, res) => {
 	// Verify file doesn't already exist
 	try {
 		await fs.access(targetFile);
-		return res.status(409).json({ error: `A file or folder named "${fileName}" already exists here` });
+		return res
+			.status(409)
+			.json({
+				error: `A file or folder named "${fileName}" already exists here`,
+			});
 	} catch {
 		// safe to create
 	}
@@ -342,6 +356,45 @@ router.post("/file", async (req, res) => {
 	} catch (error) {
 		console.error(error);
 		res.status(500).json({ error: error.message });
+	}
+});
+
+router.patch("/move", async (req, res) => {
+	const src = resolvePath(req.body.oldPath);
+	const dest = resolvePath(req.body.newPath);
+
+	// Validate both paths are inside BASE_DIR
+	if (!src.startsWith(BASE_DIR) || !dest.startsWith(BASE_DIR)) {
+		return res.status(403).json({ error: "Access denied" });
+	}
+
+	if (src === dest) {
+		return res.json({ success: true });
+	}
+
+	// Verify destination does not already exist
+	try {
+		await fs.access(dest);
+		return res.status(409).json({ error: `A file or folder named "${path.basename(dest)}" already exists` });
+	} catch {
+		// safe to move
+	}
+
+	try {
+		await fs.rename(src, dest);
+		res.json({ success: true });
+	} catch (err) {
+		if (err.code === "EXDEV") {
+			// Cross-device fallback: copy then delete original
+			try {
+				await fs.cp(src, dest, { recursive: true });
+				await fs.rm(src, { recursive: true, force: true });
+				return res.json({ success: true });
+			} catch (fallbackErr) {
+				return res.status(500).json({ error: fallbackErr.message });
+			}
+		}
+		res.status(500).json({ error: err.message });
 	}
 });
 

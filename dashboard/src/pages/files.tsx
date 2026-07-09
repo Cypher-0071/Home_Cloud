@@ -21,6 +21,7 @@ import {
   AlertTriangle,
   Eye,
   Download,
+  Scissors,
 } from 'lucide-react';
 import styles from './files.module.css';
 import axios from 'axios';
@@ -335,7 +336,11 @@ export default function FileExplorer() {
   // Viewer state
   const [viewingFile, setViewingFile] = useState<{ path: string; name: string; ext: string } | null>(null);
 
-  const [clipboard, setClipboard] = useState<{ item: FileItem; sourcePath: string } | null>(null);
+  const [clipboard, setClipboard] = useState<{
+    item: FileItem;
+    sourcePath: string;
+    action: 'copy' | 'cut';
+  } | null>(null);
   const [renamingItem, setRenamingItem] = useState<{
     oldName: string;
     newName: string;
@@ -398,6 +403,9 @@ export default function FileExplorer() {
 
       if (e.ctrlKey && e.key === 'c') {
         if (selectedItemName) handleCopy();
+      }
+      if (e.ctrlKey && e.key === 'x') {
+        if (selectedItemName) handleCut();
       }
       if (e.ctrlKey && e.key === 'v') {
         if (clipboard) handlePaste();
@@ -641,7 +649,16 @@ export default function FileExplorer() {
       const srcPath = selectedItem.path
         ? selectedItem.path.substring(0, selectedItem.path.lastIndexOf('/'))
         : currentPath;
-      setClipboard({ item: selectedItem, sourcePath: srcPath });
+      setClipboard({ item: selectedItem, sourcePath: srcPath, action: 'copy' });
+    }
+  };
+
+  const handleCut = () => {
+    if (selectedItem) {
+      const srcPath = selectedItem.path
+        ? selectedItem.path.substring(0, selectedItem.path.lastIndexOf('/'))
+        : currentPath;
+      setClipboard({ item: selectedItem, sourcePath: srcPath, action: 'cut' });
     }
   };
 
@@ -651,7 +668,7 @@ export default function FileExplorer() {
     const dest = `${currentPath}/${clipboard.item.name}`;
 
     if (src === dest) {
-      alert('Source and destination are the same folder. Navigate to a different folder to paste.');
+      setClipboard(null); // Clear clipboard visually on silent same-folder paste
       return;
     }
 
@@ -662,10 +679,15 @@ export default function FileExplorer() {
     }
 
     try {
-      await axios.post('/api/files/copy', { src, dest });
+      if (clipboard.action === 'cut') {
+        await axios.patch('/api/files/move', { oldPath: src, newPath: dest });
+        setClipboard(null); // Clear clipboard after cut is completed
+      } else {
+        await axios.post('/api/files/copy', { src, dest });
+      }
       loadDirectory(currentPath);
-    } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Copy failed';
+    } catch (err: any) {
+      const msg = err.response?.data?.error ?? 'Paste failed';
       alert(`Error: ${msg}`);
     }
   };
@@ -760,6 +782,7 @@ export default function FileExplorer() {
 
           <div className={styles.commandDivider} />
           <button className={styles.commandButton} onClick={handleCopy} disabled={!selectedItem}><Copy size={13} /><span>Copy</span></button>
+          <button className={styles.commandButton} onClick={handleCut} disabled={!selectedItem}><Scissors size={13} /><span>Cut</span></button>
           <button className={styles.commandButton} onClick={handlePaste} disabled={!clipboard}><Clipboard size={13} /><span>Paste</span></button>
           <button className={styles.commandButton} onClick={() => handleStartRename()} disabled={!selectedItem}><Edit2 size={13} /><span>Rename</span></button>
           <button className={styles.commandButton} onClick={() => handleDelete()} disabled={!selectedItem} style={{ color: selectedItem ? '#f87171' : '' }}><Trash2 size={13} /><span>Delete</span></button>
@@ -867,10 +890,16 @@ export default function FileExplorer() {
                   const isRenamingThis = renamingItem && renamingItem.oldName === item.name;
                   const isNewThis = item.isNewPlaceholder;
 
+                  const isCutPending = clipboard && 
+                    clipboard.action === 'cut' && 
+                    clipboard.item.name === item.name && 
+                    clipboard.sourcePath === currentPath;
+
                   return (
                     <div
                       key={isNewThis ? '__new_item_placeholder__' : item.name}
                       className={`${styles.fileItemRow} ${isSelected ? styles.fileItemRowSelected : ''}`}
+                      style={{ opacity: isCutPending ? 0.45 : 1, transition: 'opacity 0.2s' }}
                       onClick={e => {
                         e.stopPropagation();
                         if (isNewThis) return;
@@ -1037,6 +1066,12 @@ export default function FileExplorer() {
                     onClick={() => { handleCopy(); setContextMenu(null); }}
                   >
                     <Copy size={13} /> Copy
+                  </div>
+                  <div
+                    className={styles.contextMenuItem}
+                    onClick={() => { handleCut(); setContextMenu(null); }}
+                  >
+                    <Scissors size={13} /> Cut
                   </div>
 
                   {item.type === 'file' && (
