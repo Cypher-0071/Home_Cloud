@@ -37,3 +37,7 @@ This document outlines the current technical limitations, security tradeoffs, an
 ### 9. Details Info Pane (Deferred)
 * **Debt**: The side info pane for displaying file details, large previews, and extended metadata is not rendered.
 * **Tradeoff**: Users cannot inspect detailed file properties without viewing or opening the file.
+
+### 10. Hardcoded Base Directory (BASE_DIR)
+* **Debt**: The application has the base directory for file management statically hardcoded to `/home/rudra-unix` in backend configuration scripts.
+* **Tradeoff**: Distributing the app to other server hosts or operating systems requires manual search-and-replace edits of source code, instead of reading base directories dynamically from a centralized configuration file or `.env` variable.

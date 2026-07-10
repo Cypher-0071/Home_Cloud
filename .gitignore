@@ -64,3 +64,6 @@ coverage/
 *.pem
 .cloudflared/
 cookies.txt
+
+# Project roadmap (local work plan)
+docs/implementation.md
