@@ -41,3 +41,7 @@ This document outlines the current technical limitations, security tradeoffs, an
 ### 10. Hardcoded Base Directory (BASE_DIR)
 * **Debt**: The application has the base directory for file management statically hardcoded to `/home/rudra-unix` in backend configuration scripts.
 * **Tradeoff**: Distributing the app to other server hosts or operating systems requires manual search-and-replace edits of source code, instead of reading base directories dynamically from a centralized configuration file or `.env` variable.
+
+### 11. Docker Container Lifecycle — No-op State Errors (Deferred)
+* **Debt**: The container control routes (`/start`, `/stop`, `/restart`) do not handle the case where the action is a no-op — e.g. starting an already-running container or stopping an already-stopped one. Docker returns a `304 Not Modified` in this case, which dockerode surfaces as a thrown error, causing the route to return a generic `500`.
+* **Tradeoff**: The frontend receives a confusing error response for what is effectively a harmless operation. Should be caught separately and returned as a `200` or a descriptive `409 Conflict` with a message like `"Container is already running"`.
