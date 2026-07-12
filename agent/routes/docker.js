@@ -27,4 +27,37 @@ router.post('/containers/:id/start', async (req, res) =>{
     }
 })
 
+router.post('/containers/:id/stop', async (req, res) =>{
+    const container = docker.getContainer(req.params.id)
+
+    try {
+        await container.stop()
+        res.json({success: true})
+    } catch (err) {
+        return res.status(500).json({error: err.message})
+    }
+})
+
+router.post('/containers/:id/restart', async (req, res) =>{
+    const container = docker.getContainer(req.params.id)
+
+    try {
+        await container.restart()
+        res.json({success: true})
+    } catch (err) {
+        return res.status(500).json({error: err.message})
+    }
+})
+
+router.delete('/containers/:id/delete', async (req, res)=>{
+    const container = docker.getContainer(req.params.id)
+
+    try {
+        await container.remove()
+        res.json({success: true})
+    } catch (err) {
+        res.status(500).json({error: err.message})
+    }
+})
+
 module.exports = router;
