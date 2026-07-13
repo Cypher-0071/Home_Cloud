@@ -1,0 +1,456 @@
+/* ─── Layout ─── */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background: #000000;
+  color: #e4e4e7;
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+  user-select: none;
+  overflow: hidden;
+}
+
+/* ─── Toolbar ─── */
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  background: #0a0a0c;
+  border-bottom: 1px solid #1c1c1f;
+  flex-shrink: 0;
+  gap: 12px;
+}
+
+.toolbarLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.toolbarTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: #f4f4f5;
+  margin: 0;
+}
+
+.toolbarSub {
+  font-size: 11px;
+  color: #71717a;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.liveDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #10b981;
+  display: inline-block;
+  box-shadow: 0 0 5px #10b981;
+}
+
+/* ─── Stat badges row ─── */
+
+.statsRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  background: #070708;
+  border-bottom: 1px solid #1c1c1f;
+  flex-shrink: 0;
+}
+
+.statBadge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: 5px;
+}
+
+.statRunning {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  color: #10b981;
+}
+
+.statStopped {
+  background: rgba(107, 114, 128, 0.1);
+  border: 1px solid rgba(107, 114, 128, 0.2);
+  color: #9ca3af;
+}
+
+.statTotal {
+  background: #121214;
+  border: 1px solid #27272a;
+  color: #71717a;
+}
+
+.statDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+/* ─── Table area ─── */
+
+.tableWrapper {
+  flex: 1;
+  overflow: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  min-width: 640px;
+}
+
+.thead {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.theadRow {
+  background: #070708;
+  border-bottom: 1px solid #1c1c1f;
+}
+
+.th {
+  padding: 8px 14px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #52525b;
+}
+
+.tr {
+  border-bottom: 1px solid #0d0d0f;
+  transition: background 0.1s ease;
+}
+
+.tr:last-child {
+  border-bottom: none;
+}
+
+.tr:hover {
+  background: #0c0c0e;
+}
+
+.trConfirm {
+  background: rgba(239, 68, 68, 0.05);
+}
+
+.td {
+  padding: 10px 14px;
+  font-size: 12px;
+  color: #d4d4d8;
+  vertical-align: middle;
+}
+
+/* ─── Name cell ─── */
+
+.nameCell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.containerDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.nameInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.nameText {
+  font-size: 12px;
+  font-weight: 500;
+  color: #f4f4f5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.idText {
+  font-size: 10px;
+  color: #3f3f46;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+/* ─── Image badge ─── */
+
+.imageBadge {
+  background: #1a0f2e;
+  color: #a855f7;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  border: 1px solid #3b1f6b;
+  white-space: nowrap;
+}
+
+/* ─── Status badge ─── */
+
+.statusBadge {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.statusRunning   { background: rgba(16, 185, 129, 0.12);  color: #10b981; }
+.statusExited    { background: rgba(107, 114, 128, 0.12); color: #9ca3af; }
+.statusPaused    { background: rgba(234, 179, 8, 0.12);   color: #eab308; }
+.statusRestarting{ background: rgba(249, 115, 22, 0.12);  color: #f97316; }
+.statusDead      { background: rgba(239, 68, 68, 0.12);   color: #f87171; }
+
+/* ─── Mono values ─── */
+
+.mono {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 11px;
+  color: #71717a;
+}
+
+.dimText {
+  font-size: 11px;
+  color: #71717a;
+}
+
+/* ─── Action buttons ─── */
+
+.actionsCell {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.actionBtn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  color: #52525b;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.actionBtn:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+.actionBtn:hover:not(:disabled) {
+  background: #1c1c1f;
+  border-color: #27272a;
+  color: #d4d4d8;
+}
+
+.btnStop:hover:not(:disabled)    { background: rgba(239, 68, 68, 0.1);   border-color: rgba(239, 68, 68, 0.25);   color: #f87171; }
+.btnStart:hover:not(:disabled)   { background: rgba(16, 185, 129, 0.1);  border-color: rgba(16, 185, 129, 0.25);  color: #10b981; }
+.btnRestart:hover:not(:disabled) { background: rgba(234, 179, 8, 0.08);  border-color: rgba(234, 179, 8, 0.2);    color: #eab308; }
+.btnDelete:hover:not(:disabled)  { background: rgba(239, 68, 68, 0.08);  border-color: rgba(239, 68, 68, 0.2);    color: #f87171; }
+
+/* ─── Delete confirm ─── */
+
+.deleteConfirm {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.deleteConfirmText {
+  font-size: 11px;
+  color: #f87171;
+  white-space: nowrap;
+}
+
+.confirmBtn {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 4px;
+  color: #f87171;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.confirmBtn:hover { background: rgba(239, 68, 68, 0.25); }
+
+.cancelBtn {
+  background: #121214;
+  border: 1px solid #27272a;
+  border-radius: 4px;
+  color: #a1a1aa;
+  padding: 3px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.cancelBtn:hover { background: #1c1c1f; color: #f4f4f5; }
+
+/* ─── Refresh button ─── */
+
+.refreshBtn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: transparent;
+  border: 1px solid #27272a;
+  border-radius: 6px;
+  color: #a1a1aa;
+  padding: 5px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.refreshBtn:hover {
+  background: #1c1c1f;
+  color: #f4f4f5;
+  border-color: #3f3f46;
+}
+
+/* ─── Loading state ─── */
+
+.loadingState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 14px;
+  color: #71717a;
+}
+
+.loadingText {
+  font-size: 13px;
+}
+
+.spinner {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid #27272a;
+  border-top-color: #a855f7;
+  animation: spin 0.8s linear infinite;
+}
+
+/* ─── Error state ─── */
+
+.errorState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 12px;
+  padding: 40px;
+  text-align: center;
+}
+
+.errorTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: #f4f4f5;
+  margin: 0;
+}
+
+.errorCode {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 11px;
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.15);
+  padding: 4px 12px;
+  border-radius: 5px;
+}
+
+.retryBtn {
+  background: #231530;
+  border: 1px solid #58208c;
+  border-radius: 6px;
+  color: #a855f7;
+  padding: 6px 16px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-top: 4px;
+}
+
+.retryBtn:hover { background: #2d1a3d; color: #c084fc; }
+
+/* ─── Empty state ─── */
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 40px;
+  gap: 10px;
+  color: #3f3f46;
+  text-align: center;
+}
+
+.emptyTitle   { font-size: 13px; color: #71717a; margin: 0; }
+.emptySubtext { font-size: 11px; color: #3f3f46;  margin: 0; }
+
+/* ─── Status bar ─── */
+
+.statusBar {
+  height: 26px;
+  background: #070708;
+  border-top: 1px solid #1c1c1f;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  font-size: 11px;
+  color: #52525b;
+  flex-shrink: 0;
+}
+
+/* ─── Animations ─── */
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

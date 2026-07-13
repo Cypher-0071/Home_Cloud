@@ -5,13 +5,15 @@ import {
   Terminal as TerminalIcon,
   LogOut,
   Wifi,
-  Folder
+  Folder,
+  Box,
 } from 'lucide-react';
 
 import OSWindow from '../components/OSWindow';
 import SystemMonitorApp from '../components/apps/SystemMonitorApp';
 import TerminalApp from '../components/apps/TerminalApp';
 import FileExplorer from './files';
+import DockerApp from '../components/apps/DockerApp';
 
 // Error boundary prevents a crashing child component from blacking out the whole page
 class ErrorBoundary extends Component<
@@ -100,7 +102,7 @@ export default function Desktop() {
   // Deep-linking from router path to open corresponding OS window
   useEffect(() => {
     const path = window.location.pathname.replace(/^\//, '');
-    const validPaths = ['terminal', 'metrics', 'files'];
+    const validPaths = ['terminal', 'metrics', 'files', 'docker'];
     if (path && validPaths.includes(path)) {
       const targetId = path === 'metrics' ? 'metrics' : path;
       const newZ = maxZIndex + 1;
@@ -157,6 +159,20 @@ export default function Desktop() {
       width: 680,
       height: 440,
       zIndex: 1,
+    },
+    {
+      id: 'docker',
+      title: 'Docker Manager',
+      icon: <Box size={18} />,
+      component: <ErrorBoundary label="Docker Manager"><DockerApp /></ErrorBoundary>,
+      isOpen: false,
+      isMinimized: false,
+      isMaximized: false,
+      x: 110,
+      y: 70,
+      width: 860,
+      height: 520,
+      zIndex: 3,
     },
   ]);
 

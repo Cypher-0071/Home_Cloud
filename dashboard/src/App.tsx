@@ -12,6 +12,7 @@ function App() {
         <Route path="/terminal" element={<ProtectedRoute><Desktop /></ProtectedRoute>} />
         <Route path="/metrics" element={<ProtectedRoute><Desktop /></ProtectedRoute>} />
         <Route path="/files" element={<ProtectedRoute><Desktop /></ProtectedRoute>} />
+        <Route path="/docker" element={<ProtectedRoute><Desktop /></ProtectedRoute>} />
         <Route path="/" element={<ProtectedRoute><Desktop /></ProtectedRoute>} />
       </Routes>
     </BrowserRouter>
