@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Play, Square, RefreshCw, Trash2, Box, AlertCircle } from 'lucide-react';
+import { Play, Square, RefreshCw, Trash2, Box, AlertCircle, X, Cpu, HardDrive, Terminal } from 'lucide-react';
 import styles from './docker.module.css';
 
 /* ─── Types ─── */
@@ -59,16 +59,87 @@ function formatAge(unix: number): string {
   return `${Math.floor(diff / 86400)}d ago`;
 }
 
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]}`;
+}
+
+function calculateCpuPercent(stats: any): number {
+  if (!stats) return 0;
+  const cpuStats = stats.cpu_stats;
+  const preCpuStats = stats.precpu_stats;
+  if (!cpuStats || !preCpuStats) return 0;
+
+  const cpuDelta = (cpuStats.cpu_usage?.total_usage ?? 0) - (preCpuStats.cpu_usage?.total_usage ?? 0);
+  const systemDelta = (cpuStats.system_cpu_usage ?? 0) - (preCpuStats.system_cpu_usage ?? 0);
+  const numCpus = cpuStats.online_cpus || (cpuStats.cpu_usage?.percpu_usage ? cpuStats.cpu_usage.percpu_usage.length : 1);
+
+  if (systemDelta > 0 && cpuDelta > 0) {
+    return Math.min(100, (cpuDelta / systemDelta) * numCpus * 100.0);
+  }
+  return 0;
+}
+
+function getMemoryUsage(stats: any) {
+  if (!stats || !stats.memory_stats) return { usage: 0, limit: 0, percent: 0 };
+  const usage = stats.memory_stats.usage ?? 0;
+  const limit = stats.memory_stats.limit ?? 0;
+  const percent = limit > 0 ? (usage / limit) * 100 : 0;
+  return { usage, limit, percent };
+}
+
+function getNetworkIO(stats: any) {
+  if (!stats || !stats.networks) return { rx: 0, tx: 0 };
+  let rx = 0;
+  let tx = 0;
+  Object.values(stats.networks).forEach((net: any) => {
+    rx += net.rx_bytes ?? 0;
+    tx += net.tx_bytes ?? 0;
+  });
+  return { rx, tx };
+}
+
+function getBlockIO(stats: any) {
+  if (!stats || !stats.blkio_stats) return { read: 0, write: 0 };
+  let read = 0;
+  let write = 0;
+  const entries = stats.blkio_stats.io_service_bytes_recursive;
+  if (Array.isArray(entries)) {
+    entries.forEach((entry: any) => {
+      const op = entry.op?.toLowerCase();
+      if (op === 'read') read += entry.value ?? 0;
+      if (op === 'write') write += entry.value ?? 0;
+    });
+  }
+  return { read, write };
+}
+
 /* ─── Component ─── */
 
 export default function DockerApp() {
-  const [containers, setContainers]         = useState<Container[]>([]);
-  const [loading, setLoading]               = useState(true);
-  const [refreshing, setRefreshing]         = useState(false);
-  const [error, setError]                   = useState<string | null>(null);
-  const [actionLoading, setActionLoading]   = useState<string | null>(null);
+  const [containers, setContainers]           = useState<Container[]>([]);
+  const [loading, setLoading]                 = useState(true);
+  const [refreshing, setRefreshing]           = useState(false);
+  const [error, setError]                     = useState<string | null>(null);
+  const [actionLoading, setActionLoading]     = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-  const [lastSynced, setLastSynced]         = useState('');
+  const [lastSynced, setLastSynced]           = useState('');
+
+  // Selected container details pane
+  const [selectedId, setSelectedId]           = useState<string | null>(null);
+  const [activeTab, setActiveTab]             = useState<'stats' | 'inspect' | 'logs' | 'console'>('stats');
+
+  // Live stats state
+  const [statsData, setStatsData]             = useState<any | null>(null);
+  const [statsLoading, setStatsLoading]       = useState(false);
+  const [statsError, setStatsError]           = useState<string | null>(null);
+
+  // Inspect state
+  const [inspectData, setInspectData]         = useState<any | null>(null);
+  const [inspectLoading, setInspectLoading]   = useState(false);
+  const [inspectError, setInspectError]       = useState<string | null>(null);
 
   const fetchContainers = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -98,6 +169,85 @@ export default function DockerApp() {
     return () => clearInterval(id);
   }, [fetchContainers]);
 
+  // Handle active tab defaults on selection change
+  useEffect(() => {
+    if (!selectedId) {
+      setStatsData(null);
+      setInspectData(null);
+      return;
+    }
+    const container = containers.find(c => c.Id === selectedId);
+    if (container && container.State !== 'running') {
+      setActiveTab('inspect');
+    } else {
+      setActiveTab('stats');
+    }
+  }, [selectedId]);
+
+  // Poll stats data
+  useEffect(() => {
+    if (!selectedId || activeTab !== 'stats') return;
+    const container = containers.find(c => c.Id === selectedId);
+    if (!container || container.State !== 'running') {
+      setStatsData(null);
+      return;
+    }
+
+    let active = true;
+    const fetchStats = async (isFirst = false) => {
+      if (isFirst) setStatsLoading(true);
+      try {
+        const res = await fetch(`/api/docker/containers/${selectedId}/stats`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const { data } = await res.json();
+        if (active) {
+          setStatsData(data);
+          setStatsError(null);
+        }
+      } catch (err: any) {
+        if (active) setStatsError(err.message);
+      } finally {
+        if (active && isFirst) setStatsLoading(false);
+      }
+    };
+
+    fetchStats(true);
+    const intervalId = setInterval(() => fetchStats(false), 2000);
+
+    return () => {
+      active = false;
+      clearInterval(intervalId);
+    };
+  }, [selectedId, activeTab, containers]);
+
+  // Fetch inspect data
+  useEffect(() => {
+    if (!selectedId || activeTab !== 'inspect') return;
+
+    let active = true;
+    const fetchInspect = async () => {
+      setInspectLoading(true);
+      setInspectError(null);
+      try {
+        const res = await fetch(`/api/docker/containers/${selectedId}/inspect`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const { data } = await res.json();
+        if (active) {
+          setInspectData(data);
+        }
+      } catch (err: any) {
+        if (active) setInspectError(err.message);
+      } finally {
+        if (active) setInspectLoading(false);
+      }
+    };
+
+    fetchInspect();
+    return () => {
+      active = false;
+    };
+  }, [selectedId, activeTab]);
+
   const doAction = async (containerId: string, action: ActionKind) => {
     setActionLoading(`${containerId}-${action}`);
     setConfirmDeleteId(null);
@@ -113,8 +263,234 @@ export default function DockerApp() {
     }
   };
 
+  const selectedContainer = containers.find(c => c.Id === selectedId);
   const runningCount = containers.filter(c => c.State === 'running').length;
   const stoppedCount = containers.filter(c => c.State === 'exited').length;
+
+  /* ─── Detail Panels Content Renders ─── */
+
+  const renderStatsContent = () => {
+    if (selectedContainer?.State !== 'running') {
+      return (
+        <div className={styles.comingSoon}>
+          <AlertCircle size={28} style={{ color: '#52525b' }} />
+          <span className={styles.comingSoonText}>
+            Telemetry unavailable. Real-time stats are only available for running containers.
+          </span>
+        </div>
+      );
+    }
+
+    if (statsLoading) {
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px', gap: '10px' }}>
+          <div className={styles.spinner} style={{ width: '20px', height: '20px' }} />
+          <span style={{ fontSize: '11px', color: '#71717a' }}>Querying container telemetry…</span>
+        </div>
+      );
+    }
+
+    if (statsError) {
+      return (
+        <div style={{ padding: '12px', color: '#f87171', fontSize: '11px' }}>
+          Error fetching stats: {statsError}
+        </div>
+      );
+    }
+
+    if (!statsData) return null;
+
+    const cpuPercent = calculateCpuPercent(statsData);
+    const memInfo = getMemoryUsage(statsData);
+    const netIO = getNetworkIO(statsData);
+    const diskIO = getBlockIO(statsData);
+
+    return (
+      <>
+        {/* CPU Card */}
+        <div className={styles.statsCard}>
+          <div className={styles.statsHeader}>
+            <span>Processor (CPU)</span>
+            <Cpu size={12} style={{ color: '#a855f7' }} />
+          </div>
+          <div className={styles.statsVal}>{cpuPercent.toFixed(1)}%</div>
+          <div className={styles.statsProgress}>
+            <div className={styles.statsProgressFill} style={{ width: `${cpuPercent}%`, background: '#a855f7' }} />
+          </div>
+        </div>
+
+        {/* Memory Card */}
+        <div className={styles.statsCard}>
+          <div className={styles.statsHeader}>
+            <span>Memory (RAM)</span>
+            <HardDrive size={12} style={{ color: '#06b6d4' }} />
+          </div>
+          <div className={styles.statsVal}>{memInfo.percent.toFixed(1)}%</div>
+          <div style={{ fontSize: '10px', color: '#71717a', fontFamily: 'monospace' }}>
+            {formatBytes(memInfo.usage)} / {formatBytes(memInfo.limit)}
+          </div>
+          <div className={styles.statsProgress}>
+            <div className={styles.statsProgressFill} style={{ width: `${memInfo.percent}%`, background: '#06b6d4' }} />
+          </div>
+        </div>
+
+        {/* Network & Disk */}
+        <div className={styles.statsGrid}>
+          <div className={styles.statsCard}>
+            <div className={styles.statsHeader}>Network I/O</div>
+            <div style={{ fontSize: '11px', color: '#d4d4d8', fontFamily: 'monospace', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+              <span>▼ In: {formatBytes(netIO.rx)}</span>
+              <span>▲ Out: {formatBytes(netIO.tx)}</span>
+            </div>
+          </div>
+          <div className={styles.statsCard}>
+            <div className={styles.statsHeader}>Disk I/O</div>
+            <div style={{ fontSize: '11px', color: '#d4d4d8', fontFamily: 'monospace', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+              <span>Read: {formatBytes(diskIO.read)}</span>
+              <span>Write: {formatBytes(diskIO.write)}</span>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  };
+
+  const renderInspectContent = () => {
+    if (inspectLoading) {
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px', gap: '10px' }}>
+          <div className={styles.spinner} style={{ width: '20px', height: '20px' }} />
+          <span style={{ fontSize: '11px', color: '#71717a' }}>Querying configuration…</span>
+        </div>
+      );
+    }
+
+    if (inspectError) {
+      return (
+        <div style={{ padding: '12px', color: '#f87171', fontSize: '11px' }}>
+          Error fetching metadata: {inspectError}
+        </div>
+      );
+    }
+
+    if (!inspectData) return null;
+
+    const envVars = inspectData.Config?.Env ?? [];
+    const mounts = inspectData.Mounts ?? [];
+    const gateway = inspectData.NetworkSettings?.Gateway || inspectData.NetworkSettings?.Networks?.bridge?.Gateway || '—';
+    const ipAddress = inspectData.NetworkSettings?.IPAddress || inspectData.NetworkSettings?.Networks?.bridge?.IPAddress || '—';
+
+    return (
+      <>
+        {/* Info card */}
+        <div className={styles.inspectGroup}>
+          <span className={styles.inspectTitle}>System Configuration</span>
+          <div className={styles.inspectCard}>
+            <table className={styles.inspectTable}>
+              <tbody>
+                <tr className={styles.inspectTr}>
+                  <td className={styles.inspectTdLabel}>Image ID</td>
+                  <td className={styles.inspectTdValue}>{inspectData.Image?.replace('sha256:', '').substring(0, 12)}</td>
+                </tr>
+                <tr className={styles.inspectTr}>
+                  <td className={styles.inspectTdLabel}>Path</td>
+                  <td className={styles.inspectTdValue}>{inspectData.Path}</td>
+                </tr>
+                <tr className={styles.inspectTr}>
+                  <td className={styles.inspectTdLabel}>Restart Policy</td>
+                  <td className={styles.inspectTdValue}>{inspectData.HostConfig?.RestartPolicy?.Name || 'no'}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Network card */}
+        <div className={styles.inspectGroup}>
+          <span className={styles.inspectTitle}>Network Setup</span>
+          <div className={styles.inspectCard}>
+            <table className={styles.inspectTable}>
+              <tbody>
+                <tr className={styles.inspectTr}>
+                  <td className={styles.inspectTdLabel}>IP Address</td>
+                  <td className={styles.inspectTdValue}>{ipAddress}</td>
+                </tr>
+                <tr className={styles.inspectTr}>
+                  <td className={styles.inspectTdLabel}>Gateway</td>
+                  <td className={styles.inspectTdValue}>{gateway}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Env vars */}
+        {envVars.length > 0 && (
+          <div className={styles.inspectGroup}>
+            <span className={styles.inspectTitle}>Environment variables ({envVars.length})</span>
+            <div className={styles.inspectCard} style={{ maxHeight: '180px', overflowY: 'auto' }}>
+              <table className={styles.inspectTable}>
+                <tbody>
+                  {envVars.map((env: string, idx: number) => {
+                    const eqIndex = env.indexOf('=');
+                    const k = eqIndex > -1 ? env.substring(0, eqIndex) : env;
+                    const v = eqIndex > -1 ? env.substring(eqIndex + 1) : '';
+                    return (
+                      <tr key={idx} className={styles.inspectTr}>
+                        <td className={styles.inspectTdLabel} style={{ width: '45%' }}>{k}</td>
+                        <td className={styles.inspectTdValue} style={{ color: '#a1a1aa' }}>{v}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Mounts */}
+        {mounts.length > 0 && (
+          <div className={styles.inspectGroup}>
+            <span className={styles.inspectTitle}>Volumes / Mounts ({mounts.length})</span>
+            {mounts.map((m: any, idx: number) => (
+              <div key={idx} className={styles.inspectCard} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#71717a' }}>
+                  <span>{m.Type?.toUpperCase()}</span>
+                  <span>{m.RW ? 'READ/WRITE' : 'READ-ONLY'}</span>
+                </div>
+                <div style={{ fontSize: '11px', color: '#e4e4e7', wordBreak: 'break-all' }}>
+                  <span style={{ color: '#52525b' }}>Host:</span> {m.Source}
+                </div>
+                <div style={{ fontSize: '11px', color: '#e4e4e7', wordBreak: 'break-all' }}>
+                  <span style={{ color: '#52525b' }}>Container:</span> {m.Destination}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </>
+    );
+  };
+
+  const renderLogsPlaceholder = () => (
+    <div className={styles.comingSoon}>
+      <Terminal size={28} style={{ color: '#52525b' }} />
+      <span style={{ fontWeight: 600, color: '#e4e4e7', fontSize: '13px' }}>Streaming Logs</span>
+      <span className={styles.comingSoonText}>
+        Live stderr/stdout log piping over WebSockets is coming soon in Phase 2b/3.
+      </span>
+    </div>
+  );
+
+  const renderConsolePlaceholder = () => (
+    <div className={styles.comingSoon}>
+      <Terminal size={28} style={{ color: '#52525b' }} />
+      <span style={{ fontWeight: 600, color: '#e4e4e7', fontSize: '13px' }}>Interactive Exec Console</span>
+      <span className={styles.comingSoonText}>
+        Secure terminal execution into the container is coming soon in Phase 2c.
+      </span>
+    </div>
+  );
 
   /* ── Loading ── */
   if (loading) return (
@@ -171,135 +547,192 @@ export default function DockerApp() {
         </div>
       </div>
 
-      {/* Table */}
-      <div className={styles.tableWrapper}>
-        {containers.length === 0 ? (
-          <div className={styles.emptyState}>
-            <Box size={32} style={{ opacity: 0.15 }} />
-            <p className={styles.emptyTitle}>No containers found</p>
-            <p className={styles.emptySubtext}>Containers you run will appear here automatically</p>
-          </div>
-        ) : (
-          <table className={styles.table}>
-            <thead className={styles.thead}>
-              <tr className={styles.theadRow}>
-                {['Container', 'Image', 'Status', 'Ports', 'Age', 'Actions'].map(col => (
-                  <th key={col} className={styles.th}>{col}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {containers.map(c => {
-                const name      = (c.Names[0] ?? c.Id).replace(/^\//, '');
-                const shortId   = c.Id.substring(0, 12);
-                const isRunning = c.State === 'running';
-                const busy      = (suf: string) => actionLoading === `${c.Id}-${suf}`;
-                const anyBusy   = ['start', 'stop', 'restart', 'delete'].some(busy);
-                const isConfirm = confirmDeleteId === c.Id;
+      {/* Workspace */}
+      <div className={styles.workspace}>
+        {/* Table area */}
+        <div className={styles.tableArea}>
+          {containers.length === 0 ? (
+            <div className={styles.emptyState}>
+              <Box size={32} style={{ opacity: 0.15 }} />
+              <p className={styles.emptyTitle}>No containers found</p>
+              <p className={styles.emptySubtext}>Containers you run will appear here automatically</p>
+            </div>
+          ) : (
+            <table className={styles.table}>
+              <thead className={styles.thead}>
+                <tr className={styles.theadRow}>
+                  {['Container', 'Image', 'Status', 'Ports', 'Age', 'Actions'].map(col => (
+                    <th key={col} className={styles.th}>{col}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {containers.map(c => {
+                  const name      = (c.Names[0] ?? c.Id).replace(/^\//, '');
+                  const shortId   = c.Id.substring(0, 12);
+                  const isRunning = c.State === 'running';
+                  const busy      = (suf: string) => actionLoading === `${c.Id}-${suf}`;
+                  const anyBusy   = ['start', 'stop', 'restart', 'delete'].some(busy);
+                  const isConfirm = confirmDeleteId === c.Id;
+                  const isSelected = selectedId === c.Id;
 
-                return (
-                  <tr
-                    key={c.Id}
-                    className={`${styles.tr} ${isConfirm ? styles.trConfirm : ''}`}
-                  >
-                    {/* Name */}
-                    <td className={styles.td}>
-                      <div className={styles.nameCell}>
-                        <span
-                          className={styles.containerDot}
-                          style={{
-                            background: getDotColor(c.State),
-                            boxShadow: isRunning ? `0 0 6px ${getDotColor(c.State)}` : 'none',
-                          }}
-                        />
-                        <div className={styles.nameInfo}>
-                          <span className={styles.nameText}>{name}</span>
-                          <span className={styles.idText}>{shortId}</span>
+                  return (
+                    <tr
+                      key={c.Id}
+                      className={`${styles.tr} ${isConfirm ? styles.trConfirm : ''} ${isSelected ? styles.trSelected : ''}`}
+                      onClick={() => setSelectedId(c.Id)}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      {/* Name */}
+                      <td className={styles.td}>
+                        <div className={styles.nameCell}>
+                          <span
+                            className={styles.containerDot}
+                            style={{
+                              background: getDotColor(c.State),
+                              boxShadow: isRunning ? `0 0 6px ${getDotColor(c.State)}` : 'none',
+                            }}
+                          />
+                          <div className={styles.nameInfo}>
+                            <span className={styles.nameText}>{name}</span>
+                            <span className={styles.idText}>{shortId}</span>
+                          </div>
                         </div>
-                      </div>
-                    </td>
+                      </td>
 
-                    {/* Image */}
-                    <td className={styles.td}>
-                      <span className={styles.imageBadge}>{c.Image}</span>
-                    </td>
+                      {/* Image */}
+                      <td className={styles.td}>
+                        <span className={styles.imageBadge}>{c.Image}</span>
+                      </td>
 
-                    {/* Status */}
-                    <td className={styles.td}>
-                      <span className={`${styles.statusBadge} ${getStatusClass(c.State)}`}>
-                        {c.Status}
-                      </span>
-                    </td>
+                      {/* Status */}
+                      <td className={styles.td}>
+                        <span className={`${styles.statusBadge} ${getStatusClass(c.State)}`}>
+                          {c.Status}
+                        </span>
+                      </td>
 
-                    {/* Ports */}
-                    <td className={styles.td}>
-                      <span className={styles.mono}>{formatPorts(c.Ports)}</span>
-                    </td>
+                      {/* Ports */}
+                      <td className={styles.td}>
+                        <span className={styles.mono}>{formatPorts(c.Ports)}</span>
+                      </td>
 
-                    {/* Age */}
-                    <td className={styles.td}>
-                      <span className={styles.dimText}>{formatAge(c.Created)}</span>
-                    </td>
+                      {/* Age */}
+                      <td className={styles.td}>
+                        <span className={styles.dimText}>{formatAge(c.Created)}</span>
+                      </td>
 
-                    {/* Actions */}
-                    <td className={styles.td}>
-                      {isConfirm ? (
-                        <div className={styles.deleteConfirm}>
-                          <span className={styles.deleteConfirmText}>Delete?</span>
-                          <button className={styles.confirmBtn} onClick={() => doAction(c.Id, 'delete')}>
-                            Yes
-                          </button>
-                          <button className={styles.cancelBtn} onClick={() => setConfirmDeleteId(null)}>
-                            No
-                          </button>
-                        </div>
-                      ) : (
-                        <div className={styles.actionsCell}>
-                          {isRunning ? (
-                            <>
-                              <button
-                                className={`${styles.actionBtn} ${styles.btnStop}`}
-                                title="Stop container"
-                                disabled={anyBusy}
-                                onClick={() => doAction(c.Id, 'stop')}
-                              >
-                                <Square size={11} fill="currentColor" />
-                              </button>
-                              <button
-                                className={`${styles.actionBtn} ${styles.btnRestart}`}
-                                title="Restart container"
-                                disabled={anyBusy}
-                                onClick={() => doAction(c.Id, 'restart')}
-                              >
-                                <RefreshCw size={11} />
-                              </button>
-                            </>
-                          ) : (
-                            <button
-                              className={`${styles.actionBtn} ${styles.btnStart}`}
-                              title="Start container"
-                              disabled={anyBusy}
-                              onClick={() => doAction(c.Id, 'start')}
-                            >
-                              <Play size={11} fill="currentColor" />
+                      {/* Actions */}
+                      <td className={styles.td} onClick={e => e.stopPropagation()}>
+                        {isConfirm ? (
+                          <div className={styles.deleteConfirm}>
+                            <span className={styles.deleteConfirmText}>Delete?</span>
+                            <button className={styles.confirmBtn} onClick={() => doAction(c.Id, 'delete')}>
+                              Yes
                             </button>
-                          )}
-                          <button
-                            className={`${styles.actionBtn} ${styles.btnDelete}`}
-                            title="Delete container"
-                            disabled={anyBusy}
-                            onClick={() => setConfirmDeleteId(c.Id)}
-                          >
-                            <Trash2 size={11} />
-                          </button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                            <button className={styles.cancelBtn} onClick={() => setConfirmDeleteId(null)}>
+                              No
+                            </button>
+                          </div>
+                        ) : (
+                          <div className={styles.actionsCell}>
+                            {isRunning ? (
+                              <>
+                                <button
+                                  className={`${styles.actionBtn} ${styles.btnStop}`}
+                                  title="Stop container"
+                                  disabled={anyBusy}
+                                  onClick={() => doAction(c.Id, 'stop')}
+                                >
+                                  <Square size={11} fill="currentColor" />
+                                </button>
+                                <button
+                                  className={`${styles.actionBtn} ${styles.btnRestart}`}
+                                  title="Restart container"
+                                  disabled={anyBusy}
+                                  onClick={() => doAction(c.Id, 'restart')}
+                                >
+                                  <RefreshCw size={11} />
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                className={`${styles.actionBtn} ${styles.btnStart}`}
+                                title="Start container"
+                                disabled={anyBusy}
+                                onClick={() => doAction(c.Id, 'start')}
+                              >
+                                <Play size={11} fill="currentColor" />
+                              </button>
+                            )}
+                            <button
+                              className={`${styles.actionBtn} ${styles.btnDelete}`}
+                              title="Delete container"
+                              disabled={anyBusy}
+                              onClick={() => setConfirmDeleteId(c.Id)}
+                            >
+                              <Trash2 size={11} />
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        {/* Selected container Detail Pane */}
+        {selectedId && selectedContainer && (
+          <div className={styles.detailPane}>
+            {/* Detail Header */}
+            <div className={styles.detailHeader}>
+              <span className={styles.detailHeaderTitle} title={selectedContainer.Names[0]?.replace(/^\//, '')}>
+                {selectedContainer.Names[0]?.replace(/^\//, '')}
+              </span>
+              <button className={styles.detailCloseBtn} onClick={() => setSelectedId(null)} title="Close pane">
+                <X size={14} />
+              </button>
+            </div>
+
+            {/* Detail Tabs */}
+            <div className={styles.detailTabs}>
+              <button
+                className={`${styles.detailTab} ${activeTab === 'stats' ? styles.detailTabActive : ''}`}
+                onClick={() => setActiveTab('stats')}
+              >
+                Stats
+              </button>
+              <button
+                className={`${styles.detailTab} ${activeTab === 'inspect' ? styles.detailTabActive : ''}`}
+                onClick={() => setActiveTab('inspect')}
+              >
+                Inspect
+              </button>
+              <button
+                className={`${styles.detailTab} ${activeTab === 'logs' ? styles.detailTabActive : ''}`}
+                onClick={() => setActiveTab('logs')}
+              >
+                Logs
+              </button>
+              <button
+                className={`${styles.detailTab} ${activeTab === 'console' ? styles.detailTabActive : ''}`}
+                onClick={() => setActiveTab('console')}
+              >
+                Console
+              </button>
+            </div>
+
+            {/* Tab content */}
+            <div className={styles.detailContent}>
+              {activeTab === 'stats' && renderStatsContent()}
+              {activeTab === 'inspect' && renderInspectContent()}
+              {activeTab === 'logs' && renderLogsPlaceholder()}
+              {activeTab === 'console' && renderConsolePlaceholder()}
+            </div>
+          </div>
         )}
       </div>
 

@@ -454,3 +454,237 @@
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+/* ─── Workspace and details panel layout ─── */
+.workspace {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+.tableArea {
+  flex: 1;
+  overflow: auto;
+}
+
+.trSelected {
+  background: #1b1028 !important;
+  border-color: #58208c !important;
+}
+
+.detailPane {
+  width: 380px;
+  background: #070708;
+  border-left: 1px solid #1c1c1f;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.detailHeader {
+  padding: 10px 14px;
+  border-bottom: 1px solid #1c1c1f;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #0a0a0c;
+  flex-shrink: 0;
+}
+
+.detailHeaderTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: #f4f4f5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 280px;
+}
+
+.detailCloseBtn {
+  background: transparent;
+  border: none;
+  color: #71717a;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 4px;
+}
+
+.detailCloseBtn:hover {
+  color: #f4f4f5;
+  background: #1c1c1f;
+}
+
+.detailTabs {
+  display: flex;
+  background: #0a0a0c;
+  border-bottom: 1px solid #1c1c1f;
+  flex-shrink: 0;
+}
+
+.detailTab {
+  flex: 1;
+  padding: 8px 4px;
+  font-size: 11px;
+  text-align: center;
+  color: #71717a;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s ease;
+}
+
+.detailTab:hover {
+  color: #a1a1aa;
+}
+
+.detailTabActive {
+  color: #a855f7;
+  border-bottom-color: #a855f7;
+  font-weight: 600;
+}
+
+.detailContent {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: #000000;
+}
+
+/* ─── Detail Stats View ─── */
+.statsCard {
+  background: #070708;
+  border: 1px solid #1c1c1f;
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.statsHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: #71717a;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.statsVal {
+  font-size: 18px;
+  font-weight: 750;
+  color: #f4f4f5;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+.statsProgress {
+  height: 6px;
+  background: #121214;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.statsProgressFill {
+  height: 100%;
+  background: #a855f7;
+  border-radius: 3px;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+/* ─── Detail Inspect View ─── */
+.inspectGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.inspectTitle {
+  font-size: 10px;
+  font-weight: 700;
+  color: #52525b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.inspectCard {
+  background: #070708;
+  border: 1px solid #1c1c1f;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 11px;
+}
+
+.inspectTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.inspectTr {
+  border-bottom: 1px solid #121214;
+}
+
+.inspectTr:last-child {
+  border-bottom: none;
+}
+
+.inspectTdLabel {
+  padding: 6px 4px;
+  color: #71717a;
+  font-weight: 500;
+  width: 35%;
+  vertical-align: top;
+}
+
+.inspectTdValue {
+  padding: 6px 4px;
+  color: #d4d4d8;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  word-break: break-all;
+  vertical-align: top;
+}
+
+.inspectPre {
+  margin: 0;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 11px;
+  color: #a1a1aa;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* ─── Placeholder/Not Implemented View ─── */
+.comingSoon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #3f3f46;
+  gap: 12px;
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.comingSoonText {
+  font-size: 12px;
+  color: #71717a;
+}
+
