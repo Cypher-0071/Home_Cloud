@@ -64,8 +64,32 @@ router.get("/containers/:id/stats", async (req, res) => {
 	const container = docker.getContainer(req.params.id);
 
 	try {
-		const data = await container.stats({ stream: false });
-		res.json({ data: data });
+		res.writeHead(200, {
+			"Content-Type": "text/event-stream",
+			"Cache-Control": "no-cache",
+			Connection: "keep-alive",
+		});
+
+		res.flushHeaders();
+
+		const statsStream = await container.stats({ stream: true });
+
+		statsStream.on("data", (chunk) => {
+			res.write(`data: ${chunk.toString("utf8")}\n\n`);
+		});
+
+		statsStream.on("end", () => {
+			res.end();
+		});
+
+		statsStream.on("error", (err) => {
+			console.error("[stats stream] error:", err.message);
+			res.end();
+		});
+
+		req.on("close", () => {
+			statsStream.destroy();
+		});
 	} catch (err) {
 		return res.status(500).json({ error: err.message });
 	}

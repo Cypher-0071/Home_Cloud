@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Play, Square, RefreshCw, Trash2, Box, AlertCircle, X, Cpu, HardDrive, Terminal } from 'lucide-react';
 import styles from './docker.module.css';
 
@@ -141,6 +141,11 @@ export default function DockerApp() {
   const [inspectLoading, setInspectLoading]   = useState(false);
   const [inspectError, setInspectError]       = useState<string | null>(null);
 
+  // Ref so stats polling can always read the latest container state
+  // without containers being a useEffect dependency (which caused flicker)
+  const containersRef = useRef<Container[]>([]);
+  useEffect(() => { containersRef.current = containers; }, [containers]);
+
   const fetchContainers = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     setRefreshing(true);
@@ -184,41 +189,46 @@ export default function DockerApp() {
     }
   }, [selectedId]);
 
-  // Poll stats data
+  // Stream stats via SSE — EventSource keeps one persistent connection open.
+  // Docker pushes data every ~1s. No setInterval needed.
+  // Cleanup calls es.close() → triggers req.on('close') on backend → statsStream.destroy().
   useEffect(() => {
     if (!selectedId || activeTab !== 'stats') return;
-    const container = containers.find(c => c.Id === selectedId);
-    if (!container || container.State !== 'running') {
+
+    // If container isn't running, nothing to stream.
+    const initial = containersRef.current.find(c => c.Id === selectedId);
+    if (!initial || initial.State !== 'running') {
       setStatsData(null);
       return;
     }
 
-    let active = true;
-    const fetchStats = async (isFirst = false) => {
-      if (isFirst) setStatsLoading(true);
+    setStatsLoading(true);
+    setStatsError(null);
+
+    const es = new EventSource(`/api/docker/containers/${selectedId}/stats`);
+
+    es.onmessage = (event) => {
       try {
-        const res = await fetch(`/api/docker/containers/${selectedId}/stats`);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const { data } = await res.json();
-        if (active) {
-          setStatsData(data);
-          setStatsError(null);
-        }
-      } catch (err: any) {
-        if (active) setStatsError(err.message);
-      } finally {
-        if (active && isFirst) setStatsLoading(false);
+        const data = JSON.parse(event.data);
+        setStatsData(data);
+        setStatsError(null);
+        setStatsLoading(false); // clears loading on first message
+      } catch (e) {
+        console.error('[stats] JSON parse error', e);
       }
     };
 
-    fetchStats(true);
-    const intervalId = setInterval(() => fetchStats(false), 2000);
+    es.onerror = () => {
+      setStatsError('Stats stream disconnected');
+      setStatsLoading(false);
+      es.close();
+    };
 
     return () => {
-      active = false;
-      clearInterval(intervalId);
+      es.close(); // tells backend to destroy the Docker stats stream
     };
-  }, [selectedId, activeTab, containers]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId, activeTab]);
 
   // Fetch inspect data
   useEffect(() => {
