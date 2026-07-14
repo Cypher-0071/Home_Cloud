@@ -24,7 +24,9 @@ router.post("/containers/:id/start", async (req, res) => {
 		res.json({ success: true });
 	} catch (err) {
 		if (err.statusCode === 304)
-			return res.status(409).json({ error: "Container is already running" });
+			return res
+				.status(409)
+				.json({ error: "Container is already running" });
 		return res.status(500).json({ error: err.message });
 	}
 });
@@ -37,7 +39,9 @@ router.post("/containers/:id/stop", async (req, res) => {
 		res.json({ success: true });
 	} catch (err) {
 		if (err.statusCode === 304)
-			return res.status(409).json({ error: "Container is already stopped" });
+			return res
+				.status(409)
+				.json({ error: "Container is already stopped" });
 		return res.status(500).json({ error: err.message });
 	}
 });
@@ -61,7 +65,9 @@ router.delete("/containers/:id/delete", async (req, res) => {
 		res.json({ success: true });
 	} catch (err) {
 		if (err.statusCode === 409)
-			return res.status(409).json({ error: "Stop the container before deleting it" });
+			return res
+				.status(409)
+				.json({ error: "Stop the container before deleting it" });
 		return res.status(500).json({ error: err.message });
 	}
 });
@@ -109,6 +115,95 @@ router.get("/containers/:id/inspect", async (req, res) => {
 		res.json({ data: data });
 	} catch (err) {
 		return res.status(500).json({ error: err.message });
+	}
+});
+
+router.get("/containers/:id/logs", async (req, res) => {
+	const container = docker.getContainer(req.params.id);
+
+	try {
+		const inspect = await container.inspect();
+
+		const isTty = inspect.Config?.Tty ?? false;
+
+		res.writeHead(200, {
+			"Content-Type": "text/event-stream",
+			"Cache-Control": "no-cache",
+			Connection: "keep-alive",
+		});
+
+		res.flushHeaders();
+
+		const logsStream = await container.logs({
+			stdout: true,
+			stderr: true,
+			follow: true,
+			tail: 200,
+			timestamps: true, // Let's send timestamps so client can parse/toggle them
+		});
+
+		if (isTty) {
+			// Raw stream - direct forwarding
+			logsStream.on("data", (chunk) => {
+				res.write(`data: ${chunk.toString("utf8")}\n\n`);
+			});
+		} else {
+			// Multiplexed stream - must demux
+			const { Writable } = require("stream");
+			const sseStream = new Writable({
+				write(chunk, encoding, callback) {
+					res.write(`data: ${chunk.toString("utf8")}\n\n`);
+					callback();
+				},
+			});
+			container.modem.demuxStream(logsStream, sseStream, sseStream);
+		}
+
+		logsStream.on("end", () => {
+			res.end();
+		});
+
+		logsStream.on("error", (err) => {
+			console.error("[stats stream] error:", err.message);
+			res.end();
+		});
+
+		req.on("close", () => {
+			logsStream.destroy();
+		});
+	} catch (err) {
+		return res.status(500).json({ error: err.message });
+	}
+});
+
+router.get("/containers/:id/logs/download", async (req, res) => {
+	const container = docker.getContainer(req.params.id);
+
+	try {
+		const inspect = await container.inspect();
+		const isTty = inspect.Config?.Tty ?? false;
+
+		const name = (inspect.Name ?? req.params.id).replace(/^\//, "");
+
+		res.setHeader(
+			"Content-Disposition",
+			`attachment; filename="${name}-logs.txt"`,
+		);
+		res.setHeader("Content-Type", "text/plain");
+		const logsStream = await container.logs({
+			stdout: true,
+			stderr: true,
+			follow: false, // get history and close
+			timestamps: true,
+		});
+		if (isTty) {
+			logsStream.pipe(res);
+		} else {
+			// Pipes the demuxed stdout/stderr text chunks directly into the HTTP response
+			container.modem.demuxStream(logsStream, res, res);
+		}
+	} catch (err) {
+		return res.status(500).json({ error: err.message });   
 	}
 });
 

@@ -142,6 +142,61 @@ export default function DockerApp() {
   const [inspectLoading, setInspectLoading]   = useState(false);
   const [inspectError, setInspectError]       = useState<string | null>(null);
 
+  // Live Logs state
+  interface LogLine {
+    timestamp: string | null;
+    text: string;
+  }
+  const [logLines, setLogLines]               = useState<LogLine[]>([]);
+  const [logsLoading, setLogsLoading]         = useState(false);
+  const [logsError, setLogsError]             = useState<string | null>(null);
+  const [showTimestamps, setShowTimestamps]   = useState(true);
+  const [isLogPaused, setIsLogPaused]         = useState(false);
+
+  // Refs for tracking pause status and buffering logs without triggering stale effect closures
+  const isLogPausedRef = useRef(isLogPaused);
+  const logBufferRef = useRef<LogLine[]>([]);
+  const logsTerminalRef = useRef<HTMLDivElement>(null);
+
+  // Sync ref with state
+  useEffect(() => {
+    isLogPausedRef.current = isLogPaused;
+    if (!isLogPaused && logBufferRef.current.length > 0) {
+      setLogLines((prev) => [...prev, ...logBufferRef.current].slice(-1000));
+      logBufferRef.current = [];
+    }
+  }, [isLogPaused]);
+
+  // Helper to parse Docker logs' timestamp prefix and convert to local timezone
+  const parseLogLine = (rawLine: string): LogLine => {
+    // Format: YYYY-MM-DDTHH:mm:ss.sssssssssZ <log message>
+    const firstSpace = rawLine.indexOf(' ');
+    if (firstSpace > 0) {
+      const possibleTs = rawLine.substring(0, firstSpace);
+      if (possibleTs.includes('T') && possibleTs.endsWith('Z')) {
+        let localTimestamp = possibleTs;
+        try {
+          const date = new Date(possibleTs);
+          if (!isNaN(date.getTime())) {
+            localTimestamp = date.toLocaleTimeString('en-US', {
+              hour12: false,
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit'
+            });
+          }
+        } catch (e) {
+          console.error('[logs] Timestamp conversion failed', e);
+        }
+        return {
+          timestamp: localTimestamp,
+          text: rawLine.substring(firstSpace + 1)
+        };
+      }
+    }
+    return { timestamp: null, text: rawLine };
+  };
+
   // Ref so stats polling can always read the latest container state
   // without containers being a useEffect dependency (which caused flicker)
   const containersRef = useRef<Container[]>([]);
@@ -180,6 +235,7 @@ export default function DockerApp() {
     if (!selectedId) {
       setStatsData(null);
       setInspectData(null);
+      setLogLines([]);
       return;
     }
     const container = containers.find(c => c.Id === selectedId);
@@ -258,6 +314,55 @@ export default function DockerApp() {
       active = false;
     };
   }, [selectedId, activeTab]);
+
+  // Stream logs via SSE - EventSource keeps connection open.
+  useEffect(() => {
+    if (!selectedId || activeTab !== 'logs') return;
+
+    setLogsLoading(true);
+    setLogsError(null);
+    setLogLines([]);
+    logBufferRef.current = [];
+
+    const es = new EventSource(`/api/docker/containers/${selectedId}/logs`);
+
+    es.onmessage = (event) => {
+      setLogsLoading(false);
+      const chunk = event.data;
+      if (!chunk) return;
+
+      const newLines = chunk.split('\n');
+      const parsed = newLines
+        .filter((l: string) => l.trim() !== '')
+        .map(parseLogLine);
+
+      setLogLines((prev) => {
+        if (isLogPausedRef.current) {
+          logBufferRef.current = [...logBufferRef.current, ...parsed].slice(-1000);
+          return prev;
+        }
+        return [...prev, ...parsed].slice(-1000);
+      });
+    };
+
+    es.onerror = () => {
+      setLogsError('Logs stream disconnected');
+      setLogsLoading(false);
+      es.close();
+    };
+
+    return () => {
+      es.close();
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId, activeTab]);
+
+  // Auto-scroll logs terminal to bottom on new logs
+  useEffect(() => {
+    if (logsTerminalRef.current && !isLogPaused) {
+      logsTerminalRef.current.scrollTop = logsTerminalRef.current.scrollHeight;
+    }
+  }, [logLines, isLogPaused, activeTab]);
 
   const doAction = async (containerId: string, action: ActionKind) => {
     setActionLoading(`${containerId}-${action}`);
@@ -492,15 +597,81 @@ export default function DockerApp() {
     );
   };
 
-  const renderLogsPlaceholder = () => (
-    <div className={styles.comingSoon}>
-      <Terminal size={28} style={{ color: '#52525b' }} />
-      <span style={{ fontWeight: 600, color: '#e4e4e7', fontSize: '13px' }}>Streaming Logs</span>
-      <span className={styles.comingSoonText}>
-        Live stderr/stdout log piping over WebSockets is coming soon in Phase 2b/3.
-      </span>
-    </div>
-  );
+  const renderLogsContent = () => {
+    if (logsLoading) {
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px', gap: '10px' }}>
+          <div className={styles.spinner} style={{ width: '20px', height: '20px' }} />
+          <span style={{ fontSize: '11px', color: '#71717a' }}>Connecting to logs stream…</span>
+        </div>
+      );
+    }
+
+    if (logsError) {
+      return (
+        <div style={{ padding: '12px', color: '#f87171', fontSize: '11px' }}>
+          Error streaming logs: {logsError}
+        </div>
+      );
+    }
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '8px', overflow: 'hidden' }}>
+        {/* Logs controls toolbar */}
+        <div className={styles.logsToolbar}>
+          <button
+            className={`${styles.logsControlBtn} ${showTimestamps ? styles.logsControlBtnActive : ''}`}
+            onClick={() => setShowTimestamps(!showTimestamps)}
+            title="Toggle Timestamps"
+          >
+            Timestamps
+          </button>
+          <button
+            className={`${styles.logsControlBtn} ${isLogPaused ? styles.logsControlBtnActive : ''}`}
+            onClick={() => setIsLogPaused(!isLogPaused)}
+            title={isLogPaused ? "Resume log stream" : "Pause log stream"}
+          >
+            {isLogPaused ? "Resume" : "Pause"}
+          </button>
+          <button
+            className={styles.logsControlBtn}
+            onClick={() => setLogLines([])}
+            title="Clear current screen logs"
+          >
+            Clear
+          </button>
+          <a
+            href={`/api/docker/containers/${selectedId}/logs/download`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.logsControlBtn}
+            title="Download full container logs file"
+            style={{ textDecoration: 'none' }}
+          >
+            Download
+          </a>
+        </div>
+
+        {/* Live log lines container */}
+        <div className={styles.logsTerminal} ref={logsTerminalRef}>
+          {logLines.length === 0 ? (
+            <span style={{ color: '#52525b', fontStyle: 'italic' }}>No logs generated yet.</span>
+          ) : (
+            logLines.map((line, idx) => (
+              <div key={idx} className={styles.logsLine}>
+                {showTimestamps && line.timestamp && (
+                  <span className={styles.logsTimestamp}>
+                    [{line.timestamp}]
+                  </span>
+                )}
+                <span className={styles.logsText}>{line.text}</span>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    );
+  };
 
   const renderConsolePlaceholder = () => (
     <div className={styles.comingSoon}>
@@ -757,7 +928,7 @@ export default function DockerApp() {
             <div className={styles.detailContent}>
               {activeTab === 'stats' && renderStatsContent()}
               {activeTab === 'inspect' && renderInspectContent()}
-              {activeTab === 'logs' && renderLogsPlaceholder()}
+              {activeTab === 'logs' && renderLogsContent()}
               {activeTab === 'console' && renderConsolePlaceholder()}
             </div>
           </div>
