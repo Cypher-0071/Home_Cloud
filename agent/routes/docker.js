@@ -23,6 +23,8 @@ router.post("/containers/:id/start", async (req, res) => {
 		await container.start();
 		res.json({ success: true });
 	} catch (err) {
+		if (err.statusCode === 304)
+			return res.status(409).json({ error: "Container is already running" });
 		return res.status(500).json({ error: err.message });
 	}
 });
@@ -34,6 +36,8 @@ router.post("/containers/:id/stop", async (req, res) => {
 		await container.stop();
 		res.json({ success: true });
 	} catch (err) {
+		if (err.statusCode === 304)
+			return res.status(409).json({ error: "Container is already stopped" });
 		return res.status(500).json({ error: err.message });
 	}
 });
@@ -56,7 +60,9 @@ router.delete("/containers/:id/delete", async (req, res) => {
 		await container.remove();
 		res.json({ success: true });
 	} catch (err) {
-		res.status(500).json({ error: err.message });
+		if (err.statusCode === 409)
+			return res.status(409).json({ error: "Stop the container before deleting it" });
+		return res.status(500).json({ error: err.message });
 	}
 });
 

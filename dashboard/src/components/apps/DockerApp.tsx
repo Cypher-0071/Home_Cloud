@@ -124,6 +124,7 @@ export default function DockerApp() {
   const [refreshing, setRefreshing]           = useState(false);
   const [error, setError]                     = useState<string | null>(null);
   const [actionLoading, setActionLoading]     = useState<string | null>(null);
+  const [actionError, setActionError]         = useState<{ id: string; msg: string } | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [lastSynced, setLastSynced]           = useState('');
 
@@ -260,11 +261,20 @@ export default function DockerApp() {
 
   const doAction = async (containerId: string, action: ActionKind) => {
     setActionLoading(`${containerId}-${action}`);
+    setActionError(null);
     setConfirmDeleteId(null);
     try {
-      await fetch(`/api/docker/containers/${containerId}/${action}`, {
+      const res = await fetch(`/api/docker/containers/${containerId}/${action}`, {
         method: action === 'delete' ? 'DELETE' : 'POST',
       });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        const msg = body.error ?? `Action failed (${res.status})`;
+        setActionError({ id: containerId, msg });
+        // Auto-dismiss after 3s
+        setTimeout(() => setActionError(null), 3000);
+        return;
+      }
       await fetchContainers(true);
     } catch (e) {
       console.error('Docker action failed:', e);
@@ -645,48 +655,56 @@ export default function DockerApp() {
                             </button>
                           </div>
                         ) : (
-                          <div className={styles.actionsCell}>
-                            {isRunning ? (
-                              <>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
+                            <div className={styles.actionsCell}>
+                              {isRunning ? (
+                                <>
+                                  <button
+                                    className={`${styles.actionBtn} ${styles.btnStop}`}
+                                    title="Stop container"
+                                    disabled={anyBusy}
+                                    onClick={() => doAction(c.Id, 'stop')}
+                                  >
+                                    <Square size={11} fill="currentColor" />
+                                  </button>
+                                  <button
+                                    className={`${styles.actionBtn} ${styles.btnRestart}`}
+                                    title="Restart container"
+                                    disabled={anyBusy}
+                                    onClick={() => doAction(c.Id, 'restart')}
+                                  >
+                                    <RefreshCw size={11} />
+                                  </button>
+                                </>
+                              ) : (
                                 <button
-                                  className={`${styles.actionBtn} ${styles.btnStop}`}
-                                  title="Stop container"
+                                  className={`${styles.actionBtn} ${styles.btnStart}`}
+                                  title="Start container"
                                   disabled={anyBusy}
-                                  onClick={() => doAction(c.Id, 'stop')}
+                                  onClick={() => doAction(c.Id, 'start')}
                                 >
-                                  <Square size={11} fill="currentColor" />
+                                  <Play size={11} fill="currentColor" />
                                 </button>
-                                <button
-                                  className={`${styles.actionBtn} ${styles.btnRestart}`}
-                                  title="Restart container"
-                                  disabled={anyBusy}
-                                  onClick={() => doAction(c.Id, 'restart')}
-                                >
-                                  <RefreshCw size={11} />
-                                </button>
-                              </>
-                            ) : (
+                              )}
                               <button
-                                className={`${styles.actionBtn} ${styles.btnStart}`}
-                                title="Start container"
+                                className={`${styles.actionBtn} ${styles.btnDelete}`}
+                                title="Delete container"
                                 disabled={anyBusy}
-                                onClick={() => doAction(c.Id, 'start')}
+                                onClick={() => setConfirmDeleteId(c.Id)}
                               >
-                                <Play size={11} fill="currentColor" />
+                                <Trash2 size={11} />
                               </button>
+                            </div>
+                            {actionError?.id === c.Id && (
+                              <span style={{ fontSize: '10px', color: '#f87171', whiteSpace: 'nowrap' }}>
+                                ⚠ {actionError.msg}
+                              </span>
                             )}
-                            <button
-                              className={`${styles.actionBtn} ${styles.btnDelete}`}
-                              title="Delete container"
-                              disabled={anyBusy}
-                              onClick={() => setConfirmDeleteId(c.Id)}
-                            >
-                              <Trash2 size={11} />
-                            </button>
                           </div>
                         )}
                       </td>
                     </tr>
+
                   );
                 })}
               </tbody>
