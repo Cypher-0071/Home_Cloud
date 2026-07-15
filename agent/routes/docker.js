@@ -1,6 +1,7 @@
 const Docker = require("dockerode");
 const docker = new Docker();
 const express = require("express");
+const { truncateSync } = require("fs");
 const router = express.Router();
 
 const portBindings = {
@@ -203,8 +204,45 @@ router.get("/containers/:id/logs/download", async (req, res) => {
 			container.modem.demuxStream(logsStream, res, res);
 		}
 	} catch (err) {
-		return res.status(500).json({ error: err.message });   
+		return res.status(500).json({ error: err.message });
 	}
 });
+
+router.get("/images", async (req, res) => {
+	try {
+		const images = await docker.listImages({ all: true });
+		res.json({ images: images });
+	} catch (err) {
+		return res.status(500).json({ error: err.message });
+	}
+});
+
+router.delete("/images/:id", async (req, res) => {
+	const image = docker.getImage(req.params.id);
+	try {
+		await image.remove();
+		res.json({ success: true });
+	} catch (err) {
+		if (err.statusCode === 409)
+			return res.status(409).json({ error: "Image is in use by a container. Remove the container first." });
+		return res.status(500).json({ error: err.message });
+	}
+});
+
+router.post("/images/prune", async (req, res) => {
+	try {
+		const opts = {
+			filters: {
+				dangling: ["true"], // Remove only dangling images
+			},
+		};
+		await docker.pruneImages(opts)
+		res.json({success: true})
+	} catch (err) {
+		return res.status(500).json({error: err.message})
+	}
+});
+
+
 
 module.exports = router;
