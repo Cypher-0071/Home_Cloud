@@ -21,6 +21,21 @@ interface Container {
   Created: number;
 }
 
+interface DockerImage {
+  Id: string;
+  RepoTags: string[] | null;
+  Size: number;
+  Created: number;
+}
+
+interface PullLayer {
+  id: string;
+  status: string;
+  progress: string;
+  current: number;
+  total: number;
+}
+
 type ActionKind = 'start' | 'stop' | 'restart' | 'delete';
 
 /* ─── Helpers ─── */
@@ -119,6 +134,9 @@ function getBlockIO(stats: any) {
 /* ─── Component ─── */
 
 export default function DockerApp() {
+  // Top Level Window Navigation
+  const [activeWindowTab, setActiveWindowTab] = useState<'containers' | 'images'>('containers');
+
   const [containers, setContainers]           = useState<Container[]>([]);
   const [loading, setLoading]                 = useState(true);
   const [refreshing, setRefreshing]           = useState(false);
@@ -157,6 +175,19 @@ export default function DockerApp() {
   const isLogPausedRef = useRef(isLogPaused);
   const logBufferRef = useRef<LogLine[]>([]);
   const logsTerminalRef = useRef<HTMLDivElement>(null);
+
+  // Images state
+  const [images, setImages]                   = useState<DockerImage[]>([]);
+  const [imagesLoading, setImagesLoading]     = useState(true);
+  const [imagesError, setImagesError]         = useState<string | null>(null);
+  const [imageInput, setImageInput]           = useState('');
+  const [pullingImage, setPullingImage]       = useState<string | null>(null);
+  const [pullLayers, setPullLayers]           = useState<{ [id: string]: PullLayer }>({});
+  const [pullError, setPullError]             = useState<string | null>(null);
+  const [pullSuccess, setPullSuccess]         = useState(false);
+  const [imageActionLoading, setImageActionLoading] = useState<string | null>(null);
+  const [imageActionError, setImageActionError]     = useState<{ id: string; msg: string } | null>(null);
+  const [confirmDeleteImageId, setConfirmDeleteImageId] = useState<string | null>(null);
 
   // Sync ref with state
   useEffect(() => {
@@ -224,11 +255,31 @@ export default function DockerApp() {
     }
   }, []);
 
+  const fetchImages = useCallback(async (silent = false) => {
+    if (!silent) setImagesLoading(true);
+    try {
+      const res = await fetch('/api/docker/images');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const { images: list } = await res.json();
+      setImages(list ?? []);
+      setImagesError(null);
+    } catch (e: any) {
+      setImagesError(e.message);
+    } finally {
+      if (!silent) setImagesLoading(false);
+    }
+  }, []);
+
+  // Combined polling for containers and images
   useEffect(() => {
     fetchContainers();
-    const id = setInterval(() => fetchContainers(true), 5000);
+    fetchImages();
+    const id = setInterval(() => {
+      fetchContainers(true);
+      fetchImages(true);
+    }, 5000);
     return () => clearInterval(id);
-  }, [fetchContainers]);
+  }, [fetchContainers, fetchImages]);
 
   // Handle active tab defaults on selection change
   useEffect(() => {
@@ -385,6 +436,109 @@ export default function DockerApp() {
       console.error('Docker action failed:', e);
     } finally {
       setActionLoading(null);
+    }
+  };
+
+  /* ─── Image Actions ─── */
+
+  const handlePullImage = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!imageInput.trim()) return;
+
+    const imageName = imageInput.trim();
+    setPullingImage(imageName);
+    setPullLayers({});
+    setPullError(null);
+    setPullSuccess(false);
+    setImageInput('');
+
+    const es = new EventSource(`/api/docker/images/pull?image=${encodeURIComponent(imageName)}`);
+
+    es.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        
+        if (data.error) {
+          setPullError(data.error);
+          es.close();
+          setPullingImage(null);
+          return;
+        }
+
+        if (data.status === 'success') {
+          setPullSuccess(true);
+          es.close();
+          fetchImages(true);
+          // Reset progress card after 3s
+          setTimeout(() => {
+            setPullingImage(null);
+            setPullSuccess(false);
+          }, 3000);
+          return;
+        }
+
+        // Layer progress updates
+        if (data.id) {
+          setPullLayers((prev) => {
+            const currentLayer = prev[data.id] || { id: data.id, status: '', progress: '', current: 0, total: 0 };
+            return {
+              ...prev,
+              [data.id]: {
+                ...currentLayer,
+                status: data.status,
+                progress: data.progress || '',
+                current: data.progressDetail?.current || 0,
+                total: data.progressDetail?.total || 0,
+              }
+            };
+          });
+        }
+      } catch (err) {
+        console.error('[pull] Parse error', err);
+      }
+    };
+
+    es.onerror = () => {
+      setPullError('Image pull stream disconnected');
+      es.close();
+      setPullingImage(null);
+    };
+  };
+
+  const deleteImage = async (imageId: string) => {
+    setImageActionLoading(imageId);
+    setImageActionError(null);
+    setConfirmDeleteImageId(null);
+    try {
+      const res = await fetch(`/api/docker/images/${encodeURIComponent(imageId)}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        const msg = body.error ?? `Deletion failed (${res.status})`;
+        setImageActionError({ id: imageId, msg });
+        setTimeout(() => setImageActionError(null), 4000);
+        return;
+      }
+      await fetchImages(true);
+    } catch (e: any) {
+      console.error('Delete image failed:', e);
+    } finally {
+      setImageActionLoading(null);
+    }
+  };
+
+  const pruneImages = async () => {
+    setRefreshing(true);
+    try {
+      const res = await fetch('/api/docker/images/prune', { method: 'POST' });
+      if (res.ok) {
+        await fetchImages(true);
+      }
+    } catch (e) {
+      console.error('Prune images failed:', e);
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -707,239 +861,475 @@ export default function DockerApp() {
   return (
     <div className={styles.container}>
 
-      {/* Toolbar */}
-      <div className={styles.toolbar}>
-        <div className={styles.toolbarLeft}>
-          <p className={styles.toolbarTitle}>Docker Containers</p>
-          <p className={styles.toolbarSub}>
-            <span className={styles.liveDot} />
-            {containers.length} total · {runningCount} running · {stoppedCount} stopped
-          </p>
-        </div>
-        <button className={styles.refreshBtn} onClick={() => fetchContainers(true)}>
-          <RefreshCw size={12} className={refreshing ? styles.spinning : ''} />
-          Refresh
+      {/* Top Level App Navigation Header */}
+      <div className={styles.tabHeader}>
+        <button
+          className={`${styles.tabBtn} ${activeWindowTab === 'containers' ? styles.tabBtnActive : ''}`}
+          onClick={() => setActiveWindowTab('containers')}
+        >
+          Containers
+        </button>
+        <button
+          className={`${styles.tabBtn} ${activeWindowTab === 'images' ? styles.tabBtnActive : ''}`}
+          onClick={() => {
+            setActiveWindowTab('images');
+            fetchImages(true);
+          }}
+        >
+          Images
         </button>
       </div>
 
-      {/* Stat badges */}
-      <div className={styles.statsRow}>
-        <div className={`${styles.statBadge} ${styles.statRunning}`}>
-          <span className={styles.statDot} style={{ background: '#10b981', boxShadow: '0 0 5px #10b981' }} />
-          {runningCount} Running
-        </div>
-        <div className={`${styles.statBadge} ${styles.statStopped}`}>
-          <span className={styles.statDot} style={{ background: '#6b7280' }} />
-          {stoppedCount} Stopped
-        </div>
-        <div className={`${styles.statBadge} ${styles.statTotal}`}>
-          <Box size={10} />
-          {containers.length} Total
-        </div>
-      </div>
-
-      {/* Workspace */}
-      <div className={styles.workspace}>
-        {/* Table area */}
-        <div className={styles.tableArea}>
-          {containers.length === 0 ? (
-            <div className={styles.emptyState}>
-              <Box size={32} style={{ opacity: 0.15 }} />
-              <p className={styles.emptyTitle}>No containers found</p>
-              <p className={styles.emptySubtext}>Containers you run will appear here automatically</p>
+      {activeWindowTab === 'containers' ? (
+        <>
+          {/* Toolbar */}
+          <div className={styles.toolbar}>
+            <div className={styles.toolbarLeft}>
+              <p className={styles.toolbarTitle}>Docker Containers</p>
+              <p className={styles.toolbarSub}>
+                <span className={styles.liveDot} />
+                {containers.length} total · {runningCount} running · {stoppedCount} stopped
+              </p>
             </div>
-          ) : (
-            <table className={styles.table}>
-              <thead className={styles.thead}>
-                <tr className={styles.theadRow}>
-                  {['Container', 'Image', 'Status', 'Ports', 'Age', 'Actions'].map(col => (
-                    <th key={col} className={styles.th}>{col}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {containers.map(c => {
-                  const name      = (c.Names[0] ?? c.Id).replace(/^\//, '');
-                  const shortId   = c.Id.substring(0, 12);
-                  const isRunning = c.State === 'running';
-                  const busy      = (suf: string) => actionLoading === `${c.Id}-${suf}`;
-                  const anyBusy   = ['start', 'stop', 'restart', 'delete'].some(busy);
-                  const isConfirm = confirmDeleteId === c.Id;
-                  const isSelected = selectedId === c.Id;
+            <button className={styles.refreshBtn} onClick={() => fetchContainers(true)}>
+              <RefreshCw size={12} className={refreshing ? styles.spinning : ''} />
+              Refresh
+            </button>
+          </div>
 
-                  return (
-                    <tr
-                      key={c.Id}
-                      className={`${styles.tr} ${isConfirm ? styles.trConfirm : ''} ${isSelected ? styles.trSelected : ''}`}
-                      onClick={() => setSelectedId(c.Id)}
-                      style={{ cursor: 'pointer' }}
-                    >
-                      {/* Name */}
-                      <td className={styles.td}>
-                        <div className={styles.nameCell}>
-                          <span
-                            className={styles.containerDot}
-                            style={{
-                              background: getDotColor(c.State),
-                              boxShadow: isRunning ? `0 0 6px ${getDotColor(c.State)}` : 'none',
-                            }}
-                          />
-                          <div className={styles.nameInfo}>
-                            <span className={styles.nameText}>{name}</span>
-                            <span className={styles.idText}>{shortId}</span>
-                          </div>
-                        </div>
-                      </td>
+          {/* Stat badges */}
+          <div className={styles.statsRow}>
+            <div className={`${styles.statBadge} ${styles.statRunning}`}>
+              <span className={styles.statDot} style={{ background: '#10b981', boxShadow: '0 0 5px #10b981' }} />
+              {runningCount} Running
+            </div>
+            <div className={`${styles.statBadge} ${styles.statStopped}`}>
+              <span className={styles.statDot} style={{ background: '#6b7280' }} />
+              {stoppedCount} Stopped
+            </div>
+            <div className={`${styles.statBadge} ${styles.statTotal}`}>
+              <Box size={10} />
+              {containers.length} Total
+            </div>
+          </div>
 
-                      {/* Image */}
-                      <td className={styles.td}>
-                        <span className={styles.imageBadge}>{c.Image}</span>
-                      </td>
+          {/* Workspace */}
+          <div className={styles.workspace}>
+            {/* Table area */}
+            <div className={styles.tableArea}>
+              {containers.length === 0 ? (
+                <div className={styles.emptyState}>
+                  <Box size={32} style={{ opacity: 0.15 }} />
+                  <p className={styles.emptyTitle}>No containers found</p>
+                  <p className={styles.emptySubtext}>Containers you run will appear here automatically</p>
+                </div>
+              ) : (
+                <table className={styles.table}>
+                  <thead className={styles.thead}>
+                    <tr className={styles.theadRow}>
+                      {['Container', 'Image', 'Status', 'Ports', 'Age', 'Actions'].map(col => (
+                        <th key={col} className={styles.th}>{col}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {containers.map(c => {
+                      const name      = (c.Names[0] ?? c.Id).replace(/^\//, '');
+                      const shortId   = c.Id.substring(0, 12);
+                      const isRunning = c.State === 'running';
+                      const busy      = (suf: string) => actionLoading === `${c.Id}-${suf}`;
+                      const anyBusy   = ['start', 'stop', 'restart', 'delete'].some(busy);
+                      const isConfirm = confirmDeleteId === c.Id;
+                      const isSelected = selectedId === c.Id;
 
-                      {/* Status */}
-                      <td className={styles.td}>
-                        <span className={`${styles.statusBadge} ${getStatusClass(c.State)}`}>
-                          {c.Status}
-                        </span>
-                      </td>
+                      return (
+                        <tr
+                          key={c.Id}
+                          className={`${styles.tr} ${isConfirm ? styles.trConfirm : ''} ${isSelected ? styles.trSelected : ''}`}
+                          onClick={() => setSelectedId(c.Id)}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          {/* Name */}
+                          <td className={styles.td}>
+                            <div className={styles.nameCell}>
+                              <span
+                                className={styles.containerDot}
+                                style={{
+                                  background: getDotColor(c.State),
+                                  boxShadow: isRunning ? `0 0 6px ${getDotColor(c.State)}` : 'none',
+                                }}
+                              />
+                              <div className={styles.nameInfo}>
+                                <span className={styles.nameText}>{name}</span>
+                                <span className={styles.idText}>{shortId}</span>
+                              </div>
+                            </div>
+                          </td>
 
-                      {/* Ports */}
-                      <td className={styles.td}>
-                        <span className={styles.mono}>{formatPorts(c.Ports)}</span>
-                      </td>
+                          {/* Image */}
+                          <td className={styles.td}>
+                            <span className={styles.imageBadge}>{c.Image}</span>
+                          </td>
 
-                      {/* Age */}
-                      <td className={styles.td}>
-                        <span className={styles.dimText}>{formatAge(c.Created)}</span>
-                      </td>
+                          {/* Status */}
+                          <td className={styles.td}>
+                            <span className={`${styles.statusBadge} ${getStatusClass(c.State)}`}>
+                              {c.Status}
+                            </span>
+                          </td>
 
-                      {/* Actions */}
-                      <td className={styles.td} onClick={e => e.stopPropagation()}>
-                        {isConfirm ? (
-                          <div className={styles.deleteConfirm}>
-                            <span className={styles.deleteConfirmText}>Delete?</span>
-                            <button className={styles.confirmBtn} onClick={() => doAction(c.Id, 'delete')}>
-                              Yes
-                            </button>
-                            <button className={styles.cancelBtn} onClick={() => setConfirmDeleteId(null)}>
-                              No
-                            </button>
-                          </div>
-                        ) : (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
-                            <div className={styles.actionsCell}>
-                              {isRunning ? (
-                                <>
-                                  <button
-                                    className={`${styles.actionBtn} ${styles.btnStop}`}
-                                    title="Stop container"
-                                    disabled={anyBusy}
-                                    onClick={() => doAction(c.Id, 'stop')}
-                                  >
-                                    <Square size={11} fill="currentColor" />
-                                  </button>
-                                  <button
-                                    className={`${styles.actionBtn} ${styles.btnRestart}`}
-                                    title="Restart container"
-                                    disabled={anyBusy}
-                                    onClick={() => doAction(c.Id, 'restart')}
-                                  >
-                                    <RefreshCw size={11} />
-                                  </button>
-                                </>
-                              ) : (
-                                <button
-                                  className={`${styles.actionBtn} ${styles.btnStart}`}
-                                  title="Start container"
-                                  disabled={anyBusy}
-                                  onClick={() => doAction(c.Id, 'start')}
-                                >
-                                  <Play size={11} fill="currentColor" />
+                          {/* Ports */}
+                          <td className={styles.td}>
+                            <span className={styles.mono}>{formatPorts(c.Ports)}</span>
+                          </td>
+
+                          {/* Age */}
+                          <td className={styles.td}>
+                            <span className={styles.dimText}>{formatAge(c.Created)}</span>
+                          </td>
+
+                          {/* Actions */}
+                          <td className={styles.td} onClick={e => e.stopPropagation()}>
+                            {isConfirm ? (
+                              <div className={styles.deleteConfirm}>
+                                <span className={styles.deleteConfirmText}>Delete?</span>
+                                <button className={styles.confirmBtn} onClick={() => doAction(c.Id, 'delete')}>
+                                  Yes
                                 </button>
-                              )}
+                                <button className={styles.cancelBtn} onClick={() => setConfirmDeleteId(null)}>
+                                  No
+                                </button>
+                              </div>
+                            ) : (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
+                                <div className={styles.actionsCell}>
+                                  {isRunning ? (
+                                    <>
+                                      <button
+                                        className={`${styles.actionBtn} ${styles.btnStop}`}
+                                        title="Stop container"
+                                        disabled={anyBusy}
+                                        onClick={() => doAction(c.Id, 'stop')}
+                                      >
+                                        <Square size={11} fill="currentColor" />
+                                      </button>
+                                      <button
+                                        className={`${styles.actionBtn} ${styles.btnRestart}`}
+                                        title="Restart container"
+                                        disabled={anyBusy}
+                                        onClick={() => doAction(c.Id, 'restart')}
+                                      >
+                                        <RefreshCw size={11} />
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <button
+                                      className={`${styles.actionBtn} ${styles.btnStart}`}
+                                      title="Start container"
+                                      disabled={anyBusy}
+                                      onClick={() => doAction(c.Id, 'start')}
+                                    >
+                                      <Play size={11} fill="currentColor" />
+                                    </button>
+                                  )}
+                                  <button
+                                    className={`${styles.actionBtn} ${styles.btnDelete}`}
+                                    title="Delete container"
+                                    disabled={anyBusy}
+                                    onClick={() => setConfirmDeleteId(c.Id)}
+                                  >
+                                    <Trash2 size={11} />
+                                  </button>
+                                </div>
+                                {actionError?.id === c.Id && (
+                                  <span style={{ fontSize: '10px', color: '#f87171', whiteSpace: 'nowrap' }}>
+                                    ⚠ {actionError.msg}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            {/* Selected container Detail Pane */}
+            {selectedId && selectedContainer && (
+              <div className={styles.detailPane}>
+                {/* Detail Header */}
+                <div className={styles.detailHeader}>
+                  <span className={styles.detailHeaderTitle} title={selectedContainer.Names[0]?.replace(/^\//, '')}>
+                    {selectedContainer.Names[0]?.replace(/^\//, '')}
+                  </span>
+                  <button className={styles.detailCloseBtn} onClick={() => setSelectedId(null)} title="Close pane">
+                    <X size={14} />
+                  </button>
+                </div>
+
+                {/* Detail Tabs */}
+                <div className={styles.detailTabs}>
+                  <button
+                    className={`${styles.detailTab} ${activeTab === 'stats' ? styles.detailTabActive : ''}`}
+                    onClick={() => setActiveTab('stats')}
+                  >
+                    Stats
+                  </button>
+                  <button
+                    className={`${styles.detailTab} ${activeTab === 'inspect' ? styles.detailTabActive : ''}`}
+                    onClick={() => setActiveTab('inspect')}
+                  >
+                    Inspect
+                  </button>
+                  <button
+                    className={`${styles.detailTab} ${activeTab === 'logs' ? styles.detailTabActive : ''}`}
+                    onClick={() => setActiveTab('logs')}
+                  >
+                    Logs
+                  </button>
+                  <button
+                    className={`${styles.detailTab} ${activeTab === 'console' ? styles.detailTabActive : ''}`}
+                    onClick={() => setActiveTab('console')}
+                  >
+                    Console
+                  </button>
+                </div>
+
+                {/* Tab content */}
+                <div className={styles.detailContent}>
+                  {activeTab === 'stats' && renderStatsContent()}
+                  {activeTab === 'inspect' && renderInspectContent()}
+                  {activeTab === 'logs' && renderLogsContent()}
+                  {activeTab === 'console' && renderConsolePlaceholder()}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Status bar */}
+          <div className={styles.statusBar}>
+            <span>{containers.length} container{containers.length !== 1 ? 's' : ''}</span>
+            {lastSynced && <span>Last synced {lastSynced}</span>}
+          </div>
+        </>
+      ) : (
+        /* ───── Images Tab UI Workspace ───── */
+        <>
+          {/* Toolbar */}
+          <div className={styles.toolbar}>
+            <form className={styles.pullForm} onSubmit={handlePullImage}>
+              <input
+                className={styles.pullInput}
+                type="text"
+                value={imageInput}
+                onChange={e => setImageInput(e.target.value)}
+                placeholder="e.g. redis:alpine, nginx:latest, python:3.11"
+                disabled={!!pullingImage}
+              />
+              <button
+                className={styles.pullBtn}
+                type="submit"
+                disabled={!!pullingImage || !imageInput.trim()}
+              >
+                {pullingImage ? 'Pulling…' : 'Pull Image'}
+              </button>
+            </form>
+            <button
+              className={styles.refreshBtn}
+              onClick={() => fetchImages()}
+              disabled={imagesLoading || !!pullingImage}
+              title="Refresh local images list"
+            >
+              <RefreshCw size={12} className={imagesLoading ? styles.spinning : ''} />
+              Refresh
+            </button>
+            <button
+              className={styles.refreshBtn}
+              onClick={pruneImages}
+              disabled={refreshing || !!pullingImage}
+              title="Remove dangling, untagged images"
+            >
+              Prune Unused
+            </button>
+          </div>
+
+          {/* Pulling Progress Layer-by-Layer Card */}
+          {pullingImage && (
+            <div className={styles.pullProgressCard}>
+              <div className={styles.pullProgressTitle}>
+                <span>Downloading {pullingImage}</span>
+                {pullSuccess && <span style={{ color: '#10b981' }}>Success!</span>}
+                {pullError && <span style={{ color: '#f87171' }}>Failed</span>}
+              </div>
+
+              {pullError && (
+                <div style={{ color: '#f87171', fontSize: '11px', whiteSpace: 'pre-wrap' }}>
+                  ⚠ {pullError}
+                </div>
+              )}
+
+              {Object.keys(pullLayers).length === 0 && !pullError && !pullSuccess && (
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', fontSize: '11px', color: '#71717a' }}>
+                  <div className={styles.spinner} style={{ width: '12px', height: '12px', borderWidth: '1.5px' }} />
+                  <span>Connecting to Docker registry…</span>
+                </div>
+              )}
+
+              <div className={styles.pullProgressLayers}>
+                {Object.values(pullLayers).map((layer) => {
+                  const pct = layer.total > 0 ? (layer.current / layer.total) * 100 : 0;
+                  return (
+                    <div key={layer.id} className={styles.pullProgressLayer}>
+                      <div className={styles.pullProgressLayerHeader}>
+                        <span>{layer.id}</span>
+                        <span>{layer.status} {layer.progress && `(${layer.progress})`}</span>
+                      </div>
+                      {layer.total > 0 && (
+                        <div className={styles.pullProgressLayerBar}>
+                          <div className={styles.pullProgressLayerBarFill} style={{ width: `${pct}%` }} />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Images Table list */}
+          <div className={styles.tableWrapper}>
+            {imagesLoading && images.length === 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px', gap: '10px', color: '#71717a' }}>
+                <div className={styles.spinner} style={{ width: '20px', height: '20px' }} />
+                <span>Loading local images…</span>
+              </div>
+            ) : imagesError ? (
+              <div style={{ padding: '20px', color: '#f87171', fontSize: '12px' }}>
+                Error listing images: {imagesError}
+              </div>
+            ) : images.length === 0 ? (
+              <div className={styles.emptyState}>
+                <Box size={32} style={{ opacity: 0.15 }} />
+                <p className={styles.emptyTitle}>No Docker images found</p>
+                <p className={styles.emptySubtext}>Pulled images will list here. Try pulling an image above!</p>
+              </div>
+            ) : (
+              <table className={styles.table}>
+                <thead className={styles.thead}>
+                  <tr className={styles.theadRow}>
+                    {['Repository / Name', 'Tag', 'Image ID', 'Size', 'Created', 'Actions'].map(col => (
+                      <th key={col} className={styles.th}>{col}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {images.map((img) => {
+                    const idShort = img.Id.replace('sha256:', '').substring(0, 12);
+                    const tagString = img.RepoTags?.[0] ?? '<none>:<none>';
+                    const separatorIndex = tagString.lastIndexOf(':');
+                    const repoName = separatorIndex > -1 ? tagString.substring(0, separatorIndex) : tagString;
+                    const tag = separatorIndex > -1 ? tagString.substring(separatorIndex + 1) : '';
+
+                    const isDangling = repoName === '<none>';
+                    const isBusy = imageActionLoading === img.Id;
+                    const isConfirm = confirmDeleteImageId === img.Id;
+
+                    return (
+                      <tr key={img.Id} className={styles.tr}>
+                        {/* Name */}
+                        <td className={styles.td}>
+                          <span style={{
+                            color: isDangling ? '#71717a' : '#f4f4f5',
+                            fontWeight: isDangling ? 'normal' : '500',
+                            fontFamily: isDangling ? 'inherit' : 'monospace',
+                            fontSize: '12px'
+                          }}>
+                            {repoName}
+                          </span>
+                        </td>
+
+                        {/* Tag */}
+                        <td className={styles.td}>
+                          <span className={styles.imageBadge} style={{
+                            background: isDangling ? '#1a1a1e' : '#141c2c',
+                            borderColor: isDangling ? '#27272a' : '#1d2c4c',
+                            color: isDangling ? '#71717a' : '#60a5fa'
+                          }}>
+                            {tag}
+                          </span>
+                        </td>
+
+                        {/* ID */}
+                        <td className={styles.td}>
+                          <span className={styles.mono}>{idShort}</span>
+                        </td>
+
+                        {/* Size */}
+                        <td className={styles.td}>
+                          <span className={styles.dimText}>{formatBytes(img.Size)}</span>
+                        </td>
+
+                        {/* Created */}
+                        <td className={styles.td}>
+                          <span className={styles.dimText}>{formatAge(img.Created)}</span>
+                        </td>
+
+                        {/* Actions */}
+                        <td className={styles.td}>
+                          {isConfirm ? (
+                            <div className={styles.deleteConfirm}>
+                              <span className={styles.deleteConfirmText}>Delete?</span>
+                              <button className={styles.confirmBtn} onClick={() => deleteImage(img.Id)}>
+                                Yes
+                              </button>
+                              <button className={styles.cancelBtn} onClick={() => setConfirmDeleteImageId(null)}>
+                                No
+                              </button>
+                            </div>
+                          ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
                               <button
                                 className={`${styles.actionBtn} ${styles.btnDelete}`}
-                                title="Delete container"
-                                disabled={anyBusy}
-                                onClick={() => setConfirmDeleteId(c.Id)}
+                                title="Delete image"
+                                disabled={isBusy || !!pullingImage}
+                                onClick={() => setConfirmDeleteImageId(img.Id)}
                               >
                                 <Trash2 size={11} />
                               </button>
+                              {imageActionError?.id === img.Id && (
+                                <span style={{
+                                  fontSize: '10px',
+                                  color: '#f87171',
+                                  whiteSpace: 'nowrap',
+                                  maxWidth: '200px',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis'
+                                }} title={imageActionError.msg}>
+                                  ⚠ {imageActionError.msg}
+                                </span>
+                              )}
                             </div>
-                            {actionError?.id === c.Id && (
-                              <span style={{ fontSize: '10px', color: '#f87171', whiteSpace: 'nowrap' }}>
-                                ⚠ {actionError.msg}
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-
-                  );
-                })}
-              </tbody>
-            </table>
-          )}
-        </div>
-
-        {/* Selected container Detail Pane */}
-        {selectedId && selectedContainer && (
-          <div className={styles.detailPane}>
-            {/* Detail Header */}
-            <div className={styles.detailHeader}>
-              <span className={styles.detailHeaderTitle} title={selectedContainer.Names[0]?.replace(/^\//, '')}>
-                {selectedContainer.Names[0]?.replace(/^\//, '')}
-              </span>
-              <button className={styles.detailCloseBtn} onClick={() => setSelectedId(null)} title="Close pane">
-                <X size={14} />
-              </button>
-            </div>
-
-            {/* Detail Tabs */}
-            <div className={styles.detailTabs}>
-              <button
-                className={`${styles.detailTab} ${activeTab === 'stats' ? styles.detailTabActive : ''}`}
-                onClick={() => setActiveTab('stats')}
-              >
-                Stats
-              </button>
-              <button
-                className={`${styles.detailTab} ${activeTab === 'inspect' ? styles.detailTabActive : ''}`}
-                onClick={() => setActiveTab('inspect')}
-              >
-                Inspect
-              </button>
-              <button
-                className={`${styles.detailTab} ${activeTab === 'logs' ? styles.detailTabActive : ''}`}
-                onClick={() => setActiveTab('logs')}
-              >
-                Logs
-              </button>
-              <button
-                className={`${styles.detailTab} ${activeTab === 'console' ? styles.detailTabActive : ''}`}
-                onClick={() => setActiveTab('console')}
-              >
-                Console
-              </button>
-            </div>
-
-            {/* Tab content */}
-            <div className={styles.detailContent}>
-              {activeTab === 'stats' && renderStatsContent()}
-              {activeTab === 'inspect' && renderInspectContent()}
-              {activeTab === 'logs' && renderLogsContent()}
-              {activeTab === 'console' && renderConsolePlaceholder()}
-            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
           </div>
-        )}
-      </div>
 
-      {/* Status bar */}
-      <div className={styles.statusBar}>
-        <span>{containers.length} container{containers.length !== 1 ? 's' : ''}</span>
-        {lastSynced && <span>Last synced {lastSynced}</span>}
-      </div>
+          {/* Status bar */}
+          <div className={styles.statusBar}>
+            <span>{images.length} image{images.length !== 1 ? 's' : ''}</span>
+            <span>Total local size: {formatBytes(images.reduce((acc, img) => acc + img.Size, 0))}</span>
+          </div>
+        </>
+      )}
+
     </div>
   );
 }

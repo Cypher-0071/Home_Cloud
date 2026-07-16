@@ -1,3 +1,4 @@
+const { LogOutput } = require("concurrently");
 const Docker = require("dockerode");
 const docker = new Docker();
 const express = require("express");
@@ -224,7 +225,9 @@ router.delete("/images/:id", async (req, res) => {
 		res.json({ success: true });
 	} catch (err) {
 		if (err.statusCode === 409)
-			return res.status(409).json({ error: "Image is in use by a container. Remove the container first." });
+			return res.status(409).json({
+				error: "Image is in use by a container. Remove the container first.",
+			});
 		return res.status(500).json({ error: err.message });
 	}
 });
@@ -236,13 +239,59 @@ router.post("/images/prune", async (req, res) => {
 				dangling: ["true"], // Remove only dangling images
 			},
 		};
-		await docker.pruneImages(opts)
-		res.json({success: true})
+		await docker.pruneImages(opts);
+		res.json({ success: true });
 	} catch (err) {
-		return res.status(500).json({error: err.message})
+		return res.status(500).json({ error: err.message });
 	}
 });
 
+router.get("/images/pull", async (req, res) => {
+	const imageName = req.query.image;
+	if (!imageName) {
+		return res.status(400).json({ error: "Missing image query parameter" });
+	}
+	try {
+		res.writeHead(200, {
+			"Content-Type": "text/event-stream",
+			"Cache-Control": "no-cache",
+			Connection: "keep-alive",
+		});
 
+		res.flushHeaders();
+
+		const stream = await docker.pull(imageName);
+		docker.modem.followProgress(
+			stream,
+			(err, output) => {
+				if (err) {
+					res.write(
+						`data: ${JSON.stringify({ error: err.message })}\n\n`,
+					);
+				} else {
+					res.write(
+						`data: ${JSON.stringify({ status: "success" })}\n\n`,
+					);
+				}
+				res.end();
+			},
+			(event) => {
+				res.write(`data: ${JSON.stringify(event)}\n\n`);
+			},
+		);
+		req.on("close", () => {
+			if (stream && typeof stream.destroy === "function") {
+				stream.destroy();
+			}
+		});
+	} catch (err) {
+		if (res.headersSent) {
+			res.write(`data: ${JSON.stringify({ error: err.message })}\n\n`);
+			res.end();
+		} else {
+			return res.status(500).json({ error: err.message });
+		}
+	}
+});
 
 module.exports = router;
