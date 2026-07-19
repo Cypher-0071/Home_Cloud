@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Play, Square, RefreshCw, Trash2, Box, AlertCircle, X, Cpu, HardDrive, Terminal } from 'lucide-react';
+import { Play, Square, RefreshCw, Trash2, Box, AlertCircle, X, Cpu, HardDrive, Terminal, Plus } from 'lucide-react';
 import styles from './docker.module.css';
 
 /* ─── Types ─── */
@@ -188,6 +188,16 @@ export default function DockerApp() {
   const [imageActionLoading, setImageActionLoading] = useState<string | null>(null);
   const [imageActionError, setImageActionError]     = useState<{ id: string; msg: string } | null>(null);
   const [confirmDeleteImageId, setConfirmDeleteImageId] = useState<string | null>(null);
+
+  // Run Container Modal state
+  const [runModalImage, setRunModalImage]           = useState<string | null>(null);
+  const [runContainerName, setRunContainerName]     = useState('');
+  const [runPorts, setRunPorts]                     = useState<{ hostPort: string; containerPort: string }[]>([]);
+  const [runEnvs, setRunEnvs]                       = useState<{ key: string; value: string }[]>([]);
+  const [runVolumes, setRunVolumes]                 = useState<{ hostPath: string; containerPath: string }[]>([]);
+  const [runRestartPolicy, setRunRestartPolicy]     = useState<string>('no');
+  const [runSubmitting, setRunSubmitting]           = useState(false);
+  const [runError, setRunError]                     = useState<string | null>(null);
 
   // Sync ref with state
   useEffect(() => {
@@ -539,6 +549,66 @@ export default function DockerApp() {
       console.error('Prune images failed:', e);
     } finally {
       setRefreshing(false);
+    }
+  };
+
+  /* ─── Run Container Modal Handlers ─── */
+
+  const openRunModal = (repoTag: string) => {
+    setRunModalImage(repoTag);
+    setRunContainerName('');
+    setRunPorts([{ hostPort: '', containerPort: '' }]);
+    setRunEnvs([]);
+    setRunVolumes([]);
+    setRunRestartPolicy('no');
+    setRunError(null);
+  };
+
+  const addPortRow = () => setRunPorts(prev => [...prev, { hostPort: '', containerPort: '' }]);
+  const removePortRow = (idx: number) => setRunPorts(prev => prev.filter((_, i) => i !== idx));
+
+  const addEnvRow = () => setRunEnvs(prev => [...prev, { key: '', value: '' }]);
+  const removeEnvRow = (idx: number) => setRunEnvs(prev => prev.filter((_, i) => i !== idx));
+
+  const addVolumeRow = () => setRunVolumes(prev => [...prev, { hostPath: '', containerPath: '' }]);
+  const removeVolumeRow = (idx: number) => setRunVolumes(prev => prev.filter((_, i) => i !== idx));
+
+  const handleCreateContainer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!runModalImage) return;
+
+    setRunSubmitting(true);
+    setRunError(null);
+
+    const payload = {
+      image: runModalImage,
+      name: runContainerName.trim() || undefined,
+      ports: runPorts.filter(p => p.hostPort.trim() && p.containerPort.trim()),
+      env: runEnvs.filter(ev => ev.key.trim()).map(ev => `${ev.key.trim()}=${ev.value}`),
+      volumes: runVolumes.filter(v => v.hostPath.trim() && v.containerPath.trim()),
+      restartPolicy: runRestartPolicy,
+    };
+
+    try {
+      const res = await fetch('/api/docker/containers/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || `Failed to create container (${res.status})`);
+      }
+
+      // Success: close modal, switch tab to containers, refresh container list
+      setRunModalImage(null);
+      setActiveWindowTab('containers');
+      fetchContainers(true);
+    } catch (err: any) {
+      setRunError(err.message);
+    } finally {
+      setRunSubmitting(false);
     }
   };
 
@@ -1291,14 +1361,24 @@ export default function DockerApp() {
                             </div>
                           ) : (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
-                              <button
-                                className={`${styles.actionBtn} ${styles.btnDelete}`}
-                                title="Delete image"
-                                disabled={isBusy || !!pullingImage}
-                                onClick={() => setConfirmDeleteImageId(img.Id)}
-                              >
-                                <Trash2 size={11} />
-                              </button>
+                              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                <button
+                                  className={`${styles.actionBtn} ${styles.btnStart}`}
+                                  title="Run container from image"
+                                  disabled={isDangling || isBusy || !!pullingImage}
+                                  onClick={() => openRunModal(tagString)}
+                                >
+                                  <Play size={11} fill="currentColor" />
+                                </button>
+                                <button
+                                  className={`${styles.actionBtn} ${styles.btnDelete}`}
+                                  title="Delete image"
+                                  disabled={isBusy || !!pullingImage}
+                                  onClick={() => setConfirmDeleteImageId(img.Id)}
+                                >
+                                  <Trash2 size={11} />
+                                </button>
+                              </div>
                               {imageActionError?.id === img.Id && (
                                 <span style={{
                                   fontSize: '10px',
@@ -1328,6 +1408,227 @@ export default function DockerApp() {
             <span>Total local size: {formatBytes(images.reduce((acc, img) => acc + img.Size, 0))}</span>
           </div>
         </>
+      )}
+
+      {/* ───── Run Container Modal ───── */}
+      {runModalImage && (
+        <div className={styles.modalOverlay} onClick={() => setRunModalImage(null)}>
+          <div className={styles.modalCard} onClick={e => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <span className={styles.modalTitle}>
+                <Play size={14} style={{ color: '#a855f7' }} fill="currentColor" />
+                Run Container
+              </span>
+              <button
+                className={styles.detailCloseBtn}
+                onClick={() => setRunModalImage(null)}
+                title="Close modal"
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateContainer} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+              <div className={styles.modalBody}>
+                {runError && (
+                  <div style={{ padding: '10px 12px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid #ef4444', borderRadius: '6px', color: '#f87171', fontSize: '11px' }}>
+                    ⚠ {runError}
+                  </div>
+                )}
+
+                {/* Target Image */}
+                <div className={styles.fieldGroup}>
+                  <label className={styles.fieldLabel}>Image</label>
+                  <input
+                    className={styles.fieldInput}
+                    type="text"
+                    value={runModalImage}
+                    readOnly
+                    style={{ opacity: 0.8, background: '#121214' }}
+                  />
+                </div>
+
+                {/* Container Name */}
+                <div className={styles.fieldGroup}>
+                  <label className={styles.fieldLabel}>Container Name (optional)</label>
+                  <input
+                    className={styles.fieldInput}
+                    type="text"
+                    value={runContainerName}
+                    onChange={e => setRunContainerName(e.target.value)}
+                    placeholder="e.g. my-redis-db"
+                  />
+                </div>
+
+                {/* Ports Section */}
+                <div>
+                  <div className={styles.modalSectionTitle}>
+                    <span>Port Mappings</span>
+                    <button type="button" className={styles.iconAddBtn} onClick={addPortRow}>
+                      <Plus size={10} /> Add Port
+                    </button>
+                  </div>
+                  {runPorts.length === 0 ? (
+                    <span style={{ fontSize: '11px', color: '#52525b', fontStyle: 'italic' }}>No port mappings configured</span>
+                  ) : (
+                    <div className={styles.dynamicList}>
+                      {runPorts.map((p, idx) => (
+                        <div key={idx} className={styles.dynamicRow}>
+                          <input
+                            className={styles.fieldInput}
+                            type="text"
+                            placeholder="Host Port (e.g. 8080)"
+                            value={p.hostPort}
+                            onChange={e => {
+                              const val = e.target.value;
+                              setRunPorts(prev => prev.map((item, i) => i === idx ? { ...item, hostPort: val } : item));
+                            }}
+                          />
+                          <span style={{ color: '#71717a', fontSize: '12px' }}>→</span>
+                          <input
+                            className={styles.fieldInput}
+                            type="text"
+                            placeholder="Container Port (e.g. 80)"
+                            value={p.containerPort}
+                            onChange={e => {
+                              const val = e.target.value;
+                              setRunPorts(prev => prev.map((item, i) => i === idx ? { ...item, containerPort: val } : item));
+                            }}
+                          />
+                          <button type="button" className={styles.iconRemoveBtn} onClick={() => removePortRow(idx)}>
+                            <X size={12} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Environment Variables */}
+                <div>
+                  <div className={styles.modalSectionTitle}>
+                    <span>Environment Variables</span>
+                    <button type="button" className={styles.iconAddBtn} onClick={addEnvRow}>
+                      <Plus size={10} /> Add Var
+                    </button>
+                  </div>
+                  {runEnvs.length === 0 ? (
+                    <span style={{ fontSize: '11px', color: '#52525b', fontStyle: 'italic' }}>No environment variables configured</span>
+                  ) : (
+                    <div className={styles.dynamicList}>
+                      {runEnvs.map((ev, idx) => (
+                        <div key={idx} className={styles.dynamicRow}>
+                          <input
+                            className={styles.fieldInput}
+                            type="text"
+                            placeholder="KEY (e.g. PORT)"
+                            value={ev.key}
+                            onChange={e => {
+                              const val = e.target.value;
+                              setRunEnvs(prev => prev.map((item, i) => i === idx ? { ...item, key: val } : item));
+                            }}
+                          />
+                          <span style={{ color: '#71717a', fontSize: '12px' }}>=</span>
+                          <input
+                            className={styles.fieldInput}
+                            type="text"
+                            placeholder="VALUE (e.g. 8080)"
+                            value={ev.value}
+                            onChange={e => {
+                              const val = e.target.value;
+                              setRunEnvs(prev => prev.map((item, i) => i === idx ? { ...item, value: val } : item));
+                            }}
+                          />
+                          <button type="button" className={styles.iconRemoveBtn} onClick={() => removeEnvRow(idx)}>
+                            <X size={12} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Volume Mounts */}
+                <div>
+                  <div className={styles.modalSectionTitle}>
+                    <span>Volume Mounts</span>
+                    <button type="button" className={styles.iconAddBtn} onClick={addVolumeRow}>
+                      <Plus size={10} /> Add Volume
+                    </button>
+                  </div>
+                  {runVolumes.length === 0 ? (
+                    <span style={{ fontSize: '11px', color: '#52525b', fontStyle: 'italic' }}>No volume mounts configured</span>
+                  ) : (
+                    <div className={styles.dynamicList}>
+                      {runVolumes.map((v, idx) => (
+                        <div key={idx} className={styles.dynamicRow}>
+                          <input
+                            className={styles.fieldInput}
+                            type="text"
+                            placeholder="Host Path (e.g. /home/user/data)"
+                            value={v.hostPath}
+                            onChange={e => {
+                              const val = e.target.value;
+                              setRunVolumes(prev => prev.map((item, i) => i === idx ? { ...item, hostPath: val } : item));
+                            }}
+                          />
+                          <span style={{ color: '#71717a', fontSize: '12px' }}>→</span>
+                          <input
+                            className={styles.fieldInput}
+                            type="text"
+                            placeholder="Container Path (e.g. /data)"
+                            value={v.containerPath}
+                            onChange={e => {
+                              const val = e.target.value;
+                              setRunVolumes(prev => prev.map((item, i) => i === idx ? { ...item, containerPath: val } : item));
+                            }}
+                          />
+                          <button type="button" className={styles.iconRemoveBtn} onClick={() => removeVolumeRow(idx)}>
+                            <X size={12} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Restart Policy */}
+                <div className={styles.fieldGroup}>
+                  <label className={styles.fieldLabel}>Restart Policy</label>
+                  <select
+                    className={styles.selectInput}
+                    value={runRestartPolicy}
+                    onChange={e => setRunRestartPolicy(e.target.value)}
+                  >
+                    <option value="no">Never restart (no)</option>
+                    <option value="unless-stopped">Unless stopped (unless-stopped)</option>
+                    <option value="always">Always restart (always)</option>
+                    <option value="on-failure">On failure only (on-failure)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className={styles.modalFooter}>
+                <button
+                  type="button"
+                  className={styles.btnSecondary}
+                  onClick={() => setRunModalImage(null)}
+                  disabled={runSubmitting}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className={styles.btnPrimary}
+                  disabled={runSubmitting}
+                >
+                  {runSubmitting ? 'Starting…' : 'Run Container'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
     </div>

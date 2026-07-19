@@ -294,4 +294,60 @@ router.get("/images/pull", async (req, res) => {
 	}
 });
 
+router.post("/containers/create", async (req, res) => {
+	if (!req.body?.image) {
+		return res.status(400).json({ error: "Image name is required" });
+	}
+
+	const exposedPorts = {};
+	const portBindings = {};
+
+	if (Array.isArray(req.body.ports)) {
+		req.body.ports.forEach((p) => {
+			if (p.containerPort && p.hostPort) {
+				const containerKey = `${p.containerPort}/tcp`; // e.g. "80/tcp"
+				exposedPorts[containerKey] = {};
+				portBindings[containerKey] = [{ HostPort: String(p.hostPort) }];
+			}
+		});
+	}
+
+	const bindsArray = [];
+
+	if (Array.isArray(req.body.volumes)) {
+		req.body.volumes.forEach((v) => {
+			if (v.hostPath && v.containerPath) {
+				bindsArray.push(`${v.hostPath}:${v.containerPath}:rw`);
+			}
+		});
+	}
+
+	const options = {
+		Image: req.body.image,
+		name: req.body.name || undefined,
+		Env: Array.isArray(req.body.env) ? req.body.env : undefined,
+		ExposedPorts: exposedPorts,
+		HostConfig: {
+			PortBindings: portBindings,
+			Binds: bindsArray,
+			RestartPolicy: {
+				Name: req.body.restartPolicy || "no",
+			},
+		},
+	};
+	try {
+		const container = await docker.createContainer(options);
+		await container.start();
+		res.json({ success: true, containerId: container.id });
+	} catch (err) {
+		if (err.statusCode === 409) {
+			return res.status(409).json({ error: "A container with this name already exists" });
+		}
+		if (err.statusCode === 404) {
+			return res.status(404).json({ error: `Image '${req.body.image}' not found locally. Please pull it first.` });
+		}
+		return res.status(500).json({ error: err.message });
+	}
+});
+
 module.exports = router;

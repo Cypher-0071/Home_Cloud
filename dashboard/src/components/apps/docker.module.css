@@ -896,3 +896,213 @@
   transition: width 0.1s ease;
 }
 
+/* ─── Run Container Modal ─── */
+.modalOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 16px;
+}
+
+.modalCard {
+  background: #09090b;
+  border: 1px solid #27272a;
+  border-radius: 10px;
+  width: 100%;
+  max-width: 520px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8);
+  overflow: hidden;
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 18px;
+  border-bottom: 1px solid #1c1c1f;
+  background: #0d0d10;
+}
+
+.modalTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: #f4f4f5;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.modalBody {
+  padding: 18px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.modalSectionTitle {
+  font-size: 11px;
+  font-weight: 700;
+  color: #a855f7;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fieldLabel {
+  font-size: 11px;
+  font-weight: 500;
+  color: #a1a1aa;
+}
+
+.fieldInput {
+  background: #000000;
+  border: 1px solid #27272a;
+  border-radius: 6px;
+  color: #f4f4f5;
+  padding: 7px 10px;
+  font-size: 12px;
+  outline: none;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  width: 100%;
+  transition: border-color 0.12s ease;
+}
+
+.fieldInput:focus {
+  border-color: #58208c;
+}
+
+.selectInput {
+  background: #000000;
+  border: 1px solid #27272a;
+  border-radius: 6px;
+  color: #f4f4f5;
+  padding: 7px 10px;
+  font-size: 12px;
+  outline: none;
+  width: 100%;
+  cursor: pointer;
+}
+
+.selectInput:focus {
+  border-color: #58208c;
+}
+
+.dynamicList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dynamicRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.iconAddBtn {
+  background: #18181b;
+  border: 1px solid #27272a;
+  color: #a855f7;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.12s ease;
+}
+
+.iconAddBtn:hover {
+  background: #27272a;
+  color: #c084fc;
+}
+
+.iconRemoveBtn {
+  background: transparent;
+  border: none;
+  color: #71717a;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.iconRemoveBtn:hover {
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.modalFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 18px;
+  border-top: 1px solid #1c1c1f;
+  background: #0d0d10;
+}
+
+.btnPrimary {
+  background: #a855f7;
+  border: none;
+  border-radius: 6px;
+  color: #ffffff;
+  padding: 7px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btnPrimary:hover:not(:disabled) {
+  background: #9333ea;
+}
+
+.btnPrimary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btnSecondary {
+  background: #18181b;
+  border: 1px solid #27272a;
+  border-radius: 6px;
+  color: #a1a1aa;
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.btnSecondary:hover {
+  background: #27272a;
+  color: #f4f4f5;
+}
+
