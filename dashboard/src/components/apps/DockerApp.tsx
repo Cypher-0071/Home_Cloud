@@ -471,7 +471,10 @@ export default function DockerApp() {
         if (data.error) {
           setPullError(data.error);
           es.close();
-          setPullingImage(null);
+          setTimeout(() => {
+            setPullingImage(null);
+            setPullError(null);
+          }, 5000);
           return;
         }
 
@@ -509,9 +512,12 @@ export default function DockerApp() {
     };
 
     es.onerror = () => {
-      setPullError('Image pull stream disconnected');
+      setPullError('Image pull failed or repository does not exist');
       es.close();
-      setPullingImage(null);
+      setTimeout(() => {
+        setPullingImage(null);
+        setPullError(null);
+      }, 5000);
     };
   };
 
