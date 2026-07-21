@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Play, Square, RefreshCw, Trash2, Box, AlertCircle, X, Cpu, HardDrive, Terminal, Plus } from 'lucide-react';
+import { Play, Square, RefreshCw, Trash2, Box, AlertCircle, X, Cpu, HardDrive, Plus } from 'lucide-react';
+import ContainerConsoleTab from './ContainerConsoleTab';
 import styles from './docker.module.css';
 
 /* ─── Types ─── */
@@ -903,16 +904,6 @@ export default function DockerApp() {
     );
   };
 
-  const renderConsolePlaceholder = () => (
-    <div className={styles.comingSoon}>
-      <Terminal size={28} style={{ color: '#52525b' }} />
-      <span style={{ fontWeight: 600, color: '#e4e4e7', fontSize: '13px' }}>Interactive Exec Console</span>
-      <span className={styles.comingSoonText}>
-        Secure terminal execution into the container is coming soon in Phase 2c.
-      </span>
-    </div>
-  );
-
   /* ── Loading ── */
   if (loading) return (
     <div className={styles.loadingState}>
@@ -1179,7 +1170,14 @@ export default function DockerApp() {
                   {activeTab === 'stats' && renderStatsContent()}
                   {activeTab === 'inspect' && renderInspectContent()}
                   {activeTab === 'logs' && renderLogsContent()}
-                  {activeTab === 'console' && renderConsolePlaceholder()}
+                  <div style={{ display: activeTab === 'console' ? 'block' : 'none', height: '100%', width: '100%' }}>
+                    <ContainerConsoleTab
+                      key={selectedContainer.Id}
+                      containerId={selectedContainer.Id}
+                      containerName={selectedContainer.Names[0]?.replace(/^\//, '') ?? selectedContainer.Id}
+                      isRunning={selectedContainer.State === 'running'}
+                    />
+                  </div>
                 </div>
               </div>
             )}
