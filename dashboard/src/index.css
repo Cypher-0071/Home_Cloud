@@ -1,25 +1,84 @@
 :root {
-  --text: #a1a1aa;
-  --text-h: #f4f4f5;
-  --bg: rgba(24, 24, 27, 0.7);
-  --border: rgba(255, 255, 255, 0.08);
-  --code-bg: #18181b;
-  --accent: #a855f7;
-  --accent-rgb: 168, 85, 247;
-  --accent-bg: rgba(168, 85, 247, 0.15);
-  --accent-border: rgba(168, 85, 247, 0.4);
-  --social-bg: rgba(39, 39, 42, 0.6);
-  --shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  /* ─── Surfaces ─── */
+  --bg-base:      oklch(9%  0.008 240);
+  --bg-surface:   oklch(13% 0.010 240);
+  --bg-raised:    oklch(16% 0.012 240);
+  --bg-overlay:   oklch(19% 0.013 240);
 
-  --sans: 'Inter', system-ui, -apple-system, sans-serif;
+  /* ─── Accent: electric teal ─── */
+  --accent:         oklch(72% 0.18 195);
+  --accent-dim:     oklch(72% 0.18 195 / 0.12);
+  --accent-border:  oklch(72% 0.18 195 / 0.30);
+  --accent-text:    oklch(72% 0.18 195);
+  --accent-hover:   oklch(76% 0.20 195);
+
+  /* ─── Text ─── */
+  --text-primary:   oklch(93% 0.006 240);
+  --text-secondary: oklch(63% 0.010 240);
+  --text-muted:     oklch(43% 0.009 240);
+  --text-on-accent: oklch(10% 0.008 240);
+
+  /* ─── Borders ─── */
+  --border-subtle:  oklch(20% 0.011 240);
+  --border-default: oklch(26% 0.012 240);
+  --border-strong:  oklch(33% 0.014 240);
+
+  /* ─── Semantic status ─── */
+  --ok:       oklch(68% 0.18 145);
+  --warn:     oklch(78% 0.16 70);
+  --error:    oklch(62% 0.22 25);
+  --ok-dim:   oklch(68% 0.18 145 / 0.10);
+  --warn-dim: oklch(78% 0.16 70  / 0.10);
+  --error-dim:oklch(62% 0.22 25  / 0.10);
+
+  /* ─── Elevation ─── */
+  --shadow-sm:     0 1px 4px  oklch(0% 0 0 / 0.35);
+  --shadow-md:     0 4px 16px oklch(0% 0 0 / 0.50);
+  --shadow-lg:     0 12px 40px oklch(0% 0 0 / 0.65);
+  --shadow-window: 0 20px 60px oklch(0% 0 0 / 0.70);
+
+  /* ─── Motion ─── */
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-out-expo:  cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast:  120ms;
+  --duration-base:  200ms;
+  --duration-slow:  300ms;
+
+  /* ─── Typography ─── */
+  --sans:    'Inter', system-ui, -apple-system, sans-serif;
   --heading: 'Inter', system-ui, -apple-system, sans-serif;
-  --mono: 'JetBrains Mono', 'Fira Code', ui-monospace, Consolas, monospace;
+  --mono:    'JetBrains Mono', 'Fira Code', ui-monospace, Consolas, monospace;
 
-  font: 15px/1.6 var(--sans);
+  /* ─── Spacing (4pt base) ─── */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-12: 48px;
+
+  /* ─── Layout ─── */
+  --taskbar-height: 48px;
+
+  /* ─── Backward-compat aliases (CSS modules not yet overhauled) ─── */
+  --text:        var(--text-secondary);
+  --text-h:      var(--text-primary);
+  --bg:          var(--bg-surface);
+  --border:      var(--border-subtle);
+  --code-bg:     var(--bg-base);
+  --accent-rgb:  0, 194, 190;
+  --accent-bg:   var(--accent-dim);
+  --social-bg:   var(--bg-raised);
+  --shadow:      var(--shadow-md);
+
+  /* ─── Base ─── */
+  font: 13px/1.55 var(--sans);
   letter-spacing: -0.01em;
   color-scheme: dark;
-  color: var(--text);
-  background: #09090b;
+  color: var(--text-secondary);
+  background: var(--bg-base);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -31,64 +90,64 @@ body {
   overflow: hidden;
   height: 100vh;
   width: 100vw;
-  background: #09090b;
+  background: var(--bg-base);
   font-family: var(--sans);
 }
 
 #root {
   width: 100%;
-  max-width: 100%;
-  margin: 0 auto;
-  min-height: 100svh;
+  height: 100%;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
 }
 
-body {
-  margin: 0;
-}
-
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
+/* ─── Headings ─── */
+h1, h2 {
+  font-family: var(--sans);
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
 h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
-}
-h2 {
   font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
+  letter-spacing: -0.6px;
   margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
-}
-p {
-  margin: 0;
 }
 
-code,
-.counter {
+h2 {
+  font-size: 16px;
+  letter-spacing: -0.2px;
+  margin: 0 0 8px;
+}
+
+p { margin: 0; }
+
+code, .counter {
   font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-primary);
+  background: var(--bg-raised);
+  padding: 2px 6px;
+  border-radius: 3px;
   display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
 }
 
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+/* ─── Focus ─── */
+:focus { outline: none; }
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
+
+/* ─── Scrollbars ─── */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+::-webkit-scrollbar         { width: 6px; height: 6px; }
+::-webkit-scrollbar-track   { background: transparent; }
+::-webkit-scrollbar-thumb   { background: var(--border-strong); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-default); }

@@ -3,6 +3,7 @@ import React, { useRef } from 'react';
 interface OSWindowProps {
   id: string;
   title: string;
+  icon?: React.ReactNode;
   isOpen: boolean;
   isMinimized: boolean;
   isMaximized: boolean;
@@ -24,6 +25,7 @@ interface OSWindowProps {
 export default function OSWindow({
   id,
   title,
+  icon,
   isOpen,
   isMinimized,
   isMaximized,
@@ -49,8 +51,8 @@ export default function OSWindow({
     if (isMaximized) return;
     onFocus();
 
-    // Check if clicked a window dot control, if so, don't drag
-    if ((e.target as HTMLElement).closest('.win-dot')) return;
+    // Don't drag if clicking a control button
+    if ((e.target as HTMLElement).closest('.win-ctrl')) return;
 
     const startX = e.clientX;
     const startY = e.clientY;
@@ -60,7 +62,8 @@ export default function OSWindow({
     const handleMouseMove = (moveEvent: MouseEvent) => {
       const deltaX = moveEvent.clientX - startX;
       const deltaY = moveEvent.clientY - startY;
-      onMove(initialX + deltaX, initialY + deltaY);
+      // Clamp Y so the titlebar never goes above the viewport top
+      onMove(initialX + deltaX, Math.max(0, initialY + deltaY));
     };
 
     const handleMouseUp = () => {
@@ -85,11 +88,9 @@ export default function OSWindow({
     const handleMouseMove = (moveEvent: MouseEvent) => {
       const deltaX = moveEvent.clientX - startX;
       const deltaY = moveEvent.clientY - startY;
-      
-      // Enforce minimum width/height limits
       onResize(
         Math.max(480, initialWidth + deltaX),
-        Math.max(320, initialHeight + deltaY)
+        Math.max(320, initialHeight + deltaY),
       );
     };
 
@@ -102,21 +103,24 @@ export default function OSWindow({
     document.addEventListener('mouseup', handleMouseUp);
   };
 
-  const handleDoubleClickTitlebar = () => {
-    onMaximize();
-  };
-
   return (
     <div
       ref={windowRef}
       id={`win-${id}`}
-      className={`os-window ${active ? 'active' : ''} ${isMaximized ? 'maximized' : ''} ${isMinimized ? 'minimized' : ''}`}
+      className={[
+        'os-window',
+        active ? 'active' : '',
+        isMaximized ? 'maximized' : '',
+        isMinimized ? 'minimized' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
       style={{
         left: isMaximized ? 0 : `${x}px`,
         top: isMaximized ? 0 : `${y}px`,
         width: isMaximized ? '100%' : `${width}px`,
-        height: isMaximized ? 'calc(100% - 76px)' : `${height}px`,
-        zIndex: zIndex,
+        height: isMaximized ? '100%' : `${height}px`,
+        zIndex,
       }}
       onClick={onFocus}
     >
@@ -124,61 +128,64 @@ export default function OSWindow({
       <div
         className="window-titlebar"
         onMouseDown={handleTitleBarMouseDown}
-        onDoubleClick={handleDoubleClickTitlebar}
+        onDoubleClick={onMaximize}
       >
+        {/* Left: icon + title */}
+        <div className="window-title-area">
+          {icon && <span className="window-icon">{icon}</span>}
+          <span className="window-title">{title}</span>
+        </div>
+
+        {/* Right: Windows-style controls — minimize, maximize, close */}
         <div className="window-controls">
           <button
-            className="win-dot close"
-            onClick={(e) => {
-              e.stopPropagation();
-              onClose();
-            }}
-            title="Close"
-          >
-            <svg width="6" height="6" viewBox="0 0 10 10">
-              <path d="M1 1 L9 9 M9 1 L1 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            </svg>
-          </button>
-          <button
-            className="win-dot minimize"
-            onClick={(e) => {
-              e.stopPropagation();
-              onMinimize();
-            }}
+            className="win-ctrl win-minimize"
+            onClick={(e) => { e.stopPropagation(); onMinimize(); }}
             title="Minimize"
           >
-            <svg width="6" height="6" viewBox="0 0 10 10">
-              <path d="M1 5 L9 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            {/* Horizontal bar */}
+            <svg width="10" height="1" viewBox="0 0 10 1" fill="none" aria-hidden="true">
+              <line x1="0.75" y1="0.5" x2="9.25" y2="0.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
             </svg>
           </button>
+
           <button
-            className="win-dot maximize"
-            onClick={(e) => {
-              e.stopPropagation();
-              onMaximize();
-            }}
-            title={isMaximized ? "Restore Window" : "Maximize"}
+            className="win-ctrl win-maximize"
+            onClick={(e) => { e.stopPropagation(); onMaximize(); }}
+            title={isMaximized ? 'Restore' : 'Maximize'}
           >
-            <svg width="6" height="6" viewBox="0 0 10 10">
-              <rect x="1" y="1" width="8" height="8" rx="1" fill="none" stroke="currentColor" strokeWidth="2" />
+            {isMaximized ? (
+              /* Restore icon: two overlapping squares */
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                <rect x="2.25" y="0.75" width="7" height="7" rx="0.75" stroke="currentColor" strokeWidth="1.5" />
+                <path d="M0.75 2.75V8.5a0.75 0.75 0 0 0 0.75 0.75H7.25" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+            ) : (
+              /* Maximize icon: single square */
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                <rect x="0.75" y="0.75" width="8.5" height="8.5" rx="0.75" stroke="currentColor" strokeWidth="1.5" />
+              </svg>
+            )}
+          </button>
+
+          <button
+            className="win-ctrl win-close"
+            onClick={(e) => { e.stopPropagation(); onClose(); }}
+            title="Close"
+          >
+            {/* × icon */}
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+              <line x1="1" y1="1" x2="9" y2="9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              <line x1="9" y1="1" x2="1" y2="9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
             </svg>
           </button>
-        </div>
-        <div className="window-title">{title}</div>
-        <div className="window-actions">
-          {/* Subtle decoration/info */}
-          <span style={{ opacity: active ? 1 : 0.5, transition: 'opacity 0.2s' }}>
-            {active ? '● active' : ''}
-          </span>
         </div>
       </div>
 
       {/* Content */}
-      <div className="window-body">
-        {children}
-      </div>
+      <div className="window-body">{children}</div>
 
-      {/* Resize Handle */}
+      {/* Resize handle */}
       {!isMaximized && (
         <div className="window-resize-handle" onMouseDown={handleResizeMouseDown} />
       )}
