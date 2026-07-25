@@ -29,14 +29,18 @@ This feature enables deploying complex, multi-container applications (e.g. Nextc
 
 ---
 
-### Phase 3: Complete UI & UX Overhaul
+### Phase 3: UI/UX Overhaul ✅ *COMPLETED — 2026-07-26*
 
-This phase polishes the visual design, animations, and responsiveness across the entire desktop environment.
+Complete visual redesign of the entire desktop shell and all app surfaces.
 
-* [ ] **Unified Theme Engine:** Consolidate design tokens, color palettes, and fonts into CSS variables across the entire dashboard to match the premium dark theme (pure black backing, subtle borders, high contrast badges).
-* [ ] **Responsive Split-Pane Layouts:** Refactor the Containers list + detail panel layout to adapt smoothly to smaller windows, collapsing into a single-pane view on narrow viewports.
-* [ ] **Interactive Micro-Animations:** Introduce smooth hover scaling, fade-in transitions for split-panes, custom progress loading bars, and tab-switch animations.
-* [ ] **Rich Empty States & Feedback:** Upgrade all empty tables and loading screens with custom vector icons, inline instruction cards, and high-fidelity loaders.
+* [x] **OKLCH Design Token System** — Replaced all hardcoded hex with a layered OKLCH palette (`--bg-base/surface/raised/overlay`), electric teal accent, semantic status colors (`--ok`, `--warn`, `--error`), and motion easing tokens in `index.css`.
+* [x] **Shell Restructure — Taskbar** — Removed the top bar entirely. Replaced floating dock with a full-width 48px taskbar (grid layout: empty left | app icons center | system tray right). Tunnel status, clock, and sign-out moved to taskbar right zone.
+* [x] **Windows-style Window Chrome** — `OSWindow.tsx` rebuilt with right-side controls (minimize `—`, maximize/restore `□`, close `✕`), `46×36px` hit targets, close fills `--error` on hover. Window icon shown left of title.
+* [x] **System Monitor Redesign** — Replaced circular `GaugeRing` gauges with horizontal `MeterBar` (6px pill, threshold-colored: teal → amber → red). Added `SparklineChart` (rolling 60-point SVG polyline for CPU history). Modular micro-components.
+* [x] **Docker CSS Token Cleanup** — All purple accent removed. Teal tokens applied. Running row tint uses `--ok-dim`. Action button hover states use semantic colors. Modal overlay uses OKLCH alpha.
+* [x] **File Explorer CSS Token Cleanup** — Purple selections → teal `accent-dim`. Breadcrumb uses `--mono`. Icon colors rationalized (folders: teal, images: green, docs: red, zips: amber). Gradient progress bars removed.
+* [x] **Metrics CSS Token Cleanup** — `backdrop-filter: blur` removed (glassmorphism ban). Status dot pulse animation removed. All hardcoded hex replaced.
+* [x] **Absolute bans enforced** — No gradient text, no animated glow spots, no glassmorphism, no side-stripe decorative borders, no status dot pulse.
 
 ---
 
@@ -50,7 +54,9 @@ This phase polishes the visual design, animations, and responsiveness across the
 | Container exec console | ❌ | ❌ | ✅ V1 Completed |
 | Images management | ❌ | ✅ | ✅ V1 Completed |
 | Container creation modal | ❌ | ✅ | ✅ V1 Completed |
+| OKLCH design system + token architecture | ❌ | ❌ | ✅ V2 Completed |
+| Windows-style OS shell (taskbar + window chrome) | ❌ | ❌ | ✅ V2 Completed |
+| Sparkline CPU history chart | ❌ | ❌ | ✅ V2 Completed |
 | Cloudflare Ingress Auto-wiring | ❌ | ❌ | ⏳ V2 Planned (Phase 1) |
 | Stacks (docker-compose) | ❌ | ✅ partial | ⏳ V2 Planned (Phase 2) |
-| Native OS window UI | ❌ | ❌ | ✅ |
 | No iframe / no extra port | ❌ | ❌ | ✅ |
