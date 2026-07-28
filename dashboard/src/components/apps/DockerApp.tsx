@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Play, Square, RefreshCw, Trash2, Box, AlertCircle, X, Cpu, HardDrive, Plus } from 'lucide-react';
+import { Play, Square, RefreshCw, Trash2, Box, AlertCircle, X, Cpu, HardDrive, Plus, Globe } from 'lucide-react';
 import ContainerConsoleTab from './ContainerConsoleTab';
 import styles from './docker.module.css';
 
@@ -199,6 +199,38 @@ export default function DockerApp() {
   const [runRestartPolicy, setRunRestartPolicy]     = useState<string>('no');
   const [runSubmitting, setRunSubmitting]           = useState(false);
   const [runError, setRunError]                     = useState<string | null>(null);
+
+  // Expose container state
+  const [exposeModalContainer, setExposeModalContainer] = useState<Container | null>(null);
+  const [exposeSubdomain, setExposeSubdomain]           = useState('');
+  const [exposeLoading, setExposeLoading]               = useState(false);
+  const [exposeError, setExposeError]                   = useState<string | null>(null);
+  const [exposeSuccessUrl, setExposeSuccessUrl]         = useState<string | null>(null);
+
+  const handleExposeContainer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!exposeModalContainer || !exposeSubdomain.trim()) return;
+    setExposeLoading(true);
+    setExposeError(null);
+    setExposeSuccessUrl(null);
+    try {
+      const res = await fetch(`/api/docker/containers/${exposeModalContainer.Id}/expose`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subdomain: exposeSubdomain.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setExposeError(data.error || 'Failed to expose container');
+        return;
+      }
+      setExposeSuccessUrl(data.url);
+    } catch (err: any) {
+      setExposeError(err.message || 'Network error');
+    } finally {
+      setExposeLoading(false);
+    }
+  };
 
   // Sync ref with state
   useEffect(() => {
@@ -1088,6 +1120,20 @@ export default function DockerApp() {
                                       >
                                         <RefreshCw size={11} />
                                       </button>
+                                      <button
+                                        className={`${styles.actionBtn} ${styles.btnExpose}`}
+                                        title="Expose container to public web via Cloudflare Tunnel"
+                                        disabled={anyBusy}
+                                        onClick={() => {
+                                          const rawName = (c.Names[0] ?? c.Id).replace(/^\//, '').toLowerCase().replace(/[^a-z0-9-]/g, '-');
+                                          setExposeModalContainer(c);
+                                          setExposeSubdomain(rawName);
+                                          setExposeError(null);
+                                          setExposeSuccessUrl(null);
+                                        }}
+                                      >
+                                        <Globe size={11} />
+                                      </button>
                                     </>
                                   ) : (
                                     <button
@@ -1629,6 +1675,109 @@ export default function DockerApp() {
                 >
                   {runSubmitting ? 'Starting…' : 'Run Container'}
                 </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ───── Expose Container Modal ───── */}
+      {exposeModalContainer && (
+        <div className={styles.modalOverlay} onClick={() => setExposeModalContainer(null)}>
+          <div className={styles.modalCard} onClick={e => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <span className={styles.modalTitle}>
+                <Globe size={14} style={{ color: 'var(--accent)' }} />
+                Expose Container via Cloudflare
+              </span>
+              <button
+                className={styles.detailCloseBtn}
+                onClick={() => setExposeModalContainer(null)}
+                title="Close modal"
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            <form onSubmit={handleExposeContainer} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+              <div className={styles.modalBody}>
+                {exposeError && (
+                  <div style={{ padding: '10px 12px', background: 'var(--error-dim)', border: '1px solid var(--error)', borderRadius: '6px', color: 'var(--error)', fontSize: '11px' }}>
+                    ⚠ {exposeError}
+                  </div>
+                )}
+
+                {exposeSuccessUrl ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', background: 'var(--ok-dim)', border: '1px solid var(--ok)', borderRadius: '6px' }}>
+                    <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--ok)' }}>
+                      ✓ Container Successfully Exposed!
+                    </span>
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                      Public Endpoint:
+                    </span>
+                    <a
+                      href={exposeSuccessUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ fontSize: '12px', fontFamily: 'var(--mono)', color: 'var(--accent)', wordBreak: 'break-all', textDecoration: 'underline' }}
+                    >
+                      {exposeSuccessUrl}
+                    </a>
+                  </div>
+                ) : (
+                  <>
+                    <div className={styles.fieldGroup}>
+                      <label className={styles.fieldLabel}>Container</label>
+                      <input
+                        className={styles.fieldInput}
+                        type="text"
+                        value={(exposeModalContainer.Names[0] ?? exposeModalContainer.Id).replace(/^\//, '')}
+                        readOnly
+                        style={{ opacity: 0.8, background: 'var(--bg-base)' }}
+                      />
+                    </div>
+
+                    <div className={styles.fieldGroup}>
+                      <label className={styles.fieldLabel}>Desired Subdomain</label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <input
+                          className={styles.fieldInput}
+                          type="text"
+                          value={exposeSubdomain}
+                          onChange={e => setExposeSubdomain(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                          placeholder="e.g. my-app"
+                          required
+                        />
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'var(--mono)' }}>
+                          .home-cloud.live
+                        </span>
+                      </div>
+                    </div>
+
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: '1.4' }}>
+                      This will automatically create a proxied Cloudflare CNAME record and update your Cloudflare Tunnel ingress configuration with zero downtime.
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div className={styles.modalFooter}>
+                <button
+                  type="button"
+                  className={styles.btnSecondary}
+                  onClick={() => setExposeModalContainer(null)}
+                >
+                  {exposeSuccessUrl ? 'Close' : 'Cancel'}
+                </button>
+                {!exposeSuccessUrl && (
+                  <button
+                    type="submit"
+                    className={styles.btnPrimary}
+                    disabled={exposeLoading || !exposeSubdomain.trim()}
+                  >
+                    {exposeLoading ? 'Exposing…' : 'Expose Container'}
+                  </button>
+                )}
               </div>
             </form>
           </div>

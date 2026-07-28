@@ -287,6 +287,7 @@
 .btnStart:hover:not(:disabled)   { background: var(--ok-dim);     border-color: oklch(68% 0.18 145 / 0.30); color: var(--ok); }
 .btnRestart:hover:not(:disabled) { background: var(--warn-dim);   border-color: oklch(78% 0.16 70 / 0.30); color: var(--warn); }
 .btnDelete:hover:not(:disabled)  { background: var(--error-dim);  border-color: oklch(62% 0.22 25 / 0.30); color: var(--error); }
+.btnExpose:hover:not(:disabled)  { background: var(--accent-dim); border-color: var(--accent-border);    color: var(--accent-text); }
 
 /* ─── Delete confirm ─── */
 
