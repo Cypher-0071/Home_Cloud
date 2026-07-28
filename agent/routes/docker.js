@@ -4,6 +4,12 @@ const docker = new Docker();
 const express = require("express");
 const { truncateSync } = require("fs");
 const router = express.Router();
+const {
+	addIngressRule,
+	removeIngressRule,
+	createDnsRecord,
+	reloadCloudflared,
+} = require("../services/ingress");
 
 const portBindings = {
 	"8000/tcp": [{ HostPort: "3000" }],
@@ -346,6 +352,65 @@ router.post("/containers/create", async (req, res) => {
 		if (err.statusCode === 404) {
 			return res.status(404).json({ error: `Image '${req.body.image}' not found locally. Please pull it first.` });
 		}
+		return res.status(500).json({ error: err.message });
+	}
+});
+
+router.post("/containers/:id/expose", async (req, res) => {
+	const { id } = req.params;
+	const { subdomain } = req.body;
+
+	if (!subdomain) {
+		return res.status(400).json({ error: "Subdomain is required" });
+	}
+
+	try {
+		const container = docker.getContainer(id);
+		const info = await container.inspect();
+		const ports = info.NetworkSettings.Ports || {};
+		let hostPort = null;
+
+		for (const key in ports) {
+			if (ports[key] && ports[key].length > 0) {
+				hostPort = ports[key][0].HostPort;
+				break;
+			}
+		}
+
+		if (!hostPort) {
+			return res
+				.status(400)
+				.json({ error: "Container does not have any mapped host ports" });
+		}
+
+		addIngressRule(subdomain, hostPort);
+		await createDnsRecord(subdomain);
+		reloadCloudflared();
+
+		const baseDomain = process.env.CLOUDFLARE_BASE_DOMAIN || "home-cloud.live";
+		return res.json({
+			success: true,
+			url: `https://${subdomain}.${baseDomain}`,
+			subdomain,
+			hostPort,
+		});
+	} catch (err) {
+		return res.status(500).json({ error: err.message });
+	}
+});
+
+router.post("/containers/:id/unexpose", async (req, res) => {
+	const { subdomain } = req.body;
+
+	if (!subdomain) {
+		return res.status(400).json({ error: "Subdomain is required" });
+	}
+
+	try {
+		removeIngressRule(subdomain);
+		reloadCloudflared();
+		return res.json({ success: true });
+	} catch (err) {
 		return res.status(500).json({ error: err.message });
 	}
 });

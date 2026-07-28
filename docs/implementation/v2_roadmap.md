@@ -6,14 +6,14 @@ This document outlines all upcoming milestones, architectural goals, and feature
 
 ## 🎯 V2 Milestones & Checkpoints
 
-### Phase 1: Cloudflare Tunnel Auto-Wiring (Ingress Routing) 🌟 *(The Headline Feature)*
+### Phase 1: Cloudflare Tunnel Auto-Wiring (Ingress Routing) ✅ *COMPLETED — 2026-07-27*
 
 This feature automates DNS routing and HTTPS subdomain generation for any running container without opening public ports on your router.
 
-* [ ] **Expose Container endpoint:** `POST /api/docker/containers/:id/expose` — accepts `{ subdomain }`. Extracts the container's mapped host port to prepare it for external routing.
-* [ ] **Safe Ingress File Writer:** Write logic to parse and insert the subdomain routing rules into `~/.cloudflared/config.yml` without syntax or indentation errors.
-* [ ] **Dynamic DNS Record Creator:** Implement client calls to the Cloudflare API to dynamically create a CNAME record pointing the new subdomain to the tunnel URL.
-* [ ] **Zero-Downtime Reloading:** Implement process signaling in the backend using `SIGHUP` to notify the `cloudflared` daemon of configuration changes without dropping active tunnel connections.
+* [x] **Expose Container endpoint:** `POST /api/docker/containers/:id/expose` — accepts `{ subdomain }`. Extracts the container's mapped host port to prepare it for external routing.
+* [x] **Safe Ingress File Writer:** Write logic to parse and insert the subdomain routing rules into `~/.cloudflared/config.yml` without syntax or indentation errors.
+* [x] **Dynamic DNS Record Creator:** Implement client calls to the Cloudflare API to dynamically create a CNAME record pointing the new subdomain to the tunnel URL.
+* [x] **Zero-Downtime Reloading:** Implement process signaling in the backend using `SIGHUP` to notify the `cloudflared` daemon of configuration changes without dropping active tunnel connections.
 
 ---
 
