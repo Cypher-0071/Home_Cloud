@@ -1,31 +1,54 @@
 const { spawn } = require("node:child_process");
 
+let activeChild = null;
+
 function startTunnel() {
 	return new Promise((resolve, reject) => {
+		if (activeChild) {
+			try {
+				activeChild.kill("SIGTERM");
+			} catch (e) {}
+		}
+
 		const child = spawn("cloudflared", [
 			"tunnel",
-			"--credentials-file",
-			"/home/rudra-unix/.cloudflared/48d01e09-e50b-47da-bb93-3a679b0f4d71.json",
+			"--config",
+			"/home/rudra-unix/.cloudflared/config.yml",
 			"run",
-			"--url",
-			"http://localhost:3000",
 			"home-cloud",
 		]);
+
+		activeChild = child;
+		let resolved = false;
+
 		child.stderr.on("data", (data) => {
-			console.log(data.toString());
+			const str = data.toString();
+			console.log(str);
 			if (
-				data
-					.toString()
-					.includes("Registered tunnel connection connIndex=3")
+				!resolved &&
+				(str.includes("Registered tunnel connection") ||
+					str.includes("INF Registered tunnel connection"))
 			) {
-				resolve("https://home-cloud.live");
+				resolved = true;
+				resolve("https://dash.home-cloud.live");
 			}
 		});
-		child.on("error", (err) => reject(err));
-		child.on("close", (code) =>
-			reject(new Error(`Cloudflare exited with code ${code}`)),
-		);
+
+		child.on("error", (err) => {
+			if (!resolved) reject(err);
+		});
+
+		child.on("close", (code) => {
+			console.log(`[tunnel] Cloudflare process exited with code ${code}`);
+			if (activeChild === child) {
+				activeChild = null;
+			}
+		});
 	});
 }
 
-module.exports = { startTunnel };
+function restartTunnel() {
+	return startTunnel();
+}
+
+module.exports = { startTunnel, restartTunnel };

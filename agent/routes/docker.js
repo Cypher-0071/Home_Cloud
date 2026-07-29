@@ -5,9 +5,12 @@ const express = require("express");
 const { truncateSync } = require("fs");
 const router = express.Router();
 const {
+	getIngressRules,
+	removeIngressByPort,
 	addIngressRule,
 	removeIngressRule,
 	createDnsRecord,
+	deleteDnsRecord,
 	reloadCloudflared,
 } = require("../services/ingress");
 
@@ -18,7 +21,27 @@ const portBindings = {
 router.get("/containers", async (req, res) => {
 	try {
 		const containers = await docker.listContainers({ all: true });
-		res.json({ containers });
+		const ingressRules = getIngressRules();
+
+		const enriched = containers.map((c) => {
+			let exposedRule = null;
+			if (c.Ports && Array.isArray(c.Ports)) {
+				for (const p of c.Ports) {
+					if (p.PublicPort) {
+						const match = ingressRules.find(
+							(r) => String(r.port) === String(p.PublicPort),
+						);
+						if (match) {
+							exposedRule = match;
+							break;
+						}
+					}
+				}
+			}
+			return { ...c, exposedRule };
+		});
+
+		res.json({ containers: enriched });
 	} catch (err) {
 		return res.status(500).json({ error: err.message });
 	}
@@ -43,7 +66,25 @@ router.post("/containers/:id/stop", async (req, res) => {
 	const container = docker.getContainer(req.params.id);
 
 	try {
+		const info = await container.inspect().catch(() => null);
 		await container.stop();
+
+		if (info && info.NetworkSettings && info.NetworkSettings.Ports) {
+			const ports = info.NetworkSettings.Ports;
+			let removedAny = false;
+			for (const key in ports) {
+				if (ports[key] && ports[key].length > 0) {
+					const hostPort = ports[key][0].HostPort;
+					if (hostPort && removeIngressByPort(hostPort)) {
+						removedAny = true;
+					}
+				}
+			}
+			if (removedAny) {
+				reloadCloudflared();
+			}
+		}
+
 		res.json({ success: true });
 	} catch (err) {
 		if (err.statusCode === 304)
@@ -69,7 +110,25 @@ router.delete("/containers/:id/delete", async (req, res) => {
 	const container = docker.getContainer(req.params.id);
 
 	try {
+		const info = await container.inspect().catch(() => null);
 		await container.remove();
+
+		if (info && info.NetworkSettings && info.NetworkSettings.Ports) {
+			const ports = info.NetworkSettings.Ports;
+			let removedAny = false;
+			for (const key in ports) {
+				if (ports[key] && ports[key].length > 0) {
+					const hostPort = ports[key][0].HostPort;
+					if (hostPort && removeIngressByPort(hostPort)) {
+						removedAny = true;
+					}
+				}
+			}
+			if (removedAny) {
+				reloadCloudflared();
+			}
+		}
+
 		res.json({ success: true });
 	} catch (err) {
 		if (err.statusCode === 409)
@@ -384,10 +443,16 @@ router.post("/containers/:id/expose", async (req, res) => {
 		}
 
 		addIngressRule(subdomain, hostPort);
-		await createDnsRecord(subdomain);
+		try {
+			await createDnsRecord(subdomain);
+		} catch (err) {
+			// Do not leave a local route that has no public DNS record.
+			removeIngressRule(subdomain);
+			throw err;
+		}
 		reloadCloudflared();
 
-		const baseDomain = process.env.CLOUDFLARE_BASE_DOMAIN || "home-cloud.live";
+		const baseDomain = process.env.CF_DOMAIN || process.env.CLOUDFLARE_BASE_DOMAIN || "home-cloud.live";
 		return res.json({
 			success: true,
 			url: `https://${subdomain}.${baseDomain}`,
@@ -408,6 +473,7 @@ router.post("/containers/:id/unexpose", async (req, res) => {
 
 	try {
 		removeIngressRule(subdomain);
+		await deleteDnsRecord(subdomain);
 		reloadCloudflared();
 		return res.json({ success: true });
 	} catch (err) {

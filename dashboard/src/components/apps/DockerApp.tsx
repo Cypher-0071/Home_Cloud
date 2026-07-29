@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Play, Square, RefreshCw, Trash2, Box, AlertCircle, X, Cpu, HardDrive, Plus, Globe } from 'lucide-react';
+import { Play, Square, RefreshCw, Trash2, Box, AlertCircle, X, Cpu, HardDrive, Plus, Globe, ExternalLink, GlobeLock } from 'lucide-react';
 import ContainerConsoleTab from './ContainerConsoleTab';
 import styles from './docker.module.css';
 
@@ -12,6 +12,13 @@ interface DockerPort {
   Type: string;
 }
 
+interface ExposedRule {
+  url: string;
+  subdomain: string;
+  hostname: string;
+  port: string | null;
+}
+
 interface Container {
   Id: string;
   Names: string[];
@@ -20,6 +27,7 @@ interface Container {
   Status: string;
   Ports: DockerPort[];
   Created: number;
+  exposedRule?: ExposedRule | null;
 }
 
 interface DockerImage {
@@ -229,6 +237,25 @@ export default function DockerApp() {
       setExposeError(err.message || 'Network error');
     } finally {
       setExposeLoading(false);
+    }
+  };
+
+  const handleUnexposeContainer = async (container: Container) => {
+    if (!container.exposedRule) return;
+    setActionLoading(`${container.Id}-unexpose`);
+    try {
+      const res = await fetch(`/api/docker/containers/${container.Id}/unexpose`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subdomain: container.exposedRule.subdomain }),
+      });
+      if (res.ok) {
+        await fetchContainers(true);
+      }
+    } catch (err) {
+      console.error('Failed to unexpose container:', err);
+    } finally {
+      setActionLoading(null);
     }
   };
 
@@ -1059,7 +1086,23 @@ export default function DockerApp() {
                                 }}
                               />
                               <div className={styles.nameInfo}>
-                                <span className={styles.nameText}>{name}</span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <span className={styles.nameText}>{name}</span>
+                                  {c.exposedRule && (
+                                    <a
+                                      href={c.exposedRule.url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className={styles.exposedBadge}
+                                      title={`Exposed at ${c.exposedRule.url}`}
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <Globe size={9} />
+                                      <span>{c.exposedRule.subdomain}</span>
+                                      <ExternalLink size={8} />
+                                    </a>
+                                  )}
+                                </div>
                                 <span className={styles.idText}>{shortId}</span>
                               </div>
                             </div>
@@ -1120,20 +1163,31 @@ export default function DockerApp() {
                                       >
                                         <RefreshCw size={11} />
                                       </button>
-                                      <button
-                                        className={`${styles.actionBtn} ${styles.btnExpose}`}
-                                        title="Expose container to public web via Cloudflare Tunnel"
-                                        disabled={anyBusy}
-                                        onClick={() => {
-                                          const rawName = (c.Names[0] ?? c.Id).replace(/^\//, '').toLowerCase().replace(/[^a-z0-9-]/g, '-');
-                                          setExposeModalContainer(c);
-                                          setExposeSubdomain(rawName);
-                                          setExposeError(null);
-                                          setExposeSuccessUrl(null);
-                                        }}
-                                      >
-                                        <Globe size={11} />
-                                      </button>
+                                      {c.exposedRule ? (
+                                        <button
+                                          className={`${styles.actionBtn} ${styles.btnUnexpose}`}
+                                          title={`Unexpose ${c.exposedRule.url}`}
+                                          disabled={anyBusy}
+                                          onClick={() => handleUnexposeContainer(c)}
+                                        >
+                                          <GlobeLock size={11} />
+                                        </button>
+                                      ) : (
+                                        <button
+                                          className={`${styles.actionBtn} ${styles.btnExpose}`}
+                                          title="Expose container to public web via Cloudflare Tunnel"
+                                          disabled={anyBusy}
+                                          onClick={() => {
+                                            const rawName = (c.Names[0] ?? c.Id).replace(/^\//, '').toLowerCase().replace(/[^a-z0-9-]/g, '-');
+                                            setExposeModalContainer(c);
+                                            setExposeSubdomain(rawName);
+                                            setExposeError(null);
+                                            setExposeSuccessUrl(null);
+                                          }}
+                                        >
+                                          <Globe size={11} />
+                                        </button>
+                                      )}
                                     </>
                                   ) : (
                                     <button

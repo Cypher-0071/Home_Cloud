@@ -288,6 +288,27 @@
 .btnRestart:hover:not(:disabled) { background: var(--warn-dim);   border-color: oklch(78% 0.16 70 / 0.30); color: var(--warn); }
 .btnDelete:hover:not(:disabled)  { background: var(--error-dim);  border-color: oklch(62% 0.22 25 / 0.30); color: var(--error); }
 .btnExpose:hover:not(:disabled)  { background: var(--accent-dim); border-color: var(--accent-border);    color: var(--accent-text); }
+.btnUnexpose                     { background: var(--ok-dim);     border-color: var(--ok);               color: var(--ok); }
+.btnUnexpose:hover:not(:disabled){ background: var(--error-dim);  border-color: oklch(62% 0.22 25 / 0.30); color: var(--error); }
+
+.exposedBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: var(--ok-dim);
+  color: var(--ok);
+  border: 1px solid var(--ok);
+  border-radius: 3px;
+  font-size: 10px;
+  font-family: var(--mono);
+  padding: 1px 5px;
+  text-decoration: none;
+  transition: opacity var(--duration-fast) var(--ease-out-quart);
+}
+
+.exposedBadge:hover {
+  opacity: 0.8;
+}
 
 /* ─── Delete confirm ─── */
 
