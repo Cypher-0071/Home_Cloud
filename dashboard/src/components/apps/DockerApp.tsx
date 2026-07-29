@@ -250,7 +250,12 @@ export default function DockerApp() {
         body: JSON.stringify({ subdomain: container.exposedRule.subdomain }),
       });
       if (res.ok) {
-        await fetchContainers(true);
+        setContainers((prev) =>
+          prev.map((c) => (c.Id === container.Id ? { ...c, exposedRule: null } : c))
+        );
+        setTimeout(() => {
+          fetchContainers(true);
+        }, 2000);
       }
     } catch (err) {
       console.error('Failed to unexpose container:', err);
@@ -301,10 +306,11 @@ export default function DockerApp() {
   // Ref so stats polling can always read the latest container state
   // without containers being a useEffect dependency (which caused flicker)
   const containersRef = useRef<Container[]>([]);
+  const consecutiveFailuresRef = useRef(0);
   useEffect(() => { containersRef.current = containers; }, [containers]);
 
   const fetchContainers = useCallback(async (silent = false) => {
-    if (!silent) setLoading(true);
+    if (!silent && containersRef.current.length === 0) setLoading(true);
     setRefreshing(true);
     try {
       const res = await fetch('/api/docker/containers');
@@ -316,11 +322,16 @@ export default function DockerApp() {
           hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
         })
       );
+      consecutiveFailuresRef.current = 0;
       setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Unknown error');
+      consecutiveFailuresRef.current += 1;
+      // Only show full error screen if we have no loaded containers yet or if 3 consecutive polls fail
+      if (containersRef.current.length === 0 || consecutiveFailuresRef.current >= 3) {
+        setError(e instanceof Error ? e.message : 'Unknown error');
+      }
     } finally {
-      if (!silent) setLoading(false);
+      setLoading(false);
       setRefreshing(false);
     }
   }, []);
