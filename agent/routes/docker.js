@@ -1,22 +1,14 @@
-const { LogOutput } = require("concurrently");
 const Docker = require("dockerode");
 const docker = new Docker();
 const express = require("express");
-const { truncateSync } = require("fs");
 const router = express.Router();
 const {
 	getIngressRules,
 	removeIngressByPort,
 	addIngressRule,
 	removeIngressRule,
-	createDnsRecord,
-	deleteDnsRecord,
 	reloadCloudflared,
 } = require("../services/ingress");
-
-const portBindings = {
-	"8000/tcp": [{ HostPort: "3000" }],
-};
 
 router.get("/containers", async (req, res) => {
 	try {
@@ -443,13 +435,6 @@ router.post("/containers/:id/expose", async (req, res) => {
 		}
 
 		addIngressRule(subdomain, hostPort);
-		try {
-			await createDnsRecord(subdomain);
-		} catch (err) {
-			// Do not leave a local route that has no public DNS record.
-			removeIngressRule(subdomain);
-			throw err;
-		}
 		reloadCloudflared();
 
 		const baseDomain = process.env.CF_DOMAIN || process.env.CLOUDFLARE_BASE_DOMAIN || "home-cloud.live";
@@ -473,7 +458,6 @@ router.post("/containers/:id/unexpose", async (req, res) => {
 
 	try {
 		removeIngressRule(subdomain);
-		await deleteDnsRecord(subdomain);
 		reloadCloudflared();
 		return res.json({ success: true });
 	} catch (err) {
