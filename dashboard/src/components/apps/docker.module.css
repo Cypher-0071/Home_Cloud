@@ -1150,3 +1150,198 @@
   background: var(--bg-overlay);
   color: var(--text-primary);
 }
+
+/* ─── Stacks UI ─── */
+
+.stacksContainer {
+  flex: 1;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.stacksGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 14px;
+}
+
+.stackCard {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: border-color var(--duration-fast);
+}
+
+.stackCard:hover {
+  border-color: var(--border-default);
+}
+
+.stackCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.stackNameGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stackTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.stackStatusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 4px;
+  text-transform: capitalize;
+}
+
+.stackStatusRunning {
+  background: var(--ok-dim);
+  color: var(--ok);
+  border: 1px solid oklch(68% 0.18 145 / 0.25);
+}
+
+.stackStatusPartial {
+  background: var(--warn-dim);
+  color: var(--warn);
+  border: 1px solid oklch(78% 0.18 85 / 0.25);
+}
+
+.stackStatusStopped {
+  background: var(--bg-raised);
+  color: var(--text-muted);
+  border: 1px solid var(--border-subtle);
+}
+
+.stackActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.stackActionBtn {
+  background: var(--bg-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: 5px;
+  color: var(--text-secondary);
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+
+.stackActionBtn:hover:not(:disabled) {
+  background: var(--bg-overlay);
+  color: var(--text-primary);
+  border-color: var(--border-default);
+}
+
+.stackActionBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.stackActionDelete:hover:not(:disabled) {
+  background: var(--error-dim);
+  color: var(--error);
+  border-color: oklch(62% 0.22 25 / 0.3);
+}
+
+.stackServicesList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.servicePill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--text-secondary);
+}
+
+.serviceDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.serviceDotRunning {
+  background: var(--ok);
+}
+
+.serviceDotStopped {
+  background: var(--text-muted);
+}
+
+.yamlTextarea {
+  width: 100%;
+  height: 220px;
+  background: var(--bg-base);
+  border: 1px solid var(--border-default);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.4;
+  padding: 10px;
+  resize: vertical;
+  outline: none;
+  tab-size: 2;
+}
+
+.yamlTextarea:focus {
+  border-color: var(--accent);
+}
+
+.templateSelect {
+  background: var(--bg-base);
+  border: 1px solid var(--border-default);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 12px;
+  padding: 6px 10px;
+  outline: none;
+  font-family: var(--sans);
+}
+
+.deployConsole {
+  background: var(--bg-base);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  padding: 10px;
+  height: 140px;
+  overflow-y: auto;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+

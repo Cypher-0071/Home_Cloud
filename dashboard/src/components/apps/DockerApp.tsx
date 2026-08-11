@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Play, Square, RefreshCw, Trash2, Box, AlertCircle, X, Cpu, HardDrive, Plus, Globe, ExternalLink, GlobeLock } from 'lucide-react';
+import { Play, Square, RefreshCw, Trash2, Box, AlertCircle, X, Cpu, HardDrive, Plus, Globe, ExternalLink, GlobeLock, Layers, FileText } from 'lucide-react';
 import ContainerConsoleTab from './ContainerConsoleTab';
 import styles from './docker.module.css';
 
@@ -46,6 +46,95 @@ interface PullLayer {
 }
 
 type ActionKind = 'start' | 'stop' | 'restart' | 'delete';
+
+interface StackContainer {
+  id: string;
+  name: string;
+  service: string;
+  image: string;
+  state: string;
+  status: string;
+}
+
+interface Stack {
+  name: string;
+  status: 'running' | 'partial' | 'stopped' | 'uncreated';
+  servicesCount: number;
+  runningServicesCount: number;
+  containers: StackContainer[];
+  yamlExists: boolean;
+}
+
+const QUICK_TEMPLATES: { label: string; yaml: string }[] = [
+  {
+    label: 'PostgreSQL + Adminer',
+    yaml: `version: "3.8"
+services:
+  db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secretpassword
+      POSTGRES_DB: mydatabase
+    ports:
+      - "5432:5432"
+
+  adminer:
+    image: adminer:latest
+    restart: always
+    ports:
+      - "8080:8080"`
+  },
+  {
+    label: 'WordPress + MySQL',
+    yaml: `version: "3.8"
+services:
+  db:
+    image: mysql:8.0
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wordpress
+      MYSQL_PASSWORD: wordpresspassword
+
+  wordpress:
+    image: wordpress:latest
+    restart: always
+    ports:
+      - "8000:80"
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: wordpresspassword
+      WORDPRESS_DB_NAME: wordpress`
+  },
+  {
+    label: 'Nginx + Redis',
+    yaml: `version: "3.8"
+services:
+  web:
+    image: nginx:alpine
+    restart: always
+    ports:
+      - "8081:80"
+
+  redis:
+    image: redis:alpine
+    restart: always`
+  },
+  {
+    label: 'Blank / Custom Template',
+    yaml: `version: "3.8"
+services:
+  my-service:
+    image: nginx:alpine
+    restart: always
+    ports:
+      - "8082:80"`
+  }
+];
 
 /* ─── Helpers ─── */
 
@@ -144,7 +233,7 @@ function getBlockIO(stats: any) {
 
 export default function DockerApp() {
   // Top Level Window Navigation
-  const [activeWindowTab, setActiveWindowTab] = useState<'containers' | 'images'>('containers');
+  const [activeWindowTab, setActiveWindowTab] = useState<'containers' | 'images' | 'stacks'>('containers');
 
   const [containers, setContainers]           = useState<Container[]>([]);
   const [loading, setLoading]                 = useState(true);
@@ -154,6 +243,24 @@ export default function DockerApp() {
   const [actionError, setActionError]         = useState<{ id: string; msg: string } | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [lastSynced, setLastSynced]           = useState('');
+
+  // Stacks state
+  const [stacks, setStacks]                   = useState<Stack[]>([]);
+  const [stacksLoading, setStacksLoading]     = useState(false);
+  const [stacksError, setStacksError]         = useState<string | null>(null);
+
+  // Deploy Stack Modal state
+  const [showDeployModal, setShowDeployModal] = useState(false);
+  const [deployStackName, setDeployStackName] = useState('');
+  const [deployYaml, setDeployYaml]           = useState(QUICK_TEMPLATES[0].yaml);
+  const [deploying, setDeploying]             = useState(false);
+  const [deployConsoleLogs, setDeployConsoleLogs] = useState<string[]>([]);
+  const [deployError, setDeployError]         = useState<string | null>(null);
+
+  // Stack Logs Modal state
+  const [selectedStackLogsName, setSelectedStackLogsName] = useState<string | null>(null);
+  const [stackLogLines, setStackLogLines]     = useState<string[]>([]);
+  const [stackLogsLoading, setStackLogsLoading] = useState(false);
 
   // Selected container details pane
   const [selectedId, setSelectedId]           = useState<string | null>(null);
@@ -351,16 +458,198 @@ export default function DockerApp() {
     }
   }, []);
 
-  // Combined polling for containers and images
+  const fetchStacks = useCallback(async (silent = false) => {
+    if (!silent) setStacksLoading(true);
+    try {
+      const res = await fetch('/api/docker/stacks');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setStacks(data.stacks ?? []);
+      setStacksError(null);
+    } catch (e: any) {
+      setStacksError(e.message || 'Failed to load stacks');
+    } finally {
+      if (!silent) setStacksLoading(false);
+    }
+  }, []);
+
+  const handleOpenStackLogs = (name: string) => {
+    setSelectedStackLogsName(name);
+  };
+
+  const handleStartStack = async (name: string) => {
+    setActionLoading(`start-${name}`);
+    try {
+      const res = await fetch(`/api/docker/stacks/${name}/start`, { method: 'POST' });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to start stack');
+      }
+      fetchStacks(true);
+      fetchContainers(true);
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleStopStack = async (name: string) => {
+    setActionLoading(`stop-${name}`);
+    try {
+      const res = await fetch(`/api/docker/stacks/${name}/stop`, { method: 'POST' });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to stop stack');
+      }
+      fetchStacks(true);
+      fetchContainers(true);
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleDeleteStack = async (name: string) => {
+    if (!confirm(`Are you sure you want to remove stack '${name}'? This will stop containers and remove volumes.`)) return;
+    setActionLoading(`delete-${name}`);
+    try {
+      const res = await fetch(`/api/docker/stacks/${name}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to delete stack');
+      }
+      fetchStacks(true);
+      fetchContainers(true);
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleEditStack = async (name: string) => {
+    try {
+      const res = await fetch(`/api/docker/stacks/${name}`);
+      if (res.ok) {
+        const data = await res.json();
+        setDeployStackName(name);
+        setDeployYaml(data.yaml || '');
+        setDeployConsoleLogs([]);
+        setDeployError(null);
+        setShowDeployModal(true);
+      }
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  const handleDeploySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!deployStackName.trim() || !deployYaml.trim()) {
+      setDeployError('Stack name and YAML content are required.');
+      return;
+    }
+    setDeploying(true);
+    setDeployError(null);
+    setDeployConsoleLogs(['Deploying stack…']);
+
+    try {
+      const res = await fetch('/api/docker/stacks/deploy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: deployStackName.trim(), yaml: deployYaml }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Deployment failed');
+      }
+
+      const reader = res.body?.getReader();
+      const decoder = new TextDecoder();
+      if (!reader) throw new Error('No response stream');
+
+      let buffer = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const payload = JSON.parse(line.slice(6));
+              if (payload.text) {
+                setDeployConsoleLogs(prev => [...prev, payload.text]);
+              }
+              if (payload.status === 'success') {
+                setDeployConsoleLogs(prev => [...prev, '✓ Deployment finished successfully!']);
+                fetchStacks(true);
+                fetchContainers(true);
+              } else if (payload.status === 'failed') {
+                setDeployError(`Deployment failed (exit code ${payload.exitCode})`);
+              }
+            } catch {
+              /* ignore parse errors */
+            }
+          }
+        }
+      }
+    } catch (err: any) {
+      setDeployError(err.message || 'Deployment failed');
+    } finally {
+      setDeploying(false);
+    }
+  };
+
+  // Stack Logs SSE effect
+  useEffect(() => {
+    if (!selectedStackLogsName) {
+      setStackLogLines([]);
+      setStackLogsLoading(false);
+      return;
+    }
+    setStackLogsLoading(true);
+    setStackLogLines([]);
+    const es = new EventSource(`/api/docker/stacks/${selectedStackLogsName}/logs`);
+
+    es.onmessage = (event) => {
+      setStackLogsLoading(false);
+      try {
+        const data = JSON.parse(event.data);
+        if (data.text) {
+          setStackLogLines(prev => [...prev, data.text]);
+        }
+      } catch {
+        setStackLogLines(prev => [...prev, event.data]);
+      }
+    };
+
+    es.onerror = () => {
+      setStackLogsLoading(false);
+    };
+
+    return () => {
+      es.close();
+    };
+  }, [selectedStackLogsName]);
+
+  // Combined polling for containers, images, and stacks
   useEffect(() => {
     fetchContainers();
     fetchImages();
+    fetchStacks();
     const id = setInterval(() => {
       fetchContainers(true);
       fetchImages(true);
+      fetchStacks(true);
     }, 5000);
     return () => clearInterval(id);
-  }, [fetchContainers, fetchImages]);
+  }, [fetchContainers, fetchImages, fetchStacks]);
 
   // Handle active tab defaults on selection change
   useEffect(() => {
@@ -1015,6 +1304,15 @@ export default function DockerApp() {
         >
           Images
         </button>
+        <button
+          className={`${styles.tabBtn} ${activeWindowTab === 'stacks' ? styles.tabBtnActive : ''}`}
+          onClick={() => {
+            setActiveWindowTab('stacks');
+            fetchStacks(true);
+          }}
+        >
+          Stacks
+        </button>
       </div>
 
       {activeWindowTab === 'containers' ? (
@@ -1523,6 +1821,332 @@ export default function DockerApp() {
             <span>Total local size: {formatBytes(images.reduce((acc, img) => acc + img.Size, 0))}</span>
           </div>
         </>
+      )}
+
+      {activeWindowTab === 'stacks' && (
+        <>
+          {/* Toolbar */}
+          <div className={styles.toolbar}>
+            <div className={styles.toolbarLeft}>
+              <p className={styles.toolbarTitle}>Docker Stacks</p>
+              <p className={styles.toolbarSub}>
+                <span className={styles.liveDot} />
+                Multi-container applications deployed via docker-compose
+              </p>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button
+                className={styles.refreshBtn}
+                onClick={() => fetchStacks(true)}
+                title="Refresh stacks"
+              >
+                <RefreshCw size={12} className={stacksLoading ? styles.spin : ''} />
+              </button>
+              <button
+                className={styles.btnPrimary}
+                onClick={() => {
+                  setDeployStackName('');
+                  setDeployYaml(QUICK_TEMPLATES[0].yaml);
+                  setDeployConsoleLogs([]);
+                  setDeployError(null);
+                  setShowDeployModal(true);
+                }}
+              >
+                <Plus size={14} />
+                Deploy Stack
+              </button>
+            </div>
+          </div>
+
+          <div className={styles.stacksContainer}>
+            {stacksError && (
+              <div className={styles.alertError} style={{ marginBottom: '12px' }}>
+                <AlertCircle size={14} />
+                <span>{stacksError}</span>
+              </div>
+            )}
+
+            {stacksLoading && stacks.length === 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px', gap: '10px' }}>
+                <div className={styles.spinner} style={{ width: '20px', height: '20px' }} />
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Loading Docker stacks…</span>
+              </div>
+            ) : stacks.length === 0 ? (
+              <div className={styles.emptyState}>
+                <Box size={32} style={{ opacity: 0.15 }} />
+                <p className={styles.emptyTitle}>No Docker stacks deployed</p>
+                <p className={styles.emptySubtext}>Deploy multi-container compose files to manage them as a unified stack</p>
+                <button
+                  className={styles.btnPrimary}
+                  style={{ marginTop: '12px' }}
+                  onClick={() => {
+                    setDeployStackName('');
+                    setDeployYaml(QUICK_TEMPLATES[0].yaml);
+                    setDeployConsoleLogs([]);
+                    setDeployError(null);
+                    setShowDeployModal(true);
+                  }}
+                >
+                  <Plus size={14} /> Deploy First Stack
+                </button>
+              </div>
+            ) : (
+              <div className={styles.stacksGrid}>
+                {stacks.map(s => {
+                  const isRunning = s.status === 'running';
+                  const isPartial = s.status === 'partial';
+                  const isActioning = actionLoading?.includes(s.name);
+
+                  return (
+                    <div key={s.name} className={styles.stackCard}>
+                      <div className={styles.stackCardHeader}>
+                        <div className={styles.stackNameGroup}>
+                          <p className={styles.stackTitle}>{s.name}</p>
+                          <span
+                            className={`${styles.stackStatusBadge} ${
+                              isRunning
+                                ? styles.stackStatusRunning
+                                : isPartial
+                                ? styles.stackStatusPartial
+                                : styles.stackStatusStopped
+                            }`}
+                          >
+                            <span
+                              className={styles.statDot}
+                              style={{
+                                background: isRunning
+                                  ? 'var(--ok)'
+                                  : isPartial
+                                  ? 'var(--warn)'
+                                  : 'var(--text-muted)',
+                              }}
+                            />
+                            {s.status} ({s.runningServicesCount}/{s.servicesCount})
+                          </span>
+                        </div>
+
+                        <div className={styles.stackActions}>
+                          {isRunning || isPartial ? (
+                            <button
+                              className={styles.stackActionBtn}
+                              title="Stop Stack"
+                              disabled={isActioning}
+                              onClick={() => handleStopStack(s.name)}
+                            >
+                              <Square size={13} />
+                            </button>
+                          ) : (
+                            <button
+                              className={styles.stackActionBtn}
+                              title="Start Stack"
+                              disabled={isActioning}
+                              onClick={() => handleStartStack(s.name)}
+                            >
+                              <Play size={13} />
+                            </button>
+                          )}
+
+                          <button
+                            className={styles.stackActionBtn}
+                            title="Stack Logs"
+                            onClick={() => handleOpenStackLogs(s.name)}
+                          >
+                            <FileText size={13} />
+                          </button>
+
+                          <button
+                            className={styles.stackActionBtn}
+                            title="Edit & Redeploy"
+                            onClick={() => handleEditStack(s.name)}
+                          >
+                            <RefreshCw size={13} />
+                          </button>
+
+                          <button
+                            className={`${styles.stackActionBtn} ${styles.stackActionDelete}`}
+                            title="Delete / Down Stack"
+                            disabled={isActioning}
+                            onClick={() => handleDeleteStack(s.name)}
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className={styles.stackServicesList}>
+                        {s.containers.length > 0 ? (
+                          s.containers.map(c => (
+                            <span key={c.id} className={styles.servicePill} title={`${c.image} (${c.status})`}>
+                              <span
+                                className={`${styles.serviceDot} ${
+                                  c.state === 'running' ? styles.serviceDotRunning : styles.serviceDotStopped
+                                }`}
+                              />
+                              {c.service}: {c.state}
+                            </span>
+                          ))
+                        ) : (
+                          <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                            No active containers for this stack
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <div className={styles.statusBar}>
+            <span>{stacks.length} stack{stacks.length !== 1 ? 's' : ''}</span>
+            <span>{stacks.filter(s => s.status === 'running').length} running</span>
+          </div>
+        </>
+      )}
+
+      {/* ───── Deploy / Edit Stack Modal ───── */}
+      {showDeployModal && (
+        <div className={styles.modalOverlay} onClick={() => !deploying && setShowDeployModal(false)}>
+          <div className={styles.modalCard} style={{ maxWidth: '640px' }} onClick={e => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Layers size={16} style={{ color: 'var(--accent)' }} />
+                <p className={styles.modalTitle}>Deploy Docker Compose Stack</p>
+              </div>
+              <button
+                className={styles.modalCloseBtn}
+                onClick={() => !deploying && setShowDeployModal(false)}
+                disabled={deploying}
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            <form onSubmit={handleDeploySubmit}>
+              <div className={styles.modalBody}>
+                {deployError && (
+                  <div className={styles.alertError} style={{ marginBottom: '12px' }}>
+                    <AlertCircle size={14} />
+                    <span>{deployError}</span>
+                  </div>
+                )}
+
+                <div className={styles.fieldGroup}>
+                  <label className={styles.fieldLabel}>Stack Name</label>
+                  <input
+                    className={styles.fieldInput}
+                    type="text"
+                    value={deployStackName}
+                    onChange={e => setDeployStackName(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                    placeholder="e.g. my-web-stack"
+                    required
+                    disabled={deploying}
+                  />
+                </div>
+
+                <div className={styles.fieldGroup}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <label className={styles.fieldLabel} style={{ margin: 0 }}>docker-compose.yml</label>
+                    <select
+                      className={styles.templateSelect}
+                      onChange={e => {
+                        const val = e.target.value;
+                        const tpl = QUICK_TEMPLATES.find(t => t.label === val);
+                        if (tpl) setDeployYaml(tpl.yaml);
+                      }}
+                      disabled={deploying}
+                    >
+                      <option value="">-- Load Quick Template --</option>
+                      {QUICK_TEMPLATES.map(t => (
+                        <option key={t.label} value={t.label}>{t.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <textarea
+                    className={styles.yamlTextarea}
+                    value={deployYaml}
+                    onChange={e => setDeployYaml(e.target.value)}
+                    placeholder="paste docker-compose.yml content here..."
+                    required
+                    disabled={deploying}
+                  />
+                </div>
+
+                {deployConsoleLogs.length > 0 && (
+                  <div className={styles.fieldGroup}>
+                    <label className={styles.fieldLabel}>Deployment Progress Logs</label>
+                    <div className={styles.deployConsole}>
+                      {deployConsoleLogs.map((line, idx) => (
+                        <div key={idx}>{line}</div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className={styles.modalFooter}>
+                <button
+                  type="button"
+                  className={styles.btnSecondary}
+                  onClick={() => setShowDeployModal(false)}
+                  disabled={deploying}
+                >
+                  Close
+                </button>
+                <button
+                  type="submit"
+                  className={styles.btnPrimary}
+                  disabled={deploying || !deployStackName.trim() || !deployYaml.trim()}
+                >
+                  {deploying ? 'Deploying…' : 'Deploy Stack'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ───── Stack Logs Modal ───── */}
+      {selectedStackLogsName && (
+        <div className={styles.modalOverlay} onClick={() => setSelectedStackLogsName(null)}>
+          <div className={styles.modalCard} style={{ maxWidth: '720px' }} onClick={e => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <FileText size={16} style={{ color: 'var(--accent)' }} />
+                <p className={styles.modalTitle}>Stack Logs — {selectedStackLogsName}</p>
+              </div>
+              <button
+                className={styles.modalCloseBtn}
+                onClick={() => setSelectedStackLogsName(null)}
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            <div className={styles.modalBody} style={{ padding: '10px' }}>
+              <div className={styles.deployConsole} style={{ height: '320px' }}>
+                {stackLogsLoading && stackLogLines.length === 0 ? (
+                  <span style={{ color: 'var(--text-muted)' }}>Connecting to stack logs stream…</span>
+                ) : stackLogLines.length === 0 ? (
+                  <span style={{ color: 'var(--text-muted)' }}>No logs output yet</span>
+                ) : (
+                  stackLogLines.map((l, i) => <div key={i}>{l}</div>)
+                )}
+              </div>
+            </div>
+
+            <div className={styles.modalFooter}>
+              <button
+                type="button"
+                className={styles.btnSecondary}
+                onClick={() => setSelectedStackLogsName(null)}
+              >
+                Close Logs
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ───── Run Container Modal ───── */}

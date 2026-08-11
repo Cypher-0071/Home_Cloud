@@ -32,6 +32,7 @@ app.use("/api/auth", auth);
 app.use("/api", authMiddleware);
 app.use("/api/metrics", require("./routes/metrics"));
 app.use("/api/files", require("./routes/file"));
+app.use("/api/docker/stacks", require("./routes/stacks"));
 app.use("/api/docker", require("./routes/docker"));
 app.use(express.static(path.join(__dirname, "../dashboard/dist")));
 
