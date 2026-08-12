@@ -8,6 +8,9 @@ router.get("/info", (req, res) => {
 		let serverLocalIp = null;
 
 		for (const name of Object.keys(ifaces)) {
+			// Skip Docker, veth, bridge, virtualbox, and VPN virtual interfaces
+			if (/^(docker|veth|br-|vbox|vmnet|tun|tap)/i.test(name)) continue;
+
 			for (const iface of ifaces[name]) {
 				if (iface.family === "IPv4" && !iface.internal) {
 					serverLocalIp = iface.address;
