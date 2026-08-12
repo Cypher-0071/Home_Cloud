@@ -6,6 +6,7 @@ import {
   LogOut,
   Folder,
   Box,
+  Zap,
 } from 'lucide-react';
 
 import OSWindow from '../components/OSWindow';
@@ -13,6 +14,7 @@ import SystemMonitorApp from '../components/apps/SystemMonitorApp';
 import TerminalApp from '../components/apps/TerminalApp';
 import FileExplorer from './files';
 import DockerApp from '../components/apps/DockerApp';
+import { useNetworkDetector } from '../hooks/useNetworkDetector';
 
 // Error boundary prevents a crashing child from blacking out the whole shell
 class ErrorBoundary extends Component<
@@ -82,6 +84,7 @@ interface WindowState {
 
 export default function Desktop() {
   const navigate = useNavigate();
+  const net = useNetworkDetector();
   const [time, setTime] = useState('');
   const [maxZIndex, setMaxZIndex] = useState(10);
   const [activeWindowId, setActiveWindowId] = useState<string | null>(null);
@@ -295,10 +298,32 @@ export default function Desktop() {
 
         {/* Right: system tray */}
         <div className="taskbar-right">
-          <div className="tray-tunnel">
-            <span className="tray-dot" />
-            Tunnel
-          </div>
+          {net.isDirectLocal ? (
+            <div
+              className="tray-tunnel"
+              style={{
+                color: 'var(--ok)',
+                borderColor: 'oklch(68% 0.18 145 / 0.25)',
+                background: 'var(--ok-dim)',
+              }}
+              title={`Connected directly over Home Wi-Fi LAN (${net.serverLocalIp})`}
+            >
+              <Zap size={11} fill="currentColor" />
+              LAN ({net.serverLocalIp})
+            </div>
+          ) : (
+            <div
+              className="tray-tunnel"
+              title={
+                net.isLocalLAN
+                  ? `Redirecting to local Wi-Fi LAN (${net.serverLocalIp})…`
+                  : 'Connected over Cloudflare Remote Tunnel'
+              }
+            >
+              <span className="tray-dot" />
+              {net.isLocalLAN ? 'Upgrading to LAN…' : 'Tunnel'}
+            </div>
+          )}
           <span className="tray-time">{time}</span>
           <button
             className="tray-signout"

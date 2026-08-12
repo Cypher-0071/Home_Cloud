@@ -34,9 +34,11 @@ app.use("/api/metrics", require("./routes/metrics"));
 app.use("/api/files", require("./routes/file"));
 app.use("/api/docker/stacks", require("./routes/stacks"));
 app.use("/api/docker", require("./routes/docker"));
+app.use("/api/network", require("./routes/network"));
 app.use(express.static(path.join(__dirname, "../dashboard/dist")));
 
 app.get("/api/health", (req, res) => {
+	res.setHeader("Access-Control-Allow-Origin", "*");
 	res.json({ status: "ok" });
 });
 

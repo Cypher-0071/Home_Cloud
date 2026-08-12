@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Play, Square, RefreshCw, Trash2, Box, AlertCircle, X, Cpu, HardDrive, Plus, Globe, ExternalLink, GlobeLock, Layers, FileText } from 'lucide-react';
+import { Play, Square, RefreshCw, Trash2, Box, AlertCircle, X, Cpu, HardDrive, Plus, Globe, ExternalLink, GlobeLock, Layers, FileText, Zap } from 'lucide-react';
 import ContainerConsoleTab from './ContainerConsoleTab';
 import styles from './docker.module.css';
+import { useNetworkDetector } from '../../hooks/useNetworkDetector';
 
 /* ─── Types ─── */
 
@@ -232,6 +233,7 @@ function getBlockIO(stats: any) {
 /* ─── Component ─── */
 
 export default function DockerApp() {
+  const net = useNetworkDetector();
   // Top Level Window Navigation
   const [activeWindowTab, setActiveWindowTab] = useState<'containers' | 'images' | 'stacks'>('containers');
 
@@ -1408,6 +1410,21 @@ export default function DockerApp() {
                                     >
                                       <Globe size={9} />
                                       <span>{c.exposedRule.subdomain}</span>
+                                      <ExternalLink size={8} />
+                                    </a>
+                                  )}
+                                  {net.serverLocalIp && c.Ports && c.Ports.some(p => p.PublicPort) && (
+                                    <a
+                                      href={`http://${net.serverLocalIp}:${c.Ports.find(p => p.PublicPort)?.PublicPort}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className={styles.exposedBadge}
+                                      style={{ background: 'var(--ok-dim)', color: 'var(--ok)', borderColor: 'oklch(68% 0.18 145 / 0.25)' }}
+                                      title={`Direct Local LAN link: http://${net.serverLocalIp}:${c.Ports.find(p => p.PublicPort)?.PublicPort}`}
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <Zap size={9} fill="currentColor" />
+                                      <span>LAN:{c.Ports.find(p => p.PublicPort)?.PublicPort}</span>
                                       <ExternalLink size={8} />
                                     </a>
                                   )}
