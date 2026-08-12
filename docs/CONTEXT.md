@@ -197,7 +197,7 @@ home-cloud/
 ```
 
 > [!NOTE]
-> `routes/docker.js` and `routes/tunnel.js` are not implemented yet — see `implementation.md`.
+> `routes/docker.js` and `routes/stacks.js` handle container and docker-compose lifecycle.
 > Metrics are SSE over HTTP (not WebSocket) so there is no `sockets/metrics.js`.
 > `tunnel.js` lives at the agent root, not inside `routes/`.
 
