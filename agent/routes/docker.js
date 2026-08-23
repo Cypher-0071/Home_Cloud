@@ -10,6 +10,7 @@ const {
 	reloadCloudflared,
 } = require("../services/ingress");
 const { CF_DOMAIN } = require("../config");
+const { BASE_DIR, jailPath } = require("../paths");
 
 router.get("/containers", async (req, res) => {
 	try {
@@ -373,11 +374,16 @@ router.post("/containers/create", async (req, res) => {
 	const bindsArray = [];
 
 	if (Array.isArray(req.body.volumes)) {
-		req.body.volumes.forEach((v) => {
-			if (v.hostPath && v.containerPath) {
-				bindsArray.push(`${v.hostPath}:${v.containerPath}:rw`);
+		for (const v of req.body.volumes) {
+			if (!v.hostPath || !v.containerPath) continue;
+			const host = jailPath(v.hostPath);
+			if (!host) {
+				return res.status(403).json({
+					error: `Host path must be inside ${BASE_DIR}`,
+				});
 			}
-		});
+			bindsArray.push(`${host}:${v.containerPath}:rw`);
+		}
 	}
 
 	const options = {

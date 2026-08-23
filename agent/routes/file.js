@@ -2,53 +2,15 @@ const express = require("express");
 const router = express.Router();
 const path = require("path");
 const fs = require("fs/promises");
-const fsSync = require("fs");
 const mime = require("mime-types");
 const multer = require("multer");
 const si = require("systeminformation");
 const { spawn } = require("child_process");
 const { stdout, stderr } = require("process");
 const { error } = require("console");
-const { BASE_DIR } = require("../config");
+const { resolveUnderBase, isInsideBase } = require("../paths");
 
-// Resolve an incoming path param safely.
-// Accepts absolute paths and relative ones (resolved under BASE_DIR).
-// Always blocks traversal outside BASE_DIR.
-function resolvePath(userPath) {
-	const p = String(userPath || "");
-	return path.isAbsolute(p) ? path.resolve(p) : path.resolve(BASE_DIR, p);
-}
-
-function canonicalize(resolved) {
-	try {
-		return fsSync.realpathSync(resolved);
-	} catch (err) {
-		if (err.code !== "ENOENT") throw err;
-		const suffixes = [];
-		let current = resolved;
-		while (current !== path.dirname(current)) {
-			suffixes.unshift(path.basename(current));
-			current = path.dirname(current);
-			try {
-				return path.join(fsSync.realpathSync(current), ...suffixes);
-			} catch (err2) {
-				if (err2.code !== "ENOENT") throw err2;
-			}
-		}
-		return resolved;
-	}
-}
-
-// Prefix match on BASE_DIR alone would allow BASE_DIR + "-evil".
-function isInsideBase(resolved) {
-	let canon;
-	try {
-		canon = canonicalize(resolved);
-	} catch {
-		return false;
-	}
-	return canon === BASE_DIR || canon.startsWith(BASE_DIR + path.sep);
-}
+const resolvePath = resolveUnderBase;
 
 const storage = multer.diskStorage({
 	destination: (req, file, cb) => {

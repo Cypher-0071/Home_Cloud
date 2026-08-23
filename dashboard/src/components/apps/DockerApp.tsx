@@ -948,12 +948,27 @@ export default function DockerApp() {
     setRunSubmitting(true);
     setRunError(null);
 
+    const volumes = runVolumes.filter(v => v.hostPath.trim() && v.containerPath.trim());
+    if (net.baseDir) {
+      const escaped = volumes.find(v => {
+        const h = v.hostPath.trim();
+        if (h.includes('..')) return true;
+        if (h.startsWith('/') && h !== net.baseDir && !h.startsWith(net.baseDir + '/')) return true;
+        return false;
+      });
+      if (escaped) {
+        setRunError(`Host path must be inside ${net.baseDir}`);
+        setRunSubmitting(false);
+        return;
+      }
+    }
+
     const payload = {
       image: runModalImage,
       name: runContainerName.trim() || undefined,
       ports: runPorts.filter(p => p.hostPort.trim() && p.containerPort.trim()),
       env: runEnvs.filter(ev => ev.key.trim()).map(ev => `${ev.key.trim()}=${ev.value}`),
-      volumes: runVolumes.filter(v => v.hostPath.trim() && v.containerPath.trim()),
+      volumes,
       restartPolicy: runRestartPolicy,
     };
 
@@ -2315,6 +2330,11 @@ export default function DockerApp() {
                       <Plus size={10} /> Add Volume
                     </button>
                   </div>
+                  {net.baseDir && (
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                      Host path must be inside {net.baseDir}
+                    </span>
+                  )}
                   {runVolumes.length === 0 ? (
                     <span style={{ fontSize: '11px', color: '#52525b', fontStyle: 'italic' }}>No volume mounts configured</span>
                   ) : (
@@ -2324,7 +2344,7 @@ export default function DockerApp() {
                           <input
                             className={styles.fieldInput}
                             type="text"
-                            placeholder="Host Path (e.g. /home/user/data)"
+                            placeholder={net.baseDir ? `Host path (${net.baseDir}/…)` : 'Host path'}
                             value={v.hostPath}
                             onChange={e => {
                               const val = e.target.value;
