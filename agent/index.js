@@ -4,6 +4,7 @@ const app = express();
 const http = require("http");
 const ws = require("ws");
 const path = require("path");
+const { PORT } = require("./config");
 const { startTunnel } = require("./tunnel");
 const cookieParser = require("cookie-parser");
 const auth = require("./routes/auth");
@@ -11,7 +12,6 @@ const authMiddleware = require("./middleware/auth");
 const { handleSystemTerminal } = require("./sockets/terminal");
 const { handleContainerExec } = require("./sockets/containerExec");
 
-const port = 3000;
 const server = http.createServer(app);
 const WebSocketServer = ws.WebSocketServer;
 const wss = new WebSocketServer({ server });
@@ -54,8 +54,8 @@ app.get("/{*path}", (req, res) => {
 	res.sendFile(path.join(__dirname, "../dashboard/dist", "index.html"));
 });
 
-server.listen(port, async () => {
-	console.log(`Agent is running on port: ${port}`);
+server.listen(PORT, async () => {
+	console.log(`Agent is running on port: ${PORT}`);
 	const url = await startTunnel();
 	console.log(url);
 });

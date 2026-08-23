@@ -5,6 +5,8 @@ export interface NetworkDetectorResult {
   isDirectLocal: boolean;
   serverLocalIp: string | null;
   serverLocalPort: number;
+  baseDir: string | null;
+  cfDomain: string;
   checking: boolean;
   redirectToLocal: () => void;
 }
@@ -24,6 +26,8 @@ async function runDetectionOnce(): Promise<NetworkDetectorResult> {
 
   let localIp: string | null = null;
   let localPort = 3000;
+  let baseDir: string | null = null;
+  let cfDomain = '';
 
   try {
     const infoRes = await fetch('/api/network/info');
@@ -31,6 +35,8 @@ async function runDetectionOnce(): Promise<NetworkDetectorResult> {
       const info = await infoRes.json();
       localIp = info.serverLocalIp;
       localPort = info.serverLocalPort || 3000;
+      baseDir = info.baseDir || null;
+      cfDomain = info.cfDomain || '';
     }
   } catch {
     /* fallback */
@@ -41,6 +47,8 @@ async function runDetectionOnce(): Promise<NetworkDetectorResult> {
     isDirectLocal: isIpAddress,
     serverLocalIp: localIp,
     serverLocalPort: localPort,
+    baseDir,
+    cfDomain,
     checking: false,
     redirectToLocal: () => {
       if (localIp) {
@@ -94,6 +102,8 @@ export function useNetworkDetector(): NetworkDetectorResult {
       isDirectLocal: false,
       serverLocalIp: null,
       serverLocalPort: 3000,
+      baseDir: null,
+      cfDomain: '',
       checking: !cachedResult,
       redirectToLocal: () => {},
     }

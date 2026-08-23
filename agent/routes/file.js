@@ -9,10 +9,10 @@ const si = require("systeminformation");
 const { spawn } = require("child_process");
 const { stdout, stderr } = require("process");
 const { error } = require("console");
-const BASE_DIR = fsSync.realpathSync(path.resolve("/home/rudra-unix"));
+const { BASE_DIR } = require("../config");
 
 // Resolve an incoming path param safely.
-// Accepts both absolute paths (/home/rudra-unix/foo) and relative ones (foo).
+// Accepts absolute paths and relative ones (resolved under BASE_DIR).
 // Always blocks traversal outside BASE_DIR.
 function resolvePath(userPath) {
 	const p = String(userPath || "");
@@ -39,7 +39,7 @@ function canonicalize(resolved) {
 	}
 }
 
-// Prefix match on BASE_DIR alone would allow /home/rudra-unix-evil.
+// Prefix match on BASE_DIR alone would allow BASE_DIR + "-evil".
 function isInsideBase(resolved) {
 	let canon;
 	try {

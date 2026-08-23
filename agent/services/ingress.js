@@ -1,18 +1,14 @@
 const fs = require("fs");
-const path = require("path");
 const yaml = require("js-yaml");
+const { CF_CONFIG, CF_DOMAIN } = require("../config");
 
-const CONFIG_PATH = path.join(
-	process.env.HOME || "",
-	".cloudflared",
-	"config.yml",
-);
+const CONFIG_PATH = CF_CONFIG;
 
 function getIngressRules() {
 	try {
 		const file = fs.readFileSync(CONFIG_PATH, "utf8");
 		const config = yaml.load(file);
-		const baseDomain = process.env.CF_DOMAIN || process.env.CLOUDFLARE_BASE_DOMAIN || "home-cloud.live";
+		const baseDomain = CF_DOMAIN;
 		return (config.ingress || [])
 			.filter((r) => r.hostname && r.hostname !== `dash.${baseDomain}`)
 			.map((r) => {
@@ -56,8 +52,7 @@ function removeIngressByPort(localPort) {
 function addIngressRule(subdomain, localPort) {
 	const file = fs.readFileSync(CONFIG_PATH, "utf8");
 	const config = yaml.load(file);
-	const baseDomain = process.env.CF_DOMAIN || process.env.CLOUDFLARE_BASE_DOMAIN || "home-cloud.live";
-	const hostname = `${subdomain}.${baseDomain}`;
+	const hostname = `${subdomain}.${CF_DOMAIN}`;
 	if (config.ingress.some((r) => r.hostname === hostname)) {
 		throw new Error("Hostname already exists");
 	}
@@ -77,8 +72,7 @@ function addIngressRule(subdomain, localPort) {
 function removeIngressRule(subdomain) {
 	const file = fs.readFileSync(CONFIG_PATH, "utf8");
 	const config = yaml.load(file);
-	const baseDomain = process.env.CF_DOMAIN || process.env.CLOUDFLARE_BASE_DOMAIN || "home-cloud.live";
-	const hostname = `${subdomain}.${baseDomain}`;
+	const hostname = `${subdomain}.${CF_DOMAIN}`;
 
 	config.ingress = config.ingress.filter((r) => r.hostname !== hostname);
 	const newYaml = yaml.dump(config, { lineWidth: -1 });

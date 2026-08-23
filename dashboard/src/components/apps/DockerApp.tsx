@@ -2458,7 +2458,7 @@ export default function DockerApp() {
                           required
                         />
                         <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'var(--mono)' }}>
-                          .home-cloud.live
+                          .{net.cfDomain || '…'}
                         </span>
                       </div>
                     </div>

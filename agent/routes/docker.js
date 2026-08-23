@@ -9,6 +9,7 @@ const {
 	removeIngressRule,
 	reloadCloudflared,
 } = require("../services/ingress");
+const { CF_DOMAIN } = require("../config");
 
 router.get("/containers", async (req, res) => {
 	try {
@@ -437,10 +438,9 @@ router.post("/containers/:id/expose", async (req, res) => {
 		addIngressRule(subdomain, hostPort);
 		reloadCloudflared();
 
-		const baseDomain = process.env.CF_DOMAIN || process.env.CLOUDFLARE_BASE_DOMAIN || "home-cloud.live";
 		return res.json({
 			success: true,
-			url: `https://${subdomain}.${baseDomain}`,
+			url: `https://${subdomain}.${CF_DOMAIN}`,
 			subdomain,
 			hostPort,
 		});

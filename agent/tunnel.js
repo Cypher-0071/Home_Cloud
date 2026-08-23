@@ -1,4 +1,5 @@
 const { spawn } = require("node:child_process");
+const { CF_CONFIG, TUNNEL_NAME, CF_DOMAIN } = require("./config");
 
 let activeChild = null;
 
@@ -13,9 +14,9 @@ function startTunnel() {
 		const child = spawn("cloudflared", [
 			"tunnel",
 			"--config",
-			"/home/rudra-unix/.cloudflared/config.yml",
+			CF_CONFIG,
 			"run",
-			"home-cloud",
+			TUNNEL_NAME,
 		]);
 
 		activeChild = child;
@@ -30,7 +31,7 @@ function startTunnel() {
 					str.includes("INF Registered tunnel connection"))
 			) {
 				resolved = true;
-				resolve("https://dash.home-cloud.live");
+				resolve(`https://dash.${CF_DOMAIN}`);
 			}
 		});
 

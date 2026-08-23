@@ -26,6 +26,7 @@ import {
 import styles from './files.module.css';
 import axios from 'axios';
 import { Highlight, themes } from 'prism-react-renderer';
+import { useNetworkDetector } from '../hooks/useNetworkDetector';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -53,10 +54,9 @@ interface FileItem {
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const BASE_PATH = '/home/rudra-unix';
-
-function isInsideBasePath(p: string): boolean {
-  return p === BASE_PATH || p.startsWith(BASE_PATH + '/');
+function isInsideBasePath(p: string, basePath: string | null): boolean {
+  if (!basePath) return false;
+  return p === basePath || p.startsWith(basePath + '/');
 }
 
 function isSafeEntryName(name: string): boolean {
@@ -368,9 +368,11 @@ function FileViewer({ filePath, fileName, ext, onClose }: ViewerProps) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function FileExplorer() {
+  const net = useNetworkDetector();
+  const basePath = net.baseDir;
   const [drives, setDrives] = useState<DriveInfo[]>([]);
-  const [currentPath, setCurrentPath] = useState<string>(BASE_PATH);
-  const [history, setHistory] = useState<string[]>([BASE_PATH]);
+  const [currentPath, setCurrentPath] = useState<string>('');
+  const [history, setHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState<number>(0);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedItemName, setSelectedItemName] = useState<string | null>(null);
@@ -442,7 +444,18 @@ export default function FileExplorer() {
     }
   }, []);
 
-  useEffect(() => { loadDirectory(currentPath); }, [currentPath, loadDirectory]);
+  useEffect(() => {
+    if (basePath && !currentPath) {
+      setCurrentPath(basePath);
+      setHistory([basePath]);
+      setHistoryIndex(0);
+    }
+  }, [basePath, currentPath]);
+
+  useEffect(() => {
+    if (!currentPath) return;
+    loadDirectory(currentPath);
+  }, [currentPath, loadDirectory]);
   useEffect(() => { fetchDrives().then(setDrives); }, []);
 
   // Ctrl+C / Ctrl+V keyboard shortcuts
@@ -538,7 +551,7 @@ export default function FileExplorer() {
   const navigateToPath = (newPath: string) => {
     setRenamingItem(null);
     const cleanPath = newPath.replace(/\/$/, '');
-    if (!isInsideBasePath(cleanPath)) return;
+    if (!isInsideBasePath(cleanPath, basePath)) return;
     const newHistory = history.slice(0, historyIndex + 1);
     newHistory.push(cleanPath);
     setHistory(newHistory);
@@ -551,7 +564,7 @@ export default function FileExplorer() {
     if (historyIndex > 0) {
       const newIndex = historyIndex - 1;
       const target = history[newIndex];
-      if (!isInsideBasePath(target)) return;
+      if (!isInsideBasePath(target, basePath)) return;
       setHistoryIndex(newIndex);
       setCurrentPath(target);
       setSearchQuery('');
@@ -562,7 +575,7 @@ export default function FileExplorer() {
     if (historyIndex < history.length - 1) {
       const newIndex = historyIndex + 1;
       const target = history[newIndex];
-      if (!isInsideBasePath(target)) return;
+      if (!isInsideBasePath(target, basePath)) return;
       setHistoryIndex(newIndex);
       setCurrentPath(target);
       setSearchQuery('');
@@ -570,11 +583,11 @@ export default function FileExplorer() {
   };
 
   const handleUp = () => {
-    if (currentPath !== BASE_PATH) {
+    if (basePath && currentPath !== basePath) {
       const parts = currentPath.split('/');
       parts.pop();
       const parent = parts.join('/') || '/';
-      if (!isInsideBasePath(parent)) return;
+      if (!isInsideBasePath(parent, basePath)) return;
       navigateToPath(parent);
     }
   };
@@ -795,7 +808,7 @@ export default function FileExplorer() {
 
   // ─── Breadcrumbs ───
   const pathSegments   = currentPath.split('/').filter(Boolean);
-  const baseSegments   = BASE_PATH.split('/').filter(Boolean); // ['home','rudra-unix']
+  const baseSegments   = (basePath || '').split('/').filter(Boolean);
   const buildPathUpTo  = (index: number) => '/' + pathSegments.slice(0, index + 1).join('/');
 
   // ─── Render ───
@@ -805,7 +818,7 @@ export default function FileExplorer() {
       <div className={styles.addressBarArea}>
         <button className={styles.navButton} onClick={handleBack} disabled={historyIndex <= 0} title="Back"><ArrowLeft size={16} /></button>
         <button className={styles.navButton} onClick={handleForward} disabled={historyIndex >= history.length - 1} title="Forward"><ArrowRight size={16} /></button>
-        <button className={styles.navButton} onClick={handleUp} disabled={currentPath === BASE_PATH} title="Up"><ArrowUp size={16} /></button>
+        <button className={styles.navButton} onClick={handleUp} disabled={!basePath || currentPath === basePath} title="Up"><ArrowUp size={16} /></button>
         <button className={styles.navButton} onClick={() => loadDirectory(currentPath)} title="Refresh"><RefreshCw size={14} /></button>
 
         <div className={styles.addressInputWrapper}>
@@ -880,12 +893,12 @@ export default function FileExplorer() {
           {Array.isArray(drives) && drives.length > 0 ? (
             drives.map((drive, index) => {
               const driveName = drive.mount === '/' ? 'System Root (/)' : (drive.mount || drive.fs || `Drive ${index + 1}`);
-              const isActive = currentPath === BASE_PATH && drive.mount === '/';
+              const isActive = !!basePath && currentPath === basePath && drive.mount === '/';
               return (
                 <div
                   key={drive.fs || index}
                   className={`${styles.sidebarItem} ${isActive ? styles.sidebarItemActive : ''}`}
-                  onClick={() => navigateToPath(BASE_PATH)}
+                  onClick={() => { if (basePath) navigateToPath(basePath); }}
                   title={`${drive.fs} (${drive.type})`}
                 >
                   <HardDrive size={16} style={{ color: '#3b82f6' }} />
@@ -894,7 +907,7 @@ export default function FileExplorer() {
               );
             })
           ) : (
-            <div className={`${styles.sidebarItem} ${currentPath === BASE_PATH ? styles.sidebarItemActive : ''}`} onClick={() => navigateToPath(BASE_PATH)}>
+            <div className={`${styles.sidebarItem} ${currentPath === basePath ? styles.sidebarItemActive : ''}`} onClick={() => { if (basePath) navigateToPath(basePath); }}>
               <HardDrive size={16} style={{ color: '#3b82f6' }} /><span>Home</span>
             </div>
           )}

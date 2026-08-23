@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const os = require("os");
+const { PORT, BASE_DIR, CF_DOMAIN } = require("../config");
 
 router.get("/info", (req, res) => {
 	try {
@@ -23,7 +24,9 @@ router.get("/info", (req, res) => {
 		res.json({
 			status: "ok",
 			serverLocalIp,
-			serverLocalPort: 3000,
+			serverLocalPort: PORT,
+			baseDir: BASE_DIR,
+			cfDomain: CF_DOMAIN,
 		});
 	} catch (err) {
 		res.status(500).json({ error: err.message });

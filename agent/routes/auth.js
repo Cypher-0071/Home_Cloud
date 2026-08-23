@@ -1,11 +1,12 @@
 const jwt = require('jsonwebtoken');
 const express = require('express');
 const router = express.Router();
+const { COOKIE_SECURE } = require('../config');
 
 router.post('/login', (req,res)=>{
     if (process.env.PASSWORD === req.body.password){
         const token = jwt.sign({authorized:true}, process.env.JWT_SECRET, {expiresIn:'7d'})
-        res.cookie('token',token, {httpOnly: true, secure: true})
+        res.cookie('token',token, {httpOnly: true, secure: COOKIE_SECURE})
         res.json({success: true})
     } 
     else{
