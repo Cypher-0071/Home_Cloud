@@ -2,13 +2,14 @@ const express = require("express");
 const router = express.Router();
 const path = require("path");
 const fs = require("fs/promises");
+const fsSync = require("fs");
 const mime = require("mime-types");
 const multer = require("multer");
 const si = require("systeminformation");
 const { spawn } = require("child_process");
 const { stdout, stderr } = require("process");
 const { error } = require("console");
-const BASE_DIR = "/home/rudra-unix";
+const BASE_DIR = fsSync.realpathSync(path.resolve("/home/rudra-unix"));
 
 // Resolve an incoming path param safely.
 // Accepts both absolute paths (/home/rudra-unix/foo) and relative ones (foo).
@@ -18,11 +19,42 @@ function resolvePath(userPath) {
 	return path.isAbsolute(p) ? path.resolve(p) : path.resolve(BASE_DIR, p);
 }
 
+function canonicalize(resolved) {
+	try {
+		return fsSync.realpathSync(resolved);
+	} catch (err) {
+		if (err.code !== "ENOENT") throw err;
+		const suffixes = [];
+		let current = resolved;
+		while (current !== path.dirname(current)) {
+			suffixes.unshift(path.basename(current));
+			current = path.dirname(current);
+			try {
+				return path.join(fsSync.realpathSync(current), ...suffixes);
+			} catch (err2) {
+				if (err2.code !== "ENOENT") throw err2;
+			}
+		}
+		return resolved;
+	}
+}
+
+// Prefix match on BASE_DIR alone would allow /home/rudra-unix-evil.
+function isInsideBase(resolved) {
+	let canon;
+	try {
+		canon = canonicalize(resolved);
+	} catch {
+		return false;
+	}
+	return canon === BASE_DIR || canon.startsWith(BASE_DIR + path.sep);
+}
+
 const storage = multer.diskStorage({
 	destination: (req, file, cb) => {
 		const dest = resolvePath(req.query.path);
 		// Block uploads outside BASE_DIR
-		if (!dest.startsWith(BASE_DIR)) {
+		if (!isInsideBase(dest)) {
 			return cb(
 				new Error(
 					"Access denied: upload destination is outside allowed directory",
@@ -32,7 +64,16 @@ const storage = multer.diskStorage({
 		cb(null, dest);
 	},
 	filename: (req, file, cb) => {
-		cb(null, file.originalname);
+		const name = path.basename(file.originalname);
+		if (!name || name === "." || name === "..") {
+			return cb(new Error("invalid filename"));
+		}
+		const dest = resolvePath(req.query.path);
+		const finalPath = path.resolve(dest, name);
+		if (!isInsideBase(finalPath)) {
+			return cb(new Error("access denied"));
+		}
+		cb(null, name);
 	},
 });
 
@@ -40,7 +81,7 @@ const upload = multer({ storage });
 
 router.get("/", async (req, res) => {
 	const requestedPath = resolvePath(req.query.path);
-	if (!requestedPath.startsWith(BASE_DIR)) {
+	if (!isInsideBase(requestedPath)) {
 		return res.status(403).json({ error: "Access denied" });
 	} else {
 		try {
@@ -74,7 +115,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
 
 router.get("/download", async (req, res) => {
 	const requestedPath = resolvePath(req.query.path);
-	if (!requestedPath.startsWith(BASE_DIR)) {
+	if (!isInsideBase(requestedPath)) {
 		return res.status(403).json({ error: "Access denied" });
 	} else {
 		res.download(requestedPath);
@@ -83,7 +124,7 @@ router.get("/download", async (req, res) => {
 
 router.delete("/delete", async (req, res) => {
 	const requestedPath = resolvePath(req.query.path);
-	if (!requestedPath.startsWith(BASE_DIR)) {
+	if (!isInsideBase(requestedPath)) {
 		return res.status(403).json({ error: "Access denied" });
 	} else {
 		try {
@@ -136,7 +177,7 @@ router.get("/drives", async (req, res) => {
 
 router.get("/view", async (req, res) => {
 	const requestedPath = resolvePath(req.query.path);
-	if (!requestedPath.startsWith(BASE_DIR)) {
+	if (!isInsideBase(requestedPath)) {
 		return res.status(403).json({ error: "Access denied" });
 	}
 	const mimeType = mime.lookup(requestedPath) || "application/octet-stream";
@@ -149,7 +190,7 @@ router.post("/copy", async (req, res) => {
 	const src = resolvePath(req.body.src);
 	const dest = resolvePath(req.body.dest);
 
-	if (!src.startsWith(BASE_DIR) || !dest.startsWith(BASE_DIR)) {
+	if (!isInsideBase(src) || !isInsideBase(dest)) {
 		return res.status(403).json({ error: "Access denied" });
 	}
 
@@ -184,7 +225,7 @@ router.get("/search", async (req, res) => {
 	const query = String(req.query.search || "");
 	const currentDir = resolvePath(req.query.path);
 
-	if (!currentDir.startsWith(BASE_DIR)) {
+	if (!isInsideBase(currentDir)) {
 		return res.status(403).json({ error: "Access denied" });
 	}
 
@@ -223,10 +264,14 @@ router.get("/search", async (req, res) => {
 			const metadata = await Promise.all(
 				filePaths.map(async (filepath) => {
 					try {
-						const stat = await fs.stat(filepath);
+						const abs = path.isAbsolute(filepath)
+							? path.resolve(filepath)
+							: path.resolve(currentDir, filepath);
+						if (!isInsideBase(abs)) return null;
+						const stat = await fs.stat(abs);
 						return {
 							name: path.basename(filepath),
-							path: filepath,
+							path: abs,
 							isDirectory: stat.isDirectory(),
 							size: stat.size,
 							modified: stat.mtime,
@@ -259,7 +304,7 @@ router.patch("/rename", async (req, res) => {
 	const newPath = resolvePath(req.body.newPath);
 
 	// Validate both paths are inside BASE_DIR
-	if (!oldPath.startsWith(BASE_DIR) || !newPath.startsWith(BASE_DIR)) {
+	if (!isInsideBase(oldPath) || !isInsideBase(newPath)) {
 		return res.status(403).json({ error: "Access denied" });
 	}
 
@@ -296,7 +341,7 @@ router.post("/folder", async (req, res) => {
 	const destination = resolvePath(req.body.path);
 	const targetDir = resolvePath(path.join(destination, folderName));
 
-	if (!targetDir.startsWith(BASE_DIR)) {
+	if (!isInsideBase(targetDir)) {
 		return res.status(403).json({ error: "Access denied" });
 	}
 
@@ -330,7 +375,7 @@ router.post("/file", async (req, res) => {
 	const destination = resolvePath(req.body.path);
 	const targetFile = resolvePath(path.join(destination, fileName));
 
-	if (!targetFile.startsWith(BASE_DIR)) {
+	if (!isInsideBase(targetFile)) {
 		return res.status(403).json({ error: "Access denied" });
 	}
 
@@ -364,7 +409,7 @@ router.patch("/move", async (req, res) => {
 	const dest = resolvePath(req.body.newPath);
 
 	// Validate both paths are inside BASE_DIR
-	if (!src.startsWith(BASE_DIR) || !dest.startsWith(BASE_DIR)) {
+	if (!isInsideBase(src) || !isInsideBase(dest)) {
 		return res.status(403).json({ error: "Access denied" });
 	}
 

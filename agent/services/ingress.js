@@ -16,7 +16,10 @@ function getIngressRules() {
 		return (config.ingress || [])
 			.filter((r) => r.hostname && r.hostname !== `dash.${baseDomain}`)
 			.map((r) => {
-				const subdomain = r.hostname.replace(`.${baseDomain}`, "");
+				const suffix = `.${baseDomain}`;
+				const subdomain = r.hostname.endsWith(suffix)
+					? r.hostname.slice(0, -suffix.length)
+					: r.hostname;
 				const portMatch = r.service ? r.service.match(/localhost:(\d+)/) : null;
 				const port = portMatch ? portMatch[1] : null;
 				return {

@@ -55,6 +55,14 @@ interface FileItem {
 
 const BASE_PATH = '/home/rudra-unix';
 
+function isInsideBasePath(p: string): boolean {
+  return p === BASE_PATH || p.startsWith(BASE_PATH + '/');
+}
+
+function isSafeEntryName(name: string): boolean {
+  return !!name && name !== '.' && name !== '..' && !name.includes('/') && !name.includes('\\');
+}
+
 const IMAGE_EXTS = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'ico'];
 const TEXT_EXTS  = [
   'txt', 'md', 'markdown', 'log', 'csv', 'json', 'yaml', 'yml',
@@ -530,6 +538,7 @@ export default function FileExplorer() {
   const navigateToPath = (newPath: string) => {
     setRenamingItem(null);
     const cleanPath = newPath.replace(/\/$/, '');
+    if (!isInsideBasePath(cleanPath)) return;
     const newHistory = history.slice(0, historyIndex + 1);
     newHistory.push(cleanPath);
     setHistory(newHistory);
@@ -541,8 +550,10 @@ export default function FileExplorer() {
   const handleBack = () => {
     if (historyIndex > 0) {
       const newIndex = historyIndex - 1;
+      const target = history[newIndex];
+      if (!isInsideBasePath(target)) return;
       setHistoryIndex(newIndex);
-      setCurrentPath(history[newIndex]);
+      setCurrentPath(target);
       setSearchQuery('');
     }
   };
@@ -550,8 +561,10 @@ export default function FileExplorer() {
   const handleForward = () => {
     if (historyIndex < history.length - 1) {
       const newIndex = historyIndex + 1;
+      const target = history[newIndex];
+      if (!isInsideBasePath(target)) return;
       setHistoryIndex(newIndex);
-      setCurrentPath(history[newIndex]);
+      setCurrentPath(target);
       setSearchQuery('');
     }
   };
@@ -560,7 +573,9 @@ export default function FileExplorer() {
     if (currentPath !== BASE_PATH) {
       const parts = currentPath.split('/');
       parts.pop();
-      navigateToPath(parts.join('/'));
+      const parent = parts.join('/') || '/';
+      if (!isInsideBasePath(parent)) return;
+      navigateToPath(parent);
     }
   };
 
@@ -600,6 +615,7 @@ export default function FileExplorer() {
     setNewItem(null); // Remove placeholder immediately for snappy UI
 
     if (!name) return;
+    if (!isSafeEntryName(name)) return;
 
     try {
       const endpoint = type === 'folder' ? '/api/files/folder' : '/api/files/file';
@@ -662,6 +678,10 @@ export default function FileExplorer() {
     const newName = renamingItem.newName.trim();
 
     if (!newName || oldName === newName) {
+      setRenamingItem(null);
+      return;
+    }
+    if (!isSafeEntryName(newName)) {
       setRenamingItem(null);
       return;
     }
@@ -775,6 +795,7 @@ export default function FileExplorer() {
 
   // ─── Breadcrumbs ───
   const pathSegments   = currentPath.split('/').filter(Boolean);
+  const baseSegments   = BASE_PATH.split('/').filter(Boolean); // ['home','rudra-unix']
   const buildPathUpTo  = (index: number) => '/' + pathSegments.slice(0, index + 1).join('/');
 
   // ─── Render ───
@@ -790,9 +811,13 @@ export default function FileExplorer() {
         <div className={styles.addressInputWrapper}>
           {pathSegments.map((segment, index) => (
             <div key={index} style={{ display: 'flex', alignItems: 'center' }}>
-              <span className={styles.breadcrumbSegment} onClick={() => navigateToPath(buildPathUpTo(index))}>
-                {segment}
-              </span>
+              {index < baseSegments.length - 1 ? (
+                <span className={styles.breadcrumbSegment}>{segment}</span>
+              ) : (
+                <span className={styles.breadcrumbSegment} onClick={() => navigateToPath(buildPathUpTo(index))}>
+                  {segment}
+                </span>
+              )}
               {index < pathSegments.length - 1 && <ChevronRight size={12} className={styles.breadcrumbDivider} />}
             </div>
           ))}

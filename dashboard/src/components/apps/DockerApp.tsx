@@ -1912,7 +1912,10 @@ export default function DockerApp() {
                 {stacks.map(s => {
                   const isRunning = s.status === 'running';
                   const isPartial = s.status === 'partial';
-                  const isActioning = actionLoading?.includes(s.name);
+                  const isActioning =
+                    actionLoading === `start-${s.name}` ||
+                    actionLoading === `stop-${s.name}` ||
+                    actionLoading === `delete-${s.name}`;
 
                   return (
                     <div key={s.name} className={styles.stackCard}>

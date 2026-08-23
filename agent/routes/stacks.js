@@ -8,9 +8,22 @@ const Docker = require("dockerode");
 const DockerCompose = require("dockerode-compose");
 const docker = new Docker();
 
-const STACKS_DIR = path.join(os.homedir(), ".home-cloud", "stacks");
+const STACKS_DIR = path.resolve(path.join(os.homedir(), ".home-cloud", "stacks"));
 if (!fs.existsSync(STACKS_DIR)) {
 	fs.mkdirSync(STACKS_DIR, { recursive: true });
+}
+
+function isSafeStackName(name) {
+	return typeof name === "string" && /^[a-zA-Z0-9][a-zA-Z0-9._-]*$/.test(name);
+}
+
+function resolveStackFolder(name) {
+	if (!isSafeStackName(name)) return null;
+	const resolved = path.resolve(STACKS_DIR, name);
+	if (resolved === STACKS_DIR) return null;
+	if (!resolved.startsWith(STACKS_DIR + path.sep)) return null;
+	if (path.basename(resolved) !== name) return null;
+	return resolved;
 }
 
 // GET /api/docker/stacks - List all stacks
@@ -47,8 +60,10 @@ router.get("/", async (req, res) => {
 		);
 
 		const stacks = allStackNames.map((name) => {
-			const stackPath = path.join(STACKS_DIR, name, "docker-compose.yml");
-			const yamlExists = fs.existsSync(stackPath);
+			const stackPath = isSafeStackName(name)
+				? path.join(STACKS_DIR, name, "docker-compose.yml")
+				: null;
+			const yamlExists = stackPath ? fs.existsSync(stackPath) : false;
 			const cList = stackContainersMap[name] || [];
 			const runningCount = cList.filter((c) => c.state === "running").length;
 
@@ -78,7 +93,11 @@ router.get("/", async (req, res) => {
 // GET /api/docker/stacks/:name - Get stack details & yaml content
 router.get("/:name", async (req, res) => {
 	const { name } = req.params;
-	const stackPath = path.join(STACKS_DIR, name, "docker-compose.yml");
+	const stackFolder = resolveStackFolder(name);
+	if (!stackFolder) {
+		return res.status(400).json({ error: "Invalid stack name" });
+	}
+	const stackPath = path.join(stackFolder, "docker-compose.yml");
 
 	try {
 		if (!fs.existsSync(stackPath)) {
@@ -112,7 +131,10 @@ router.post("/deploy", async (req, res) => {
 		return res.status(400).json({ error: "Stack name and YAML content are required" });
 	}
 
-	const stackFolder = path.join(STACKS_DIR, name);
+	const stackFolder = resolveStackFolder(name);
+	if (!stackFolder) {
+		return res.status(400).json({ error: "Invalid stack name" });
+	}
 	const filePath = path.join(stackFolder, "docker-compose.yml");
 
 	try {
@@ -161,7 +183,11 @@ router.post("/deploy", async (req, res) => {
 // POST /api/docker/stacks/:name/start - Start stack containers
 router.post("/:name/start", async (req, res) => {
 	const { name } = req.params;
-	const stackPath = path.join(STACKS_DIR, name, "docker-compose.yml");
+	const stackFolder = resolveStackFolder(name);
+	if (!stackFolder) {
+		return res.status(400).json({ error: "Invalid stack name" });
+	}
+	const stackPath = path.join(stackFolder, "docker-compose.yml");
 
 	try {
 		if (fs.existsSync(stackPath)) {
@@ -182,7 +208,11 @@ router.post("/:name/start", async (req, res) => {
 // POST /api/docker/stacks/:name/stop - Stop stack containers
 router.post("/:name/stop", async (req, res) => {
 	const { name } = req.params;
-	const stackPath = path.join(STACKS_DIR, name, "docker-compose.yml");
+	const stackFolder = resolveStackFolder(name);
+	if (!stackFolder) {
+		return res.status(400).json({ error: "Invalid stack name" });
+	}
+	const stackPath = path.join(stackFolder, "docker-compose.yml");
 
 	try {
 		if (fs.existsSync(stackPath)) {
@@ -203,7 +233,10 @@ router.post("/:name/stop", async (req, res) => {
 // DELETE /api/docker/stacks/:name - Remove stack containers and directory
 router.delete("/:name", async (req, res) => {
 	const { name } = req.params;
-	const stackFolder = path.join(STACKS_DIR, name);
+	const stackFolder = resolveStackFolder(name);
+	if (!stackFolder) {
+		return res.status(400).json({ error: "Invalid stack name" });
+	}
 	const stackPath = path.join(stackFolder, "docker-compose.yml");
 
 	try {
@@ -228,7 +261,11 @@ router.delete("/:name", async (req, res) => {
 // GET /api/docker/stacks/:name/logs - Stream multi-container stack logs via SSE
 router.get("/:name/logs", async (req, res) => {
 	const { name } = req.params;
-	const stackPath = path.join(STACKS_DIR, name, "docker-compose.yml");
+	const stackFolder = resolveStackFolder(name);
+	if (!stackFolder) {
+		return res.status(400).json({ error: "Invalid stack name" });
+	}
+	const stackPath = path.join(stackFolder, "docker-compose.yml");
 
 	try {
 		res.writeHead(200, {

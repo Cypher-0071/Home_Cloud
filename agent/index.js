@@ -18,11 +18,19 @@ const wss = new WebSocketServer({ server });
 
 // Master WebSocket Router: isolates host terminal and container exec connections deterministically
 wss.on("connection", (socket, request) => {
-	const url = request.url || "";
-	if (url.includes("/ws/docker/exec")) {
+	let pathname = "";
+	try {
+		pathname = new URL(request.url || "", "http://localhost").pathname;
+	} catch {
+		socket.close();
+		return;
+	}
+	if (pathname === "/ws/docker/exec") {
 		handleContainerExec(socket, request);
-	} else {
+	} else if (pathname === "/terminal") {
 		handleSystemTerminal(socket, request);
+	} else {
+		socket.close();
 	}
 });
 
