@@ -160,13 +160,28 @@ router.post("/deploy", async (req, res) => {
 			res.write(`data: ${JSON.stringify({ text: chunk.toString("utf8") })}\n\n`);
 		});
 
-		child.on("close", (code) => {
-			res.write(`data: ${JSON.stringify({ status: code === 0 ? "success" : "failed", exitCode: code })}\n\n`);
+		let settled = false;
+		const finish = (payload) => {
+			if (settled || res.writableEnded) return;
+			settled = true;
+			res.write(`data: ${JSON.stringify(payload)}\n\n`);
 			res.end();
+		};
+
+		child.on("error", (err) => {
+			finish({ status: "failed", error: `Failed to start docker compose: ${err.message}` });
 		});
 
-		req.on("close", () => {
-			if (!child.killed) {
+		child.on("close", (code, signal) => {
+			if (code === 0) {
+				finish({ status: "success" });
+			} else {
+				finish({ status: "failed", exitCode: code, signal });
+			}
+		});
+
+		res.on("close", () => {
+			if (!res.writableEnded && !child.killed) {
 				child.kill();
 			}
 		});
@@ -196,6 +211,7 @@ router.post("/:name/start", async (req, res) => {
 		} else {
 			const child = spawn("docker", ["compose", "-p", name, "start"]);
 			await new Promise((resolve, reject) => {
+				child.on("error", reject);
 				child.on("close", (code) => (code === 0 ? resolve() : reject(new Error(`Exit code ${code}`))));
 			});
 		}
@@ -221,6 +237,7 @@ router.post("/:name/stop", async (req, res) => {
 		} else {
 			const child = spawn("docker", ["compose", "-p", name, "stop"]);
 			await new Promise((resolve, reject) => {
+				child.on("error", reject);
 				child.on("close", (code) => (code === 0 ? resolve() : reject(new Error(`Exit code ${code}`))));
 			});
 		}
@@ -241,11 +258,22 @@ router.delete("/:name", async (req, res) => {
 
 	try {
 		if (fs.existsSync(stackPath)) {
-			const compose = new DockerCompose(docker, stackPath, name);
-			await compose.down({ volumes: true }).catch(() => null);
+			try {
+				const compose = new DockerCompose(docker, stackPath, name);
+				await compose.down({ volumes: true }).catch(() => null);
+			} catch {
+				const child = spawn("docker", ["compose", "-p", name, "down", "-v"]);
+				await new Promise((resolve) => {
+					child.on("error", resolve);
+					child.on("close", resolve);
+				});
+			}
 		} else {
 			const child = spawn("docker", ["compose", "-p", name, "down", "-v"]);
-			await new Promise((resolve) => child.on("close", resolve));
+			await new Promise((resolve, reject) => {
+				child.on("error", reject);
+				child.on("close", resolve);
+			});
 		}
 
 		if (fs.existsSync(stackFolder)) {
@@ -285,8 +313,10 @@ router.get("/:name/logs", async (req, res) => {
 			res.write(`data: ${JSON.stringify({ text: chunk.toString("utf8") })}\n\n`);
 		});
 
-		req.on("close", () => {
-			if (!child.killed) {
+		child.on("error", () => res.end());
+
+		res.on("close", () => {
+			if (!res.writableEnded && !child.killed) {
 				child.kill();
 			}
 		});

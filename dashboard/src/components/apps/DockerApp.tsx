@@ -593,7 +593,13 @@ export default function DockerApp() {
                 fetchStacks(true);
                 fetchContainers(true);
               } else if (payload.status === 'failed') {
-                setDeployError(`Deployment failed (exit code ${payload.exitCode})`);
+                const reason = payload.error
+                  ? payload.error
+                  : payload.exitCode != null
+                    ? `exit code ${payload.exitCode}`
+                    : `process was killed (${payload.signal || 'unknown signal'}) before completing`;
+                setDeployConsoleLogs(prev => [...prev, `✗ ${reason}`]);
+                setDeployError(`Deployment failed — ${reason}`);
               }
             } catch {
               /* ignore parse errors */
