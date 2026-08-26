@@ -21,7 +21,10 @@ professional — not transparent or flashy.
    no AI badges. Every visual element earns its presence by serving a task.
 3. **Data is the decoration.** Numbers, status indicators, paths, and log output are
    first-class content. Color and type exist to make data legible.
-4. **Consistency is an affordance.** Same material, same borders, same shadows, same spacing
+4. **Neutral chrome, semantic color.** The UI itself is white/gray — no accent color on
+   chrome. The only color comes from status indicators (green/yellow/red) and the danger
+   action (red). This means when you see color, it always means something.
+5. **Consistency is an affordance.** Same material, same borders, same shadows, same spacing
    everywhere. Predictability accelerates task completion.
 
 ---
@@ -85,16 +88,21 @@ functionally opaque against high-contrast wallpapers.
 | `--text-primary`   | `oklch(96% 0.005 240)`    | Headings, values   |
 | `--text-secondary` | `oklch(75% 0.012 240)`    | Body, labels       |
 | `--text-muted`     | `oklch(52% 0.015 240)`    | Hints, placeholders|
-| `--text-on-accent` | `#0f172a`                  | Text on accent bg  |
+| `--text-on-accent` | `#09090b`                  | Text on white buttons|
 
-### Accent
+### Accent (Neutral White)
 
-| Token             | Value                         | Usage                |
-|-------------------|-------------------------------|----------------------|
-| `--accent`        | `#38bdf8`                     | Primary accent       |
-| `--accent-dim`    | `rgba(56, 189, 248, 0.12)`   | Accent tint bg       |
-| `--accent-text`   | `#7dd3fc`                     | Accent in text       |
-| Active indicator  | `#60cdff`                     | Dock active pill     |
+The UI uses **no chromatic accent**. Interactive highlights are white/gray. The only hue in
+the interface comes from status colors (green, yellow, red) and the danger/sign-out action.
+
+| Token             | Value                         | Usage                    |
+|-------------------|-------------------------------|--------------------------|
+| `--accent`        | `#ffffff`                     | Primary interactive      |
+| `--accent-dim`    | `rgba(255, 255, 255, 0.08)`  | Hover / tint bg          |
+| `--accent-text`   | `#f4f4f5`                     | Highlighted text         |
+| `--accent-hover`  | `#e4e4e7`                     | Pressed state            |
+| Active indicator  | `#ffffff`                     | Dock active pill         |
+| Focus ring        | `rgba(255, 255, 255, 0.60)`  | `:focus-visible` outline |
 
 ### Status
 
@@ -165,7 +173,7 @@ functionally opaque against high-contrast wallpapers.
 - Hover: `rgba(255, 255, 255, 0.08)` bg
 - Active: `rgba(255, 255, 255, 0.11)` bg
 - Running indicator: `6×3px` dot, color `#88888e`, radius `1.5px`
-- Active indicator: `16px` wide pill, color `#60cdff`, glow `0 0 6px rgba(96, 205, 255, 0.50)`
+- Active indicator: `16px` wide pill, color `#ffffff`, subtle glow `0 0 6px rgba(255, 255, 255, 0.35)`
 
 ### System Tray (`.taskbar-right`)
 
@@ -270,6 +278,7 @@ These are patterns explicitly rejected for this project:
 | macOS traffic-light window controls | Wrong OS reference                           |
 | Dock icon magnification on hover  | macOS behavior, not Windows 11                 |
 | Purple/indigo accent palette      | Generic "dark dashboard" trope                 |
+| Blue/cyan accent color            | "dark dashboard = blue" — the most predictable combo |
 | SVG noise texture overlays        | Over-engineered, negligible visual impact      |
 | `contrast()` / `brightness()` in backdrop-filter | Unpredictable cross-browser results |
 
@@ -285,7 +294,7 @@ These are patterns explicitly rejected for this project:
 ## Accessibility
 
 - WCAG AA minimum contrast ratios
-- `:focus-visible` ring (`2px solid var(--accent)`) on all interactive elements
+- `:focus-visible` ring (`2px solid rgba(255, 255, 255, 0.60)`) on all interactive elements
 - Keyboard-navigable dock and window controls
 - Status colors always paired with a non-color signal (icon, label, or shape)
 - Respect `prefers-reduced-motion`
