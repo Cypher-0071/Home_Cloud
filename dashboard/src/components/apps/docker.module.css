@@ -5,21 +5,23 @@
   flex-direction: column;
   height: 100%;
   width: 100%;
-  background: var(--bg-base);
+  background: rgba(14, 18, 28, 0.65);
   color: var(--text-secondary);
   font-family: var(--sans);
   user-select: none;
   overflow: hidden;
 }
 
-/* ─── Toolbar ─── */
+/* ─── Toolbar — Frosted Glass ─── */
 
 .toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 14px;
-  background: var(--bg-surface);
+  padding: 8px 16px;
+  background: rgba(24, 30, 48, 0.55);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border-subtle);
   flex-shrink: 0;
   gap: 12px;
@@ -35,6 +37,7 @@
   font-size: 13px;
   font-weight: 600;
   color: var(--text-primary);
+  letter-spacing: -0.01em;
   margin: 0;
 }
 
@@ -44,25 +47,27 @@
   margin: 0;
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
 }
 
 .liveDot {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: var(--ok);
+  box-shadow: 0 0 6px var(--ok);
   display: inline-block;
+  animation: pulseGlow 2.5s infinite ease-in-out;
 }
 
-/* ─── Stat badges row ─── */
+/* ─── Stat Badges Row ─── */
 
 .statsRow {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 7px 14px;
-  background: var(--bg-base);
+  padding: 8px 16px;
+  background: rgba(18, 22, 34, 0.40);
   border-bottom: 1px solid var(--border-subtle);
   flex-shrink: 0;
 }
@@ -70,29 +75,31 @@
 .statBadge {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   font-size: 11px;
   font-weight: 500;
-  padding: 3px 10px;
-  border-radius: 5px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  transition: all var(--duration-fast);
 }
 
 .statRunning {
-  background: var(--ok-dim);
-  border: 1px solid oklch(68% 0.18 145 / 0.20);
+  background: rgba(52, 211, 153, 0.12);
+  border: 1px solid rgba(52, 211, 153, 0.25);
   color: var(--ok);
+  box-shadow: 0 0 10px rgba(52, 211, 153, 0.15);
 }
 
 .statStopped {
-  background: var(--bg-raised);
-  border: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
   color: var(--text-muted);
 }
 
 .statTotal {
-  background: var(--bg-raised);
-  border: 1px solid var(--border-subtle);
-  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: var(--text-secondary);
 }
 
 .statDot {
@@ -102,11 +109,12 @@
   display: inline-block;
 }
 
-/* ─── Table area ─── */
+/* ─── Table Area ─── */
 
 .tableWrapper {
   flex: 1;
   overflow: auto;
+  padding: 6px 8px;
 }
 
 .table {
@@ -123,13 +131,15 @@
 }
 
 .theadRow {
-  background: var(--bg-base);
+  background: rgba(20, 26, 40, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border-subtle);
 }
 
 .th {
   padding: 8px 14px;
-  font-size: 10px;
+  font-size: 10.5px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -138,7 +148,7 @@
 
 .tr {
   border-bottom: 1px solid var(--border-subtle);
-  transition: background var(--duration-fast) ease;
+  transition: background var(--duration-fast) ease, transform var(--duration-fast) ease;
 }
 
 .tr:last-child {
@@ -146,7 +156,7 @@
 }
 
 .tr:hover {
-  background: var(--bg-raised);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .trConfirm {

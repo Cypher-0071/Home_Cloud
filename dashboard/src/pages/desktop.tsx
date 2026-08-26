@@ -303,20 +303,20 @@ export default function Desktop() {
               className="tray-tunnel"
               style={{
                 color: 'var(--ok)',
-                borderColor: 'oklch(68% 0.18 145 / 0.25)',
-                background: 'var(--ok-dim)',
+                borderColor: 'rgba(52, 211, 153, 0.30)',
+                background: 'rgba(52, 211, 153, 0.12)',
               }}
-              title={`Connected directly over Home Wi-Fi LAN (${net.serverLocalIp})`}
+              title={net.serverLocalIp ? `Connected directly over Home Wi-Fi LAN (${net.serverLocalIp})` : 'Connected directly over Home Wi-Fi LAN'}
             >
               <Zap size={11} fill="currentColor" />
-              LAN ({net.serverLocalIp})
+              {net.serverLocalIp ? `LAN · ${net.serverLocalIp}` : 'Direct LAN'}
             </div>
           ) : (
             <div
               className="tray-tunnel"
               title={
                 net.isLocalLAN
-                  ? `Redirecting to local Wi-Fi LAN (${net.serverLocalIp})…`
+                  ? `Redirecting to local Wi-Fi LAN (${net.serverLocalIp || 'detecting…'})…`
                   : 'Connected over Cloudflare Remote Tunnel'
               }
             >

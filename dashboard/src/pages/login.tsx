@@ -48,8 +48,12 @@ export default function Login() {
     <div className={styles.container}>
       <div className={styles.card}>
         <div className={styles.header}>
-          <h1 className={styles.title}>Home Cloud</h1>
-          <p className={styles.subtitle}>Enter your security key to access your server</p>
+          <div className={styles.badge}>
+            <span className={styles.badgeDot} />
+            Home Cloud Secure Node
+          </div>
+          <h1 className={styles.title}>Home Cloud OS</h1>
+          <p className={styles.subtitle}>Enter your security key to access the control plane</p>
         </div>
 
         <form onSubmit={handleSubmit} className={styles.form}>

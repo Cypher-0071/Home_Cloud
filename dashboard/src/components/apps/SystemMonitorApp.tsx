@@ -44,7 +44,7 @@ function formatBytes(bytes: number): string {
   return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]}`;
 }
 
-/** Horizontal meter bar — 6px pill, color-thresholded */
+/** Horizontal meter bar — 6px pill with smooth glow */
 function MeterBar({ value }: { value: number }) {
   const color =
     value > 90
@@ -53,51 +53,76 @@ function MeterBar({ value }: { value: number }) {
         ? 'var(--warn)'
         : 'var(--accent)';
 
+  const glowColor =
+    value > 90
+      ? 'rgba(248, 113, 113, 0.4)'
+      : value > 75
+        ? 'rgba(251, 191, 36, 0.4)'
+        : 'rgba(56, 189, 248, 0.4)';
+
   return (
     <div style={{
       width: '100%',
       height: '6px',
       borderRadius: '3px',
-      background: 'var(--border-subtle)',
+      background: 'rgba(255, 255, 255, 0.06)',
+      border: '1px solid rgba(255, 255, 255, 0.04)',
       overflow: 'hidden',
+      position: 'relative',
     }}>
       <div style={{
         height: '100%',
-        width: `${Math.min(100, value)}%`,
+        width: `${Math.min(100, Math.max(0, value))}%`,
         background: color,
         borderRadius: '3px',
+        boxShadow: `0 0 8px ${glowColor}`,
         transition: 'width 600ms var(--ease-out-quart), background 300ms',
       }} />
     </div>
   );
 }
 
-/** Rolling 60-point CPU sparkline — drawn as an SVG polyline */
+/** Rolling 60-point CPU sparkline — drawn with gradient fill */
 function SparklineChart({ points }: { points: number[] }) {
   if (points.length < 2) return null;
 
-  const W = 100;
-  const H = 36;
+  const W = 200;
+  const H = 42;
   const max = 100;
 
   const coords = points.map((v, i) => {
     const x = (i / (points.length - 1)) * W;
-    const y = H - (v / max) * H;
+    const y = H - (v / max) * (H - 4) - 2;
     return `${x.toFixed(1)},${y.toFixed(1)}`;
   });
+
+  const areaCoords = [
+    `0,${H}`,
+    ...coords,
+    `${W},${H}`,
+  ].join(' ');
+
+  const gradId = 'cpu-grad-' + Math.random().toString(36).substring(2, 7);
 
   return (
     <svg
       viewBox={`0 0 ${W} ${H}`}
       preserveAspectRatio="none"
-      style={{ width: '100%', height: '36px', display: 'block' }}
+      style={{ width: '100%', height: '42px', display: 'block', overflow: 'visible' }}
       aria-hidden="true"
     >
+      <defs>
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.35" />
+          <stop offset="100%" stopColor="#38bdf8" stopOpacity="0.0" />
+        </linearGradient>
+      </defs>
+      <polygon points={areaCoords} fill={`url(#${gradId})`} />
       <polyline
         points={coords.join(' ')}
         fill="none"
-        stroke="var(--accent)"
-        strokeWidth="1.5"
+        stroke="#38bdf8"
+        strokeWidth="1.75"
         strokeLinecap="round"
         strokeLinejoin="round"
         vectorEffect="non-scaling-stroke"
@@ -113,6 +138,7 @@ function Val({ children, muted }: { children: React.ReactNode; muted?: boolean }
       fontFamily: 'var(--mono)',
       fontSize: '12px',
       fontWeight: 600,
+      letterSpacing: '-0.01em',
       color: muted ? 'var(--text-muted)' : 'var(--text-primary)',
     }}>
       {children}
@@ -124,12 +150,12 @@ function Val({ children, muted }: { children: React.ReactNode; muted?: boolean }
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <span style={{
-      fontSize: '11px',
+      fontSize: '10.5px',
       fontFamily: 'var(--sans)',
       color: 'var(--text-muted)',
       textTransform: 'uppercase',
       letterSpacing: '0.06em',
-      fontWeight: 500,
+      fontWeight: 600,
     }}>
       {children}
     </span>
@@ -140,23 +166,27 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 function StatRow({ label, value }: { label: string; value: string }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '12px' }}>
-      <span style={{ fontSize: '11px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{label}</span>
+      <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{label}</span>
       <Val>{value}</Val>
     </div>
   );
 }
 
-/** Metric card container */
+/** Metric card container — Acrylic glass */
 function MetricCard({ children }: { children: React.ReactNode }) {
   return (
     <div style={{
-      background: 'var(--bg-raised)',
-      border: '1px solid var(--border-subtle)',
-      borderRadius: '8px',
-      padding: '14px 16px',
+      background: 'rgba(22, 28, 42, 0.55)',
+      backdropFilter: 'blur(12px)',
+      WebkitBackdropFilter: 'blur(12px)',
+      border: '1px solid rgba(255, 255, 255, 0.08)',
+      borderTopColor: 'rgba(255, 255, 255, 0.16)',
+      borderRadius: '12px',
+      padding: '16px',
       display: 'flex',
       flexDirection: 'column',
-      gap: '12px',
+      gap: '14px',
+      boxShadow: '0 4px 16px -2px rgba(0, 0, 0, 0.40)',
     }}>
       {children}
     </div>
@@ -276,18 +306,36 @@ export default function SystemMonitorApp() {
         alignItems: 'center',
         justifyContent: 'center',
         height: '100%',
-        gap: '12px',
+        gap: '14px',
         color: 'var(--text-secondary)',
       }}>
         <div style={{
-          width: '20px',
-          height: '20px',
-          borderRadius: '50%',
-          border: '2px solid var(--border-default)',
-          borderTopColor: 'var(--accent)',
-          animation: 'spin 0.8s linear infinite',
-        }} />
-        <span style={{ fontSize: '12px' }}>Connecting...</span>
+          position: 'relative',
+          width: '28px',
+          height: '28px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            borderRadius: '50%',
+            border: '2px solid rgba(56, 189, 248, 0.15)',
+          }} />
+          <div style={{
+            width: '28px',
+            height: '28px',
+            borderRadius: '50%',
+            border: '2px solid transparent',
+            borderTopColor: 'var(--accent)',
+            boxShadow: '0 0 12px var(--accent-glow)',
+            animation: 'spin 0.75s linear infinite',
+          }} />
+        </div>
+        <span style={{ fontSize: '12px', fontFamily: 'var(--mono)', color: 'var(--text-muted)' }}>
+          Establishing telemetry stream…
+        </span>
       </div>
     );
   }

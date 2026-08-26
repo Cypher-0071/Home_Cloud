@@ -1,53 +1,66 @@
 :root {
-  /* ─── Surfaces ─── */
-  --bg-base:      oklch(9%  0.008 240);
-  --bg-surface:   oklch(13% 0.010 240);
-  --bg-raised:    oklch(16% 0.012 240);
-  --bg-overlay:   oklch(19% 0.013 240);
+  /* ─── Glassmorphism & Acrylic Surfaces ─── */
+  --bg-base:          oklch(10% 0.015 250);
+  --bg-surface:       rgba(18, 22, 34, 0.72);
+  --bg-surface-solid: oklch(14% 0.015 250);
+  --bg-raised:        rgba(30, 36, 52, 0.65);
+  --bg-overlay:       rgba(42, 50, 72, 0.75);
+  --bg-card:          rgba(22, 27, 40, 0.60);
+  --bg-glass-input:   rgba(10, 14, 22, 0.55);
 
-  /* ─── Accent: electric teal ─── */
-  --accent:         oklch(72% 0.18 195);
-  --accent-dim:     oklch(72% 0.18 195 / 0.12);
-  --accent-border:  oklch(72% 0.18 195 / 0.30);
-  --accent-text:    oklch(72% 0.18 195);
-  --accent-hover:   oklch(76% 0.20 195);
+  /* ─── Glass Specular Borders & Highlights ─── */
+  --border-subtle:    rgba(255, 255, 255, 0.08);
+  --border-default:   rgba(255, 255, 255, 0.13);
+  --border-strong:    rgba(255, 255, 255, 0.22);
+  --border-highlight: rgba(255, 255, 255, 0.35);
 
-  /* ─── Text ─── */
-  --text-primary:   oklch(93% 0.006 240);
-  --text-secondary: oklch(63% 0.010 240);
-  --text-muted:     oklch(43% 0.009 240);
-  --text-on-accent: oklch(10% 0.008 240);
+  /* ─── Accent: Ice Blue / Electric Cyan ─── */
+  --accent:         #38bdf8;
+  --accent-rgb:     56, 189, 248;
+  --accent-dim:     rgba(56, 189, 248, 0.12);
+  --accent-border:  rgba(56, 189, 248, 0.35);
+  --accent-glow:    rgba(56, 189, 248, 0.25);
+  --accent-text:    #7dd3fc;
+  --accent-hover:   #60a5fa;
 
-  /* ─── Borders ─── */
-  --border-subtle:  oklch(20% 0.011 240);
-  --border-default: oklch(26% 0.012 240);
-  --border-strong:  oklch(33% 0.014 240);
+  /* ─── Text Hierarchy ─── */
+  --text-primary:   oklch(96% 0.005 240);
+  --text-secondary: oklch(75% 0.012 240);
+  --text-muted:     oklch(52% 0.015 240);
+  --text-on-accent: #0f172a;
 
-  /* ─── Semantic status ─── */
-  --ok:       oklch(68% 0.18 145);
-  --warn:     oklch(78% 0.16 70);
-  --error:    oklch(62% 0.22 25);
-  --ok-dim:   oklch(68% 0.18 145 / 0.10);
-  --warn-dim: oklch(78% 0.16 70  / 0.10);
-  --error-dim:oklch(62% 0.22 25  / 0.10);
+  /* ─── Semantic Status ─── */
+  --ok:        #34d399;
+  --warn:      #fbbf24;
+  --error:     #f87171;
+  --ok-dim:    rgba(52, 211, 153, 0.12);
+  --warn-dim:  rgba(251, 191, 36, 0.12);
+  --error-dim: rgba(248, 113, 113, 0.12);
 
-  /* ─── Elevation ─── */
-  --shadow-sm:     0 1px 4px  oklch(0% 0 0 / 0.35);
-  --shadow-md:     0 4px 16px oklch(0% 0 0 / 0.50);
-  --shadow-lg:     0 12px 40px oklch(0% 0 0 / 0.65);
-  --shadow-window: 0 20px 60px oklch(0% 0 0 / 0.70);
+  /* ─── Elevation & Glass Shadows ─── */
+  --shadow-sm:      0 2px 8px rgba(0, 0, 0, 0.35);
+  --shadow-md:      0 8px 24px -4px rgba(0, 0, 0, 0.55);
+  --shadow-lg:      0 16px 48px -8px rgba(0, 0, 0, 0.65);
+  --shadow-window:  0 28px 72px -12px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  --shadow-dock:    0 20px 50px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+
+  /* ─── Blur Constants ─── */
+  --blur-window: blur(28px) saturate(190%);
+  --blur-dock:   blur(32px) saturate(200%);
+  --blur-card:   blur(20px) saturate(180%);
 
   /* ─── Motion ─── */
   --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
   --ease-out-expo:  cubic-bezier(0.16, 1, 0.3, 1);
-  --duration-fast:  120ms;
-  --duration-base:  200ms;
-  --duration-slow:  300ms;
+  --ease-spring:    cubic-bezier(0.34, 1.56, 0.64, 1);
+  --duration-fast:  140ms;
+  --duration-base:  220ms;
+  --duration-slow:  320ms;
 
   /* ─── Typography ─── */
-  --sans:    'Inter', system-ui, -apple-system, sans-serif;
-  --heading: 'Inter', system-ui, -apple-system, sans-serif;
-  --mono:    'JetBrains Mono', 'Fira Code', ui-monospace, Consolas, monospace;
+  --sans:    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --heading: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --mono:    'JetBrains Mono', ui-monospace, SFMono-Regular, Consolas, monospace;
 
   /* ─── Spacing (4pt base) ─── */
   --space-1:  4px;
@@ -60,22 +73,21 @@
   --space-12: 48px;
 
   /* ─── Layout ─── */
-  --taskbar-height: 48px;
+  --taskbar-height: 56px;
 
-  /* ─── Backward-compat aliases (CSS modules not yet overhauled) ─── */
+  /* ─── Backward-compat aliases ─── */
   --text:        var(--text-secondary);
   --text-h:      var(--text-primary);
   --bg:          var(--bg-surface);
-  --border:      var(--border-subtle);
-  --code-bg:     var(--bg-base);
-  --accent-rgb:  0, 194, 190;
+  --border:      var(--border-default);
+  --code-bg:     var(--bg-glass-input);
   --accent-bg:   var(--accent-dim);
   --social-bg:   var(--bg-raised);
   --shadow:      var(--shadow-md);
 
   /* ─── Base ─── */
   font: 13px/1.55 var(--sans);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.012em;
   color-scheme: dark;
   color: var(--text-secondary);
   background: var(--bg-base);

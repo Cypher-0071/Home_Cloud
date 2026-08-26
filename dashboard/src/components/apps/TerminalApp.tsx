@@ -15,19 +15,29 @@ export default function TerminalApp() {
       cursorBlink: true,
       fontSize: 13,
       fontFamily: 'var(--mono)',
+      letterSpacing: 0,
       theme: {
-        background: '#0b0b0e',
-        foreground: '#e4e4e7',
-        cursor: '#a855f7',
-        selectionBackground: 'rgba(168, 85, 247, 0.3)',
-        black: '#000000',
-        red: '#ef4444',
-        green: '#22c55e',
-        yellow: '#eab308',
-        blue: '#3b82f6',
-        magenta: '#a855f7',
-        cyan: '#06b6d4',
-        white: '#d4d4d8',
+        background: '#090d16',
+        foreground: '#e2e8f0',
+        cursor: '#38bdf8',
+        cursorAccent: '#090d16',
+        selectionBackground: 'rgba(56, 189, 248, 0.30)',
+        black: '#0f172a',
+        red: '#f87171',
+        green: '#34d399',
+        yellow: '#fbbf24',
+        blue: '#60a5fa',
+        magenta: '#c084fc',
+        cyan: '#38bdf8',
+        white: '#f1f5f9',
+        brightBlack: '#475569',
+        brightRed: '#fca5a5',
+        brightGreen: '#6ee7b7',
+        brightYellow: '#fde047',
+        brightBlue: '#93c5fd',
+        brightMagenta: '#d8b4fe',
+        brightCyan: '#7dd3fc',
+        brightWhite: '#ffffff',
       },
     });
 
@@ -49,7 +59,7 @@ export default function TerminalApp() {
     socketRef.current = socket;
 
     socket.onopen = () => {
-      term.write('\r\n\x1b[1;35m==> Connected to Home Cloud Secure Shell (bash) <==\x1b[0m\r\n\r\n');
+      term.write('\r\n\x1b[1;36m==> Connected to Home Cloud Secure Shell (bash) <==\x1b[0m\r\n\r\n');
     };
 
     socket.onmessage = (event) => {
