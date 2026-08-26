@@ -125,7 +125,7 @@ export default function Desktop() {
     {
       id: 'metrics',
       title: 'Activity Monitor',
-      icon: <Activity size={14} />,
+      icon: <Activity size={18} />,
       component: <ErrorBoundary label="Activity Monitor"><SystemMonitorApp /></ErrorBoundary>,
       isOpen: true,
       isMinimized: false,
@@ -139,7 +139,7 @@ export default function Desktop() {
     {
       id: 'files',
       title: 'File Explorer',
-      icon: <Folder size={14} />,
+      icon: <Folder size={18} />,
       component: <ErrorBoundary label="File Explorer"><FileExplorer /></ErrorBoundary>,
       isOpen: false,
       isMinimized: false,
@@ -153,7 +153,7 @@ export default function Desktop() {
     {
       id: 'terminal',
       title: 'Terminal',
-      icon: <TerminalIcon size={14} />,
+      icon: <TerminalIcon size={18} />,
       component: <ErrorBoundary label="Terminal"><TerminalApp /></ErrorBoundary>,
       isOpen: false,
       isMinimized: false,
@@ -167,7 +167,7 @@ export default function Desktop() {
     {
       id: 'docker',
       title: 'Docker Manager',
-      icon: <Box size={14} />,
+      icon: <Box size={18} />,
       component: <ErrorBoundary label="Docker Manager"><DockerApp /></ErrorBoundary>,
       isOpen: false,
       isMinimized: false,
