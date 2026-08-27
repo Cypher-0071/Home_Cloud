@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Play, Square, RefreshCw, Trash2, Box, AlertCircle, X, Cpu, HardDrive, Plus, Globe, ExternalLink, GlobeLock, Layers, FileText, Zap } from 'lucide-react';
+import { Play, Square, RefreshCw, Trash2, Box, AlertCircle, X, Cpu, HardDrive, Plus, Globe, ExternalLink, GlobeLock, Layers, FileText, Zap, Terminal } from 'lucide-react';
 import ContainerConsoleTab from './ContainerConsoleTab';
 import styles from './docker.module.css';
 import { useNetworkDetector } from '../../hooks/useNetworkDetector';
@@ -151,11 +151,12 @@ function getStatusClass(state: string): string {
 
 function getDotColor(state: string): string {
   switch (state) {
-    case 'running':    return '#10b981';
-    case 'exited':     return '#3f3f46';
-    case 'paused':     return '#eab308';
-    case 'restarting': return '#f97316';
-    default:           return '#ef4444';
+    case 'running':    return '#34d399';
+    case 'exited':     return '#71717a';
+    case 'paused':     return '#fbbf24';
+    case 'restarting': return '#fbbf24';
+    case 'dead':       return '#f87171';
+    default:           return '#71717a';
   }
 }
 
@@ -288,6 +289,7 @@ export default function DockerApp() {
   const [logsError, setLogsError]             = useState<string | null>(null);
   const [showTimestamps, setShowTimestamps]   = useState(true);
   const [isLogPaused, setIsLogPaused]         = useState(false);
+  const [autoScroll, setAutoScroll]           = useState(true);
 
   // Refs for tracking pause status and buffering logs without triggering stale effect closures
   const isLogPausedRef = useRef(isLogPaused);
@@ -788,10 +790,10 @@ export default function DockerApp() {
 
   // Auto-scroll logs terminal to bottom on new logs
   useEffect(() => {
-    if (logsTerminalRef.current && !isLogPaused) {
+    if (logsTerminalRef.current && !isLogPaused && autoScroll) {
       logsTerminalRef.current.scrollTop = logsTerminalRef.current.scrollHeight;
     }
-  }, [logLines, isLogPaused, activeTab]);
+  }, [logLines, isLogPaused, autoScroll, activeTab]);
 
   const doAction = async (containerId: string, action: ActionKind) => {
     setActionLoading(`${containerId}-${action}`);
@@ -1011,7 +1013,7 @@ export default function DockerApp() {
     if (selectedContainer?.State !== 'running') {
       return (
         <div className={styles.comingSoon}>
-          <AlertCircle size={28} style={{ color: '#52525b' }} />
+          <AlertCircle size={28} style={{ color: 'var(--text-muted)' }} />
           <span className={styles.comingSoonText}>
             Telemetry unavailable. Real-time stats are only available for running containers.
           </span>
@@ -1023,14 +1025,14 @@ export default function DockerApp() {
       return (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px', gap: '10px' }}>
           <div className={styles.spinner} style={{ width: '20px', height: '20px' }} />
-          <span style={{ fontSize: '11px', color: '#71717a' }}>Querying container telemetry…</span>
+          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Querying container telemetry…</span>
         </div>
       );
     }
 
     if (statsError) {
       return (
-        <div style={{ padding: '12px', color: '#f87171', fontSize: '11px' }}>
+        <div style={{ padding: '12px', color: 'var(--error)', fontSize: '11px' }}>
           Error fetching stats: {statsError}
         </div>
       );
@@ -1049,11 +1051,17 @@ export default function DockerApp() {
         <div className={styles.statsCard}>
           <div className={styles.statsHeader}>
             <span>Processor (CPU)</span>
-            <Cpu size={12} style={{ color: '#a855f7' }} />
+            <Cpu size={12} style={{ color: 'var(--text-secondary)' }} />
           </div>
           <div className={styles.statsVal}>{cpuPercent.toFixed(1)}%</div>
           <div className={styles.statsProgress}>
-            <div className={styles.statsProgressFill} style={{ width: `${cpuPercent}%`, background: '#a855f7' }} />
+            <div
+              className={styles.statsProgressFill}
+              style={{
+                width: `${cpuPercent}%`,
+                background: cpuPercent > 85 ? 'var(--error)' : cpuPercent > 60 ? 'var(--warn)' : '#ffffff',
+              }}
+            />
           </div>
         </div>
 
@@ -1061,14 +1069,20 @@ export default function DockerApp() {
         <div className={styles.statsCard}>
           <div className={styles.statsHeader}>
             <span>Memory (RAM)</span>
-            <HardDrive size={12} style={{ color: '#06b6d4' }} />
+            <HardDrive size={12} style={{ color: 'var(--text-secondary)' }} />
           </div>
           <div className={styles.statsVal}>{memInfo.percent.toFixed(1)}%</div>
-          <div style={{ fontSize: '10px', color: '#71717a', fontFamily: 'monospace' }}>
+          <div style={{ fontSize: '10.5px', color: 'var(--text-muted)', fontFamily: 'var(--mono)' }}>
             {formatBytes(memInfo.usage)} / {formatBytes(memInfo.limit)}
           </div>
           <div className={styles.statsProgress}>
-            <div className={styles.statsProgressFill} style={{ width: `${memInfo.percent}%`, background: '#06b6d4' }} />
+            <div
+              className={styles.statsProgressFill}
+              style={{
+                width: `${memInfo.percent}%`,
+                background: memInfo.percent > 85 ? 'var(--error)' : memInfo.percent > 60 ? 'var(--warn)' : '#ffffff',
+              }}
+            />
           </div>
         </div>
 
@@ -1076,14 +1090,14 @@ export default function DockerApp() {
         <div className={styles.statsGrid}>
           <div className={styles.statsCard}>
             <div className={styles.statsHeader}>Network I/O</div>
-            <div style={{ fontSize: '11px', color: '#d4d4d8', fontFamily: 'monospace', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+            <div style={{ fontSize: '11px', color: '#d4d4d8', fontFamily: 'var(--mono)', display: 'flex', flexDirection: 'column', gap: '3px' }}>
               <span>▼ In: {formatBytes(netIO.rx)}</span>
               <span>▲ Out: {formatBytes(netIO.tx)}</span>
             </div>
           </div>
           <div className={styles.statsCard}>
             <div className={styles.statsHeader}>Disk I/O</div>
-            <div style={{ fontSize: '11px', color: '#d4d4d8', fontFamily: 'monospace', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+            <div style={{ fontSize: '11px', color: '#d4d4d8', fontFamily: 'var(--mono)', display: 'flex', flexDirection: 'column', gap: '3px' }}>
               <span>Read: {formatBytes(diskIO.read)}</span>
               <span>Write: {formatBytes(diskIO.write)}</span>
             </div>
@@ -1098,14 +1112,14 @@ export default function DockerApp() {
       return (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px', gap: '10px' }}>
           <div className={styles.spinner} style={{ width: '20px', height: '20px' }} />
-          <span style={{ fontSize: '11px', color: '#71717a' }}>Querying configuration…</span>
+          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Querying configuration…</span>
         </div>
       );
     }
 
     if (inspectError) {
       return (
-        <div style={{ padding: '12px', color: '#f87171', fontSize: '11px' }}>
+        <div style={{ padding: '12px', color: 'var(--error)', fontSize: '11px' }}>
           Error fetching metadata: {inspectError}
         </div>
       );
@@ -1215,14 +1229,14 @@ export default function DockerApp() {
       return (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px', gap: '10px' }}>
           <div className={styles.spinner} style={{ width: '20px', height: '20px' }} />
-          <span style={{ fontSize: '11px', color: '#71717a' }}>Connecting to logs stream…</span>
+          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Connecting to logs stream…</span>
         </div>
       );
     }
 
     if (logsError) {
       return (
-        <div style={{ padding: '12px', color: '#f87171', fontSize: '11px' }}>
+        <div style={{ padding: '12px', color: 'var(--error)', fontSize: '11px' }}>
           Error streaming logs: {logsError}
         </div>
       );
@@ -1244,7 +1258,14 @@ export default function DockerApp() {
             onClick={() => setIsLogPaused(!isLogPaused)}
             title={isLogPaused ? "Resume log stream" : "Pause log stream"}
           >
-            {isLogPaused ? "Resume" : "Pause"}
+            {isLogPaused ? "▶ Resume" : "⏸ Pause"}
+          </button>
+          <button
+            className={`${styles.logsControlBtn} ${autoScroll ? styles.logsControlBtnActive : ''}`}
+            onClick={() => setAutoScroll(!autoScroll)}
+            title={autoScroll ? "Disable automatic scrolling" : "Enable automatic scrolling to latest log line"}
+          >
+            {autoScroll ? "↓ Auto-scroll ON" : "↓ Auto-scroll OFF"}
           </button>
           <button
             className={styles.logsControlBtn}
@@ -1297,7 +1318,7 @@ export default function DockerApp() {
   /* ── Error ── */
   if (error) return (
     <div className={styles.errorState}>
-      <AlertCircle size={32} style={{ color: '#ef4444', opacity: 0.7 }} />
+      <AlertCircle size={32} style={{ color: 'var(--error)', opacity: 0.8 }} />
       <p className={styles.errorTitle}>Docker Engine Unavailable</p>
       <span className={styles.errorCode}>{error}</span>
       <button className={styles.retryBtn} onClick={() => fetchContainers()}>
@@ -1358,15 +1379,15 @@ export default function DockerApp() {
           {/* Stat badges */}
           <div className={styles.statsRow}>
             <div className={`${styles.statBadge} ${styles.statRunning}`}>
-              <span className={styles.statDot} style={{ background: '#10b981', boxShadow: '0 0 5px #10b981' }} />
+              <span className={styles.statDot} style={{ background: 'var(--ok)' }} />
               {runningCount} Running
             </div>
             <div className={`${styles.statBadge} ${styles.statStopped}`}>
-              <span className={styles.statDot} style={{ background: '#6b7280' }} />
+              <span className={styles.statDot} style={{ background: 'var(--text-muted)' }} />
               {stoppedCount} Stopped
             </div>
             <div className={`${styles.statBadge} ${styles.statTotal}`}>
-              <Box size={10} />
+              <Box size={11} />
               {containers.length} Total
             </div>
           </div>
@@ -1414,7 +1435,6 @@ export default function DockerApp() {
                                 className={styles.containerDot}
                                 style={{
                                   background: getDotColor(c.State),
-                                  boxShadow: isRunning ? `0 0 6px ${getDotColor(c.State)}` : 'none',
                                 }}
                               />
                               <div className={styles.nameInfo}>
@@ -1510,6 +1530,26 @@ export default function DockerApp() {
                                       >
                                         <RefreshCw size={11} />
                                       </button>
+                                      <button
+                                        className={`${styles.actionBtn} ${styles.btnNav}`}
+                                        title="Open container shell / console"
+                                        onClick={() => {
+                                          setSelectedId(c.Id);
+                                          setActiveTab('console');
+                                        }}
+                                      >
+                                        <Terminal size={11} />
+                                      </button>
+                                      <button
+                                        className={`${styles.actionBtn} ${styles.btnNav}`}
+                                        title="View container logs"
+                                        onClick={() => {
+                                          setSelectedId(c.Id);
+                                          setActiveTab('logs');
+                                        }}
+                                      >
+                                        <FileText size={11} />
+                                      </button>
                                       {c.exposedRule ? (
                                         <button
                                           className={`${styles.actionBtn} ${styles.btnUnexpose}`}
@@ -1537,14 +1577,26 @@ export default function DockerApp() {
                                       )}
                                     </>
                                   ) : (
-                                    <button
-                                      className={`${styles.actionBtn} ${styles.btnStart}`}
-                                      title="Start container"
-                                      disabled={anyBusy}
-                                      onClick={() => doAction(c.Id, 'start')}
-                                    >
-                                      <Play size={11} fill="currentColor" />
-                                    </button>
+                                    <>
+                                      <button
+                                        className={`${styles.actionBtn} ${styles.btnStart}`}
+                                        title="Start container"
+                                        disabled={anyBusy}
+                                        onClick={() => doAction(c.Id, 'start')}
+                                      >
+                                        <Play size={11} fill="currentColor" />
+                                      </button>
+                                      <button
+                                        className={`${styles.actionBtn} ${styles.btnNav}`}
+                                        title="View container logs"
+                                        onClick={() => {
+                                          setSelectedId(c.Id);
+                                          setActiveTab('logs');
+                                        }}
+                                      >
+                                        <FileText size={11} />
+                                      </button>
+                                    </>
                                   )}
                                   <button
                                     className={`${styles.actionBtn} ${styles.btnDelete}`}
@@ -1682,12 +1734,12 @@ export default function DockerApp() {
             <div className={styles.pullProgressCard}>
               <div className={styles.pullProgressTitle}>
                 <span>Downloading {pullingImage}</span>
-                {pullSuccess && <span style={{ color: '#10b981' }}>Success!</span>}
-                {pullError && <span style={{ color: '#f87171' }}>Failed</span>}
+                {pullSuccess && <span style={{ color: 'var(--ok)' }}>Success!</span>}
+                {pullError && <span style={{ color: 'var(--error)' }}>Failed</span>}
               </div>
 
               {pullError && (
-                <div style={{ color: '#f87171', fontSize: '11px', whiteSpace: 'pre-wrap' }}>
+                <div style={{ color: 'var(--error)', fontSize: '11px', whiteSpace: 'pre-wrap' }}>
                   ⚠ {pullError}
                 </div>
               )}
@@ -1723,12 +1775,12 @@ export default function DockerApp() {
           {/* Images Table list */}
           <div className={styles.tableWrapper}>
             {imagesLoading && images.length === 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px', gap: '10px', color: '#71717a' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px', gap: '10px', color: 'var(--text-muted)' }}>
                 <div className={styles.spinner} style={{ width: '20px', height: '20px' }} />
                 <span>Loading local images…</span>
               </div>
             ) : imagesError ? (
-              <div style={{ padding: '20px', color: '#f87171', fontSize: '12px' }}>
+              <div style={{ padding: '20px', color: 'var(--error)', fontSize: '12px' }}>
                 Error listing images: {imagesError}
               </div>
             ) : images.length === 0 ? (
@@ -1775,9 +1827,9 @@ export default function DockerApp() {
                         {/* Tag */}
                         <td className={styles.td}>
                           <span className={styles.imageBadge} style={{
-                            background: isDangling ? '#1a1a1e' : '#141c2c',
-                            borderColor: isDangling ? '#27272a' : '#1d2c4c',
-                            color: isDangling ? '#71717a' : '#60a5fa'
+                            background: isDangling ? 'rgba(255, 255, 255, 0.03)' : 'rgba(255, 255, 255, 0.06)',
+                            borderColor: isDangling ? 'rgba(255, 255, 255, 0.06)' : 'rgba(255, 255, 255, 0.12)',
+                            color: isDangling ? 'var(--text-muted)' : 'var(--text-primary)'
                           }}>
                             {tag}
                           </span>
@@ -2196,7 +2248,7 @@ export default function DockerApp() {
           <div className={styles.modalCard} onClick={e => e.stopPropagation()}>
             <div className={styles.modalHeader}>
               <span className={styles.modalTitle}>
-                <Play size={14} style={{ color: '#a855f7' }} fill="currentColor" />
+                <Play size={14} style={{ color: 'var(--text-primary)' }} fill="currentColor" />
                 Run Container
               </span>
               <button
@@ -2211,7 +2263,7 @@ export default function DockerApp() {
             <form onSubmit={handleCreateContainer} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
               <div className={styles.modalBody}>
                 {runError && (
-                  <div style={{ padding: '10px 12px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid #ef4444', borderRadius: '6px', color: '#f87171', fontSize: '11px' }}>
+                  <div style={{ padding: '10px 12px', background: 'var(--error-dim)', border: '1px solid var(--error)', borderRadius: '6px', color: 'var(--error)', fontSize: '11px' }}>
                     ⚠ {runError}
                   </div>
                 )}
@@ -2224,7 +2276,7 @@ export default function DockerApp() {
                     type="text"
                     value={runModalImage}
                     readOnly
-                    style={{ opacity: 0.8, background: '#121214' }}
+                    style={{ opacity: 0.8, background: 'rgba(255, 255, 255, 0.03)' }}
                   />
                 </div>
 

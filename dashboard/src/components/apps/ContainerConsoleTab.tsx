@@ -22,21 +22,31 @@ export default function ContainerConsoleTab({ containerId, containerName, isRunn
 
     const term = new Terminal({
       cursorBlink: true,
-      fontSize: 12,
-      fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+      fontSize: 12.5,
+      fontFamily: "'JetBrains Mono', ui-monospace, SFMono-Regular, Consolas, monospace",
+      letterSpacing: 0,
       theme: {
-        background: '#070708',
-        foreground: '#e4e4e7',
-        cursor: '#a855f7',
-        selectionBackground: 'rgba(168, 85, 247, 0.3)',
-        black: '#000000',
-        red: '#ef4444',
-        green: '#10b981',
-        yellow: '#eab308',
-        blue: '#3b82f6',
-        magenta: '#a855f7',
-        cyan: '#06b6d4',
-        white: '#d4d4d8',
+        background: '#18181b',
+        foreground: '#f4f4f5',
+        cursor: '#ffffff',
+        cursorAccent: '#18181b',
+        selectionBackground: 'rgba(255, 255, 255, 0.22)',
+        black: '#27272a',
+        red: '#f87171',
+        green: '#34d399',
+        yellow: '#fbbf24',
+        blue: '#60a5fa',
+        magenta: '#c084fc',
+        cyan: '#38bdf8',
+        white: '#f4f4f5',
+        brightBlack: '#52525b',
+        brightRed: '#fca5a5',
+        brightGreen: '#6ee7b7',
+        brightYellow: '#fde047',
+        brightBlue: '#93c5fd',
+        brightMagenta: '#e9d5ff',
+        brightCyan: '#a5f3fc',
+        brightWhite: '#ffffff',
       },
     });
 
@@ -59,7 +69,7 @@ export default function ContainerConsoleTab({ containerId, containerName, isRunn
     socketRef.current = socket;
 
     socket.onopen = () => {
-      term.write(`\r\n\x1b[1;35m==> Connected to exec console (${containerName}) <==\x1b[0m\r\n\r\n`);
+      term.write(`\r\n\x1b[1;37m==> Connected to container console (${containerName}) <==\x1b[0m\r\n\r\n`);
       if (fitAddon && term) {
         try {
           fitAddon.fit();
@@ -119,7 +129,7 @@ export default function ContainerConsoleTab({ containerId, containerName, isRunn
   if (!isRunning) {
     return (
       <div className={styles.comingSoon}>
-        <AlertCircle size={28} style={{ color: '#52525b' }} />
+        <AlertCircle size={28} style={{ color: 'var(--text-muted)' }} />
         <span className={styles.comingSoonText}>
           Exec console unavailable. Container must be in a running state.
         </span>
@@ -128,8 +138,8 @@ export default function ContainerConsoleTab({ containerId, containerName, isRunn
   }
 
   return (
-    <div style={{ height: '100%', width: '100%', background: '#070708', padding: '6px', boxSizing: 'border-box', overflow: 'hidden' }}>
-      <div ref={terminalRef} style={{ height: '100%', width: '100%' }} />
+    <div className={styles.consoleWrapper}>
+      <div ref={terminalRef} className={styles.consoleInner} />
     </div>
   );
 }
