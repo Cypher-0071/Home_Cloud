@@ -1,4 +1,3 @@
-import { useEffect, useRef, useState } from 'react';
 import {
   Cpu,
   HardDrive,
@@ -6,60 +5,10 @@ import {
   Network,
   ArrowDown,
   ArrowUp,
-  Wifi,
-  Globe,
   Activity,
 } from 'lucide-react';
 import { useNetworkDetector } from '../../hooks/useNetworkDetector';
-
-// ─── Telemetry Data Types ───
-
-interface CpuLoad {
-  avgLoad?: number;
-  currentLoad: number;
-  currentLoadUser: number;
-  currentLoadSystem: number;
-  currentLoadIdle: number;
-  cpus?: { load: number }[];
-}
-
-interface MemData {
-  total: number;
-  used: number;
-  free: number;
-  active?: number;
-  available: number;
-  swaptotal: number;
-  swapused: number;
-  swapfree: number;
-}
-
-interface DiskPartition {
-  fs: string;
-  type: string;
-  size: number;
-  used: number;
-  available: number;
-  use: number;
-  mount: string;
-}
-
-interface NetworkInterfaceStats {
-  iface: string;
-  operstate?: string;
-  rx_bytes: number;
-  tx_bytes: number;
-  rx_sec?: number | null;
-  tx_sec?: number | null;
-  ms?: number;
-}
-
-interface MetricsPayload {
-  cpu: CpuLoad;
-  mem: MemData;
-  disk: DiskPartition[];
-  network?: NetworkInterfaceStats[];
-}
+import { useSystemMetrics } from '../../hooks/useSystemMetrics';
 
 // ─── Format Helpers ───
 
@@ -285,14 +234,14 @@ function MetricCard({
   return (
     <div
       style={{
-        background: 'rgba(255, 255, 255, 0.03)',
-        border: '1px solid rgba(255, 255, 255, 0.08)',
+        background: '#0a0a0a',
+        border: '1px solid #262626',
         borderRadius: '8px',
-        padding: '14px 16px',
+        padding: '16px 18px',
         display: 'flex',
         flexDirection: 'column',
         gap: '12px',
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.35)',
+        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.40)',
         boxSizing: 'border-box',
         ...style,
       }}
@@ -328,7 +277,8 @@ function CardHeader({
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
         <div
           style={{
-            background: 'rgba(255, 255, 255, 0.06)',
+            background: '#171717',
+            border: '1px solid #262626',
             color: 'var(--text-primary)',
             borderRadius: '6px',
             width: '28px',
@@ -377,78 +327,8 @@ function CardHeader({
 // ─── Main System Monitor App Component ───
 
 export default function SystemMonitorApp() {
-  const [data, setData] = useState<MetricsPayload | null>(null);
-  const [connected, setConnected] = useState(false);
-  const eventSourceRef = useRef<EventSource | null>(null);
-  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const mountedRef = useRef(true);
-
-  // Network context (detects LAN vs Tunnel)
+  const { data, cpuHistory } = useSystemMetrics();
   const netDetector = useNetworkDetector();
-
-  // Rolling 60-point CPU history
-  const cpuHistoryRef = useRef<number[]>([]);
-  const [cpuHistory, setCpuHistory] = useState<number[]>([]);
-
-  useEffect(() => {
-    mountedRef.current = true;
-
-    const connect = () => {
-      if (!mountedRef.current) return;
-
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close();
-        eventSourceRef.current = null;
-      }
-
-      const es = new EventSource('/api/metrics');
-      eventSourceRef.current = es;
-
-      es.onopen = () => {
-        if (mountedRef.current) setConnected(true);
-      };
-
-      es.onmessage = (event) => {
-        if (!mountedRef.current) return;
-        try {
-          const parsed: MetricsPayload = JSON.parse(event.data);
-          setData(parsed);
-          setConnected(true);
-
-          // Accumulate CPU history (up to 60 points)
-          cpuHistoryRef.current = [
-            ...cpuHistoryRef.current.slice(-59),
-            parsed.cpu.currentLoad,
-          ];
-          setCpuHistory([...cpuHistoryRef.current]);
-        } catch (err) {
-          console.error('[SystemMonitor] SSE parse error:', err);
-        }
-      };
-
-      es.onerror = () => {
-        if (!mountedRef.current) return;
-        setConnected(false);
-        es.close();
-        eventSourceRef.current = null;
-        reconnectTimerRef.current = setTimeout(connect, 5000);
-      };
-    };
-
-    connect();
-
-    return () => {
-      mountedRef.current = false;
-      if (reconnectTimerRef.current) {
-        clearTimeout(reconnectTimerRef.current);
-        reconnectTimerRef.current = null;
-      }
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close();
-        eventSourceRef.current = null;
-      }
-    };
-  }, []);
 
   // ─── Loading / Connecting View ───
   if (!data) {
@@ -519,6 +399,24 @@ export default function SystemMonitorApp() {
       (n) => n.operstate === 'up' && !n.iface.startsWith('lo') && !n.iface.startsWith('veth'),
     ) || network?.[0];
 
+  // Filter out internal WSL/virtual module partitions for a clean UI
+  const displayDisks =
+    disk.filter(
+      (d) =>
+        !d.mount.startsWith('/usr/lib') &&
+        !d.mount.startsWith('/mnt/wslg') &&
+        !d.fs?.includes('squashfs') &&
+        d.size > 0,
+    ).length > 0
+      ? disk.filter(
+          (d) =>
+            !d.mount.startsWith('/usr/lib') &&
+            !d.mount.startsWith('/mnt/wslg') &&
+            !d.fs?.includes('squashfs') &&
+            d.size > 0,
+        )
+      : disk;
+
   return (
     <div
       style={{
@@ -529,76 +427,9 @@ export default function SystemMonitorApp() {
         overflowY: 'auto',
         height: '100%',
         boxSizing: 'border-box',
+        background: '#000000',
       }}
     >
-      {/* ─── Telemetry Header Status Bar ─── */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '8px',
-          paddingBottom: '2px',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span
-            style={{
-              width: '6px',
-              height: '6px',
-              borderRadius: '50%',
-              background: connected ? 'var(--ok, #34d399)' : 'var(--error, #f87171)',
-              flexShrink: 0,
-            }}
-          />
-          <span
-            style={{
-              fontSize: '11px',
-              color: 'var(--text-secondary)',
-              fontFamily: 'var(--mono)',
-            }}
-          >
-            {connected ? 'Live telemetry · 2s interval' : 'Stream disconnected · retrying…'}
-          </span>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span
-            style={{
-              fontSize: '11px',
-              color: 'var(--text-muted)',
-              fontFamily: 'var(--mono)',
-            }}
-          >
-            Host: {netDetector.serverLocalIp || 'localhost'}
-          </span>
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '4px',
-              fontSize: '10.5px',
-              fontFamily: 'var(--mono)',
-              padding: '2px 6px',
-              borderRadius: '4px',
-              background: netDetector.isDirectLocal
-                ? 'rgba(52, 211, 153, 0.12)'
-                : 'rgba(255, 255, 255, 0.06)',
-              color: netDetector.isDirectLocal ? 'var(--ok, #34d399)' : 'var(--text-secondary)',
-              border: `1px solid ${
-                netDetector.isDirectLocal
-                  ? 'rgba(52, 211, 153, 0.25)'
-                  : 'rgba(255, 255, 255, 0.08)'
-              }`,
-            }}
-          >
-            {netDetector.isDirectLocal ? <Wifi size={10} /> : <Globe size={10} />}
-            <span>{netDetector.isDirectLocal ? 'Direct LAN' : 'Cloudflare Tunnel'}</span>
-          </div>
-        </div>
-      </div>
-
       {/* ─── 2x2 Telemetry Grid (CPU, RAM, Storage, Network) ─── */}
       <div
         style={{
@@ -815,7 +646,7 @@ export default function SystemMonitorApp() {
           <CardHeader
             icon={<HardDrive size={15} />}
             title="Storage"
-            subtitle={`${disk.length} filesystem${disk.length !== 1 ? 's' : ''}`}
+            subtitle={`${displayDisks.length} partition${displayDisks.length !== 1 ? 's' : ''}`}
             badge={
               <span
                 style={{
@@ -824,8 +655,8 @@ export default function SystemMonitorApp() {
                   color: 'var(--text-muted)',
                 }}
               >
-                {disk.reduce((acc, d) => acc + (d.size || 0), 0) > 0
-                  ? formatBytes(disk.reduce((acc, d) => acc + (d.size || 0), 0))
+                {displayDisks.reduce((acc, d) => acc + (d.size || 0), 0) > 0
+                  ? formatBytes(displayDisks.reduce((acc, d) => acc + (d.size || 0), 0))
                   : ''}
               </span>
             }
@@ -833,7 +664,7 @@ export default function SystemMonitorApp() {
 
           {/* Disk Partitions List */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {disk.map((d, i) => (
+            {displayDisks.map((d, i) => (
               <div
                 key={d.mount}
                 style={{

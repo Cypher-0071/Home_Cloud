@@ -1,33 +1,33 @@
 :root {
-  /* ─── Windows 11 Mica Dark & Solid Surfaces ─── */
-  --bg-base:          #0b0f17;
-  --bg-surface:       rgba(32, 32, 36, 0.98);
-  --bg-surface-solid: #1e1e22;
-  --bg-raised:        rgba(255, 255, 255, 0.05);
-  --bg-overlay:       rgba(24, 24, 28, 0.96);
-  --bg-card:          rgba(32, 32, 36, 0.98);
-  --bg-glass-input:   rgba(255, 255, 255, 0.05);
+  /* ─── Vercel Signature Dark Design System ─── */
+  --bg-base:          #000000;
+  --bg-surface:       #0a0a0a;
+  --bg-surface-solid: #111111;
+  --bg-raised:        #171717;
+  --bg-overlay:       #000000;
+  --bg-card:          #0a0a0a;
+  --bg-glass-input:   #111111;
 
-  /* ─── Specular Borders & Highlights ─── */
-  --border-subtle:    rgba(255, 255, 255, 0.08);
-  --border-default:   rgba(255, 255, 255, 0.12);
-  --border-strong:    rgba(255, 255, 255, 0.20);
-  --border-highlight: rgba(255, 255, 255, 0.35);
+  /* ─── Vercel Precision 1px Borders ─── */
+  --border-subtle:    #262626;
+  --border-default:   #333333;
+  --border-strong:    #404040;
+  --border-highlight: #525252;
 
-  /* ─── Accent: Neutral White (Unslop Standard) ─── */
+  /* ─── Accent: Pure White Standard ─── */
   --accent:         #ffffff;
   --accent-rgb:     255, 255, 255;
   --accent-dim:     rgba(255, 255, 255, 0.08);
-  --accent-border:  rgba(255, 255, 255, 0.18);
-  --accent-glow:    rgba(255, 255, 255, 0.12);
-  --accent-text:    #f4f4f5;
-  --accent-hover:   #e4e4e7;
+  --accent-border:  #333333;
+  --accent-glow:    rgba(255, 255, 255, 0.08);
+  --accent-text:    #ffffff;
+  --accent-hover:   #eaeaea;
 
-  /* ─── Text Hierarchy ─── */
-  --text-primary:   #f4f4f5;
-  --text-secondary: #a1a1aa;
-  --text-muted:     #71717a;
-  --text-on-accent: #09090b;
+  /* ─── Vercel Text Hierarchy ─── */
+  --text-primary:   #ededed;
+  --text-secondary: #a1a1a1;
+  --text-muted:     #737373;
+  --text-on-accent: #000000;
 
   /* ─── Semantic Status ─── */
   --ok:        #34d399;
@@ -45,9 +45,9 @@
   --shadow-dock:    0 20px 50px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 
   /* ─── Blur Constants ─── */
-  --blur-window: blur(28px) saturate(190%);
-  --blur-dock:   blur(32px) saturate(200%);
-  --blur-card:   blur(20px) saturate(180%);
+  --blur-window: blur(28px);
+  --blur-dock:   blur(32px);
+  --blur-card:   blur(20px);
 
   /* ─── Motion ─── */
   --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);

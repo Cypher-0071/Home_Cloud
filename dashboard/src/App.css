@@ -23,16 +23,14 @@
   overflow: hidden;
 }
 
-/* ─── OS Window — Windows 11 Mica Dark Frame ─── */
+/* ─── OS Window — Vercel Dark Frame ─── */
 .os-window {
   position: absolute;
-  background: rgba(32, 32, 36, 0.98);
-  backdrop-filter: blur(80px) saturate(120%);
-  -webkit-backdrop-filter: blur(80px) saturate(120%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-top: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 10px;
-  box-shadow: 0 24px 64px -12px rgba(0, 0, 0, 0.65), 0 4px 16px rgba(0, 0, 0, 0.40);
+  background: #000000;
+  border: 1px solid #262626;
+  border-top: 1px solid #333333;
+  border-radius: 8px;
+  box-shadow: 0 24px 64px -12px rgba(0, 0, 0, 0.85), 0 4px 16px rgba(0, 0, 0, 0.60);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -45,12 +43,12 @@
 }
 
 .os-window.active {
-  border-color: rgba(255, 255, 255, 0.14);
-  border-top-color: rgba(255, 255, 255, 0.22);
+  border-color: #383838;
+  border-top-color: #4a4a4a;
   box-shadow: 
-    0 32px 80px -16px rgba(0, 0, 0, 0.85),
-    0 4px 20px rgba(0, 0, 0, 0.50),
-    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    0 32px 80px -16px rgba(0, 0, 0, 0.95),
+    0 4px 20px rgba(0, 0, 0, 0.70),
+    inset 0 1px 0 rgba(255, 255, 255, 0.10);
 }
 
 .os-window.maximized {
@@ -71,9 +69,9 @@
 
 /* ─── Window Title Bar ─── */
 .window-titlebar {
-  height: 38px;
-  background: rgba(24, 24, 28, 0.98);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  height: 36px;
+  background: #0a0a0a;
+  border-bottom: 1px solid #222222;
   display: flex;
   align-items: center;
   padding: 0 4px 0 14px;
@@ -88,7 +86,7 @@
 }
 
 .os-window.active .window-titlebar {
-  background: rgba(28, 28, 32, 0.98);
+  background: #111111;
 }
 
 .window-title-area {
@@ -178,7 +176,7 @@
   flex-grow: 1;
   overflow: auto;
   position: relative;
-  background: rgba(14, 18, 28, 0.70);
+  background: transparent;
 }
 
 /* ─── Resize Handle ─── */
@@ -225,7 +223,94 @@
   gap: 8px;
 }
 
-/* ─── Center: Windows 11 Mica Dark Dock ─── */
+/* ─── Left: Vercel Live Metric Widget ─── */
+.desktop-metric-widget {
+  position: relative;
+  height: 38px;
+  padding: 0 12px;
+  background: #000000;
+  border: 1px solid #262626;
+  border-top: 1px solid #333333;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.70);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  color: #a1a1a1;
+  font-family: var(--sans);
+  transition:
+    background 120ms var(--ease-out-quart),
+    border-color 120ms var(--ease-out-quart),
+    color 120ms var(--ease-out-quart);
+}
+
+.desktop-metric-widget:hover {
+  background: #111111;
+  border-color: #383838;
+  color: #ffffff;
+}
+
+.desktop-metric-widget:active {
+  background: #171717;
+}
+
+.desktop-metric-widget.active {
+  background: #171717;
+  border-color: #454545;
+  color: #ffffff;
+}
+
+.desktop-metric-widget:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.60);
+  outline-offset: 1px;
+}
+
+.desktop-metric-widget:hover .dock-tooltip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.metric-widget-icon {
+  flex-shrink: 0;
+  color: #a1a1a1;
+}
+
+.metric-widget-stats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.metric-chip {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.metric-chip-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted, #71717a);
+  font-family: var(--sans);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.metric-chip-val {
+  font-size: 11.5px;
+  font-weight: 500;
+  font-family: var(--mono);
+  letter-spacing: -0.01em;
+}
+
+.metric-divider {
+  width: 1px;
+  height: 14px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* ─── Center: Vercel Precision Dock ─── */
 .taskbar-center {
   position: absolute;
   left: 50%;
@@ -234,15 +319,11 @@
   align-items: center;
   gap: 4px;
   padding: 4px 6px;
-  background: rgba(32, 32, 36, 0.98);
-  backdrop-filter: blur(80px) saturate(120%);
-  -webkit-backdrop-filter: blur(80px) saturate(120%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-top: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 10px;
-  box-shadow: 
-    0 10px 30px -2px rgba(0, 0, 0, 0.55),
-    0 2px 6px rgba(0, 0, 0, 0.35);
+  background: #000000;
+  border: 1px solid #262626;
+  border-top: 1px solid #333333;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.70);
   overflow: visible;
 }
 
@@ -335,22 +416,18 @@
   transform: translateX(-50%) translateY(0);
 }
 
-/* ─── Right: Windows 11 Mica Dark System Tray ─── */
+/* ─── Right: Vercel Precision System Tray ─── */
 .taskbar-right {
   margin-left: auto;
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 4px 8px;
-  background: rgba(32, 32, 36, 0.98);
-  backdrop-filter: blur(80px) saturate(120%);
-  -webkit-backdrop-filter: blur(80px) saturate(120%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-top: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 10px;
-  box-shadow: 
-    0 10px 30px -2px rgba(0, 0, 0, 0.55),
-    0 2px 6px rgba(0, 0, 0, 0.35);
+  background: #000000;
+  border: 1px solid #262626;
+  border-top: 1px solid #333333;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.70);
 }
 
 .tray-tunnel {
@@ -359,18 +436,18 @@
   gap: 6px;
   padding: 4px 9px;
   border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid #262626;
+  background: #111111;
   font-size: 11px;
   font-family: var(--mono);
-  color: #cbd5e1;
+  color: #ededed;
   line-height: 1;
   transition: background var(--duration-fast), border-color var(--duration-fast);
 }
 
 .tray-tunnel:hover {
-  background: rgba(255, 255, 255, 0.10);
-  border-color: rgba(255, 255, 255, 0.14);
+  background: #171717;
+  border-color: #383838;
 }
 
 .tray-dot {
@@ -378,19 +455,11 @@
   height: 6px;
   border-radius: 50%;
   background: #34d399;
-  box-shadow: 0 0 6px #34d399;
   flex-shrink: 0;
-  animation: pulseGlow 2.5s infinite ease-in-out;
-}
-
-@keyframes pulseGlow {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.6; transform: scale(0.85); }
 }
 
 .tray-dot.offline {
   background: var(--error);
-  box-shadow: 0 0 6px var(--error);
 }
 
 .tray-time {

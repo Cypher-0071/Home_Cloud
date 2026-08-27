@@ -14,6 +14,7 @@ import SystemMonitorApp from '../components/apps/SystemMonitorApp';
 import TerminalApp from '../components/apps/TerminalApp';
 import FileExplorer from './files';
 import DockerApp from '../components/apps/DockerApp';
+import DesktopMetricWidget from '../components/DesktopMetricWidget';
 import { useNetworkDetector } from '../hooks/useNetworkDetector';
 
 // Error boundary prevents a crashing child from blacking out the whole shell
@@ -127,14 +128,14 @@ export default function Desktop() {
       title: 'Activity Monitor',
       icon: <Activity size={18} />,
       component: <ErrorBoundary label="Activity Monitor"><SystemMonitorApp /></ErrorBoundary>,
-      isOpen: true,
+      isOpen: false,
       isMinimized: false,
       isMaximized: false,
       x: 60,
       y: 60,
       width: 760,
       height: 520,
-      zIndex: 10,
+      zIndex: 1,
     },
     {
       id: 'files',
@@ -275,25 +276,37 @@ export default function Desktop() {
 
       {/* Taskbar */}
       <div className="taskbar">
-        <div className="taskbar-left" />
+        <div className="taskbar-left">
+          <DesktopMetricWidget
+            active={
+              activeWindowId === 'metrics' &&
+              (windows.find(w => w.id === 'metrics')?.isOpen ?? false) &&
+              !(windows.find(w => w.id === 'metrics')?.isMinimized ?? false)
+            }
+            isOpen={windows.find(w => w.id === 'metrics')?.isOpen}
+            onClick={() => handleDockClick('metrics')}
+          />
+        </div>
 
-        {/* Center: app icons */}
+        {/* Center: app icons (File Explorer, Terminal, Docker) */}
         <div className="taskbar-center">
-          {windows.map(win => {
-            const isActive = activeWindowId === win.id && win.isOpen && !win.isMinimized;
-            return (
-              <button
-                key={win.id}
-                className={`dock-item${isActive ? ' active' : ''}`}
-                onClick={() => handleDockClick(win.id)}
-                aria-label={win.title}
-              >
-                {win.icon}
-                <span className="dock-tooltip">{win.title}</span>
-                {win.isOpen && <span className="dock-item-dot" />}
-              </button>
-            );
-          })}
+          {windows
+            .filter(win => win.id !== 'metrics')
+            .map(win => {
+              const isActive = activeWindowId === win.id && win.isOpen && !win.isMinimized;
+              return (
+                <button
+                  key={win.id}
+                  className={`dock-item${isActive ? ' active' : ''}`}
+                  onClick={() => handleDockClick(win.id)}
+                  aria-label={win.title}
+                >
+                  {win.icon}
+                  <span className="dock-tooltip">{win.title}</span>
+                  {win.isOpen && <span className="dock-item-dot" />}
+                </button>
+              );
+            })}
         </div>
 
         {/* Right: system tray */}
