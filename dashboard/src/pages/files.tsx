@@ -7,6 +7,7 @@ import {
   Search,
   Plus,
   Copy,
+  Check,
   Clipboard,
   Trash2,
   Edit2,
@@ -22,6 +23,10 @@ import {
   Eye,
   Download,
   Scissors,
+  FileCode,
+  Film,
+  Music,
+  FileArchive,
 } from 'lucide-react';
 import styles from './files.module.css';
 import axios from 'axios';
@@ -70,9 +75,15 @@ const TEXT_EXTS  = [
   'js', 'ts', 'jsx', 'tsx', 'py', 'rs', 'go', 'java', 'c', 'cpp',
   'h', 'hpp', 'css', 'html', 'xml', 'sql', 'dockerfile', 'gitignore',
 ];
+const CODE_EXTS = [
+  'js', 'ts', 'jsx', 'tsx', 'py', 'rs', 'go', 'java', 'c', 'cpp',
+  'h', 'hpp', 'css', 'html', 'xml', 'sql', 'sh', 'bash', 'zsh',
+  'json', 'yaml', 'yml', 'toml',
+];
+const ARCHIVE_EXTS = ['zip', 'tar', 'gz', 'bz2', 'xz', '7z', 'rar'];
 const PDF_EXTS   = ['pdf'];
-const VIDEO_EXTS = ['mp4', 'webm', 'ogg', 'mkv'];
-const AUDIO_EXTS = ['mp3', 'wav', 'ogg', 'flac', 'aac'];
+const VIDEO_EXTS = ['mp4', 'webm', 'ogg', 'mkv', 'mov', 'avi'];
+const AUDIO_EXTS = ['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a'];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -130,12 +141,10 @@ const fetchFiles = async (dirPath: string): Promise<FileItem[]> => {
   }));
 };
 
-// Build the URL for the /view endpoint
 function viewUrl(filePath: string): string {
   return `/api/files/view?path=${encodeURIComponent(filePath)}`;
 }
 
-// Map file extensions to languages supported by prism-react-renderer
 function mapExtensionToLanguage(ext: string): string {
   const e = ext.toLowerCase();
   if (e === 'js' || e === 'jsx') return 'javascript';
@@ -144,7 +153,11 @@ function mapExtensionToLanguage(ext: string): string {
   if (e === 'json') return 'json';
   if (e === 'css') return 'css';
   if (e === 'html') return 'html';
-  return 'text'; // Fallback
+  if (e === 'md' || e === 'markdown') return 'markdown';
+  if (e === 'sh' || e === 'bash' || e === 'zsh') return 'bash';
+  if (e === 'sql') return 'sql';
+  if (e === 'yaml' || e === 'yml') return 'yaml';
+  return 'text';
 }
 
 // ─── File Viewer Modal ────────────────────────────────────────────────────────
@@ -186,9 +199,10 @@ function FileViewer({ filePath, fileName, ext, onClose }: ViewerProps) {
     <div
       style={{
         position: 'absolute', inset: 0, zIndex: 200,
-        background: 'rgba(0,0,0,0.85)',
+        background: 'rgba(0, 0, 0, 0.75)',
         display: 'flex', flexDirection: 'column',
-        backdropFilter: 'blur(6px)',
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
         animation: 'fadeIn 0.15s ease-out',
       }}
       onClick={onClose}
@@ -198,28 +212,33 @@ function FileViewer({ filePath, fileName, ext, onClose }: ViewerProps) {
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '10px 16px',
-          background: '#0a0a0c', borderBottom: '1px solid #1c1c1f',
+          background: 'rgba(28, 28, 32, 0.98)',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
           flexShrink: 0,
         }}
         onClick={e => e.stopPropagation()}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <FileText size={16} style={{ color: '#a855f7' }} />
+          <FileText size={16} style={{ color: '#ffffff' }} />
           <span style={{ fontSize: '13px', fontWeight: 600, color: '#f4f4f5' }}>{fileName}</span>
           <span style={{
-            fontSize: '11px', color: '#71717a',
-            background: '#1c1c1f', padding: '2px 6px', borderRadius: '4px',
-          }}>{ext.toUpperCase()}</span>
+            fontSize: '11px', color: '#a1a1aa',
+            background: 'rgba(255, 255, 255, 0.06)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            padding: '2px 6px', borderRadius: '4px',
+            fontFamily: 'var(--mono)',
+          }}>{ext ? ext.toUpperCase() : 'FILE'}</span>
         </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <a
             href={`/api/files/download?path=${encodeURIComponent(filePath)}`}
             download={fileName}
             style={{
               display: 'flex', alignItems: 'center', gap: '6px',
-              padding: '5px 10px', borderRadius: '6px',
-              background: 'rgba(168,85,247,0.12)', border: '1px solid rgba(168,85,247,0.3)',
-              color: '#a855f7', fontSize: '12px', textDecoration: 'none', cursor: 'pointer',
+              padding: '6px 12px', borderRadius: '6px',
+              background: '#ffffff', color: '#09090b',
+              fontSize: '12px', fontWeight: 550, textDecoration: 'none', cursor: 'pointer',
+              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.15)',
             }}
             onClick={e => e.stopPropagation()}
           >
@@ -230,7 +249,7 @@ function FileViewer({ filePath, fileName, ext, onClose }: ViewerProps) {
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               width: '28px', height: '28px', borderRadius: '6px',
-              background: 'transparent', border: '1px solid #27272a',
+              background: 'rgba(255, 255, 255, 0.04)', border: '1px solid rgba(255, 255, 255, 0.08)',
               color: '#a1a1aa', cursor: 'pointer',
             }}
           >
@@ -248,7 +267,7 @@ function FileViewer({ filePath, fileName, ext, onClose }: ViewerProps) {
           <img
             src={url}
             alt={fileName}
-            style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: '8px', boxShadow: '0 8px 32px rgba(0,0,0,0.6)' }}
+            style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: '8px', boxShadow: '0 12px 36px rgba(0,0,0,0.6)' }}
           />
         )}
 
@@ -261,7 +280,7 @@ function FileViewer({ filePath, fileName, ext, onClose }: ViewerProps) {
         )}
 
         {kind === 'video' && (
-          <video controls style={{ maxWidth: '100%', maxHeight: '100%', borderRadius: '8px', boxShadow: '0 8px 32px rgba(0,0,0,0.6)' }}>
+          <video controls style={{ maxWidth: '100%', maxHeight: '100%', borderRadius: '8px', boxShadow: '0 12px 36px rgba(0,0,0,0.6)' }}>
             <source src={url} />
             Your browser does not support video playback.
           </video>
@@ -269,8 +288,8 @@ function FileViewer({ filePath, fileName, ext, onClose }: ViewerProps) {
 
         {kind === 'audio' && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
-            <div style={{ fontSize: '64px' }}>🎵</div>
-            <span style={{ color: '#d4d4d8', fontSize: '15px', fontWeight: 500 }}>{fileName}</span>
+            <Music size={48} style={{ color: '#ffffff' }} />
+            <span style={{ color: '#d4d4d8', fontSize: '14px', fontWeight: 500 }}>{fileName}</span>
             <audio controls style={{ width: '380px' }}>
               <source src={url} />
               Your browser does not support audio playback.
@@ -304,15 +323,15 @@ function FileViewer({ filePath, fileName, ext, onClose }: ViewerProps) {
                       ...style,
                       margin: 0,
                       padding: '16px',
-                      fontSize: '13px',
+                      fontSize: '12.5px',
                       lineHeight: '1.6',
-                      fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace",
+                      fontFamily: 'var(--mono)',
                       borderRadius: '8px',
-                      border: '1px solid #1c1c1f',
+                      border: '1px solid rgba(255, 255, 255, 0.08)',
                       whiteSpace: 'pre-wrap',
                       wordBreak: 'break-word',
                       minHeight: '100%',
-                      background: '#070708',
+                      background: '#09090b',
                     }}
                   >
                     {tokens.map((line, i) => (
@@ -327,6 +346,7 @@ function FileViewer({ filePath, fileName, ext, onClose }: ViewerProps) {
                           textAlign: 'right',
                           paddingRight: '12px',
                           color: '#858585',
+                          fontFamily: 'var(--mono)',
                         }}>{i + 1}</span>
                         <div>
                           {line.map((token, key) => (
@@ -345,15 +365,15 @@ function FileViewer({ filePath, fileName, ext, onClose }: ViewerProps) {
         {kind === 'unsupported' && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', color: '#71717a' }}>
             <FileText size={56} style={{ opacity: 0.3 }} />
-            <p style={{ margin: 0, fontSize: '14px' }}>No preview available for <strong style={{ color: '#a1a1aa' }}>.{ext}</strong> files</p>
+            <p style={{ margin: 0, fontSize: '13px' }}>No preview available for <strong style={{ color: '#a1a1aa' }}>.{ext}</strong> files</p>
             <a
               href={`/api/files/download?path=${encodeURIComponent(filePath)}`}
               download={fileName}
               style={{
                 display: 'flex', alignItems: 'center', gap: '6px',
                 padding: '8px 16px', borderRadius: '8px',
-                background: 'rgba(168,85,247,0.12)', border: '1px solid rgba(168,85,247,0.3)',
-                color: '#a855f7', fontSize: '13px', textDecoration: 'none',
+                background: '#ffffff', color: '#09090b',
+                fontSize: '13px', fontWeight: 550, textDecoration: 'none',
               }}
             >
               <Download size={14} /> Download instead
@@ -388,6 +408,9 @@ export default function FileExplorer() {
 
   // Viewer state
   const [viewingFile, setViewingFile] = useState<{ path: string; name: string; ext: string } | null>(null);
+
+  // Copy path feedback
+  const [copiedPath, setCopiedPath] = useState<boolean>(false);
 
   const [clipboard, setClipboard] = useState<{
     item: FileItem;
@@ -432,7 +455,7 @@ export default function FileExplorer() {
     setLoading(true);
     setLoadError(null);
     setSelectedItemName(null);
-    setCurrentFiles([]);   // clear stale data immediately so checks against currentFiles don't use the old folder's list
+    setCurrentFiles([]);
     try {
       const files = await fetchFiles(dirPath);
       setCurrentFiles(files);
@@ -456,12 +479,14 @@ export default function FileExplorer() {
     if (!currentPath) return;
     loadDirectory(currentPath);
   }, [currentPath, loadDirectory]);
-  useEffect(() => { fetchDrives().then(setDrives); }, []);
 
-  // Ctrl+C / Ctrl+V keyboard shortcuts
+  useEffect(() => {
+    fetchDrives().then(setDrives);
+  }, []);
+
+  // Ctrl+C / Ctrl+X / Ctrl+V keyboard shortcuts
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      // Don't intercept when user is typing in an input or textarea
       const tag = (e.target as HTMLElement).tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
 
@@ -477,7 +502,7 @@ export default function FileExplorer() {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [selectedItemName, clipboard]); // re-bind when these change so handlers see latest values
+  }, [selectedItemName, clipboard]);
 
   // ─── Backend search trigger effect with debounce & cancellation ───
   useEffect(() => {
@@ -512,17 +537,17 @@ export default function FileExplorer() {
         setSearchResults(mappedResults);
       } catch (err: any) {
         if (axios.isCancel(err)) {
-          return; // Ignore cancelled requests
+          return;
         }
         console.error(err);
       } finally {
         setSearchLoading(false);
       }
-    }, 300); // 300ms debounce
+    }, 300);
 
     return () => {
       clearTimeout(delayDebounceFn);
-      controller.abort(); // Cancel the request if searchQuery changes
+      controller.abort();
     };
   }, [searchQuery, currentPath, searchRefreshTrigger]);
 
@@ -592,12 +617,19 @@ export default function FileExplorer() {
     }
   };
 
+  const handleCopyPath = () => {
+    if (currentPath) {
+      navigator.clipboard.writeText(currentPath);
+      setCopiedPath(true);
+      setTimeout(() => setCopiedPath(false), 1500);
+    }
+  };
+
   // ─── Double-click handler ───
   const handleItemDoubleClick = (item: FileItem) => {
     if (item.type === 'folder') {
       navigateToPath(`${currentPath}/${item.name}`);
     } else {
-      // Open viewer
       setViewingFile({
         path: `${currentPath}/${item.name}`,
         name: item.name,
@@ -606,11 +638,27 @@ export default function FileExplorer() {
     }
   };
 
-  // ─── Icons ───
+  // ─── Icons (Clean, Neutral, Non-Neon) ───
   const getFileIcon = (item: FileItem) => {
-    if (item.type === 'folder') return <Folder className={styles.iconFolder} size={16} fill="#fbbf24" />;
+    if (item.type === 'folder') {
+      return <Folder className={styles.iconFolder} size={16} fill="#fbbf24" color="#fbbf24" />;
+    }
     const ext = item.ext?.toLowerCase() || '';
-    if (IMAGE_EXTS.includes(ext)) return <Image className={styles.iconImage} size={16} />;
+    if (CODE_EXTS.includes(ext)) {
+      return <FileCode className={styles.iconCode} size={16} />;
+    }
+    if (IMAGE_EXTS.includes(ext)) {
+      return <Image className={styles.iconImage} size={16} />;
+    }
+    if (VIDEO_EXTS.includes(ext)) {
+      return <Film className={styles.iconMedia} size={16} />;
+    }
+    if (AUDIO_EXTS.includes(ext)) {
+      return <Music className={styles.iconMedia} size={16} />;
+    }
+    if (ARCHIVE_EXTS.includes(ext)) {
+      return <FileArchive className={styles.iconZip} size={16} />;
+    }
     return <FileText className={styles.iconDoc} size={16} />;
   };
 
@@ -625,7 +673,7 @@ export default function FileExplorer() {
     const name = newItem.name.trim();
     const type = newItem.type;
 
-    setNewItem(null); // Remove placeholder immediately for snappy UI
+    setNewItem(null);
 
     if (!name) return;
     if (!isSafeEntryName(name)) return;
@@ -744,7 +792,7 @@ export default function FileExplorer() {
     const dest = `${currentPath}/${clipboard.item.name}`;
 
     if (src === dest) {
-      setClipboard(null); // Clear clipboard visually on silent same-folder paste
+      setClipboard(null);
       return;
     }
 
@@ -757,7 +805,7 @@ export default function FileExplorer() {
     try {
       if (clipboard.action === 'cut') {
         await axios.patch('/api/files/move', { oldPath: src, newPath: dest });
-        setClipboard(null); // Clear clipboard after cut is completed
+        setClipboard(null);
       } else {
         await axios.post('/api/files/copy', { src, dest });
       }
@@ -811,33 +859,65 @@ export default function FileExplorer() {
   const baseSegments   = (basePath || '').split('/').filter(Boolean);
   const buildPathUpTo  = (index: number) => '/' + pathSegments.slice(0, index + 1).join('/');
 
-  // ─── Render ───
   return (
     <div className={styles.container}>
       {/* ─── Address Bar ─── */}
       <div className={styles.addressBarArea}>
-        <button className={styles.navButton} onClick={handleBack} disabled={historyIndex <= 0} title="Back"><ArrowLeft size={16} /></button>
-        <button className={styles.navButton} onClick={handleForward} disabled={historyIndex >= history.length - 1} title="Forward"><ArrowRight size={16} /></button>
-        <button className={styles.navButton} onClick={handleUp} disabled={!basePath || currentPath === basePath} title="Up"><ArrowUp size={16} /></button>
-        <button className={styles.navButton} onClick={() => loadDirectory(currentPath)} title="Refresh"><RefreshCw size={14} /></button>
-
-        <div className={styles.addressInputWrapper}>
-          {pathSegments.map((segment, index) => (
-            <div key={index} style={{ display: 'flex', alignItems: 'center' }}>
-              {index < baseSegments.length - 1 ? (
-                <span className={styles.breadcrumbSegment}>{segment}</span>
-              ) : (
-                <span className={styles.breadcrumbSegment} onClick={() => navigateToPath(buildPathUpTo(index))}>
-                  {segment}
-                </span>
-              )}
-              {index < pathSegments.length - 1 && <ChevronRight size={12} className={styles.breadcrumbDivider} />}
-            </div>
-          ))}
+        <div className={styles.navButtonGroup}>
+          <button className={styles.navButton} onClick={handleBack} disabled={historyIndex <= 0} title="Back">
+            <ArrowLeft size={15} />
+          </button>
+          <button className={styles.navButton} onClick={handleForward} disabled={historyIndex >= history.length - 1} title="Forward">
+            <ArrowRight size={15} />
+          </button>
+          <button className={styles.navButton} onClick={handleUp} disabled={!basePath || currentPath === basePath} title="Up one folder">
+            <ArrowUp size={15} />
+          </button>
+          <button className={styles.navButton} onClick={() => loadDirectory(currentPath)} title="Refresh">
+            <RefreshCw size={13} style={{ animation: loading ? 'spin 0.8s linear infinite' : 'none' }} />
+          </button>
         </div>
 
+        {/* Breadcrumb Path Bar */}
+        <div className={styles.addressInputWrapper}>
+          <div className={styles.breadcrumbsScrollArea}>
+            {pathSegments.length === 0 ? (
+              <span className={`${styles.breadcrumbSegment} ${styles.breadcrumbSegmentActive}`}>/</span>
+            ) : (
+              pathSegments.map((segment, index) => {
+                const isLast = index === pathSegments.length - 1;
+                const isBaseAncestor = index < baseSegments.length - 1;
+                return (
+                  <React.Fragment key={index}>
+                    {isBaseAncestor ? (
+                      <span className={styles.breadcrumbSegment}>{segment}</span>
+                    ) : (
+                      <span
+                        className={`${styles.breadcrumbSegment} ${isLast ? styles.breadcrumbSegmentActive : ''}`}
+                        onClick={() => navigateToPath(buildPathUpTo(index))}
+                        title={buildPathUpTo(index)}
+                      >
+                        {segment}
+                      </span>
+                    )}
+                    {!isLast && <ChevronRight size={12} className={styles.breadcrumbDivider} />}
+                  </React.Fragment>
+                );
+              })
+            )}
+          </div>
+          <button
+            className={styles.copyPathButton}
+            onClick={handleCopyPath}
+            title={copiedPath ? 'Copied to clipboard!' : 'Copy path'}
+          >
+            {copiedPath ? <Check size={13} style={{ color: 'var(--ok)' }} /> : <Copy size={13} />}
+          </button>
+        </div>
+
+        {/* Search Box */}
         <div className={styles.searchWrapper}>
-          <Search size={14} />
+          <Search size={14} className={styles.searchIcon} />
           <input
             className={styles.searchInput}
             type="text"
@@ -846,7 +926,7 @@ export default function FileExplorer() {
             onChange={e => setSearchQuery(e.target.value)}
           />
           {searchQuery && (
-            <button style={{ background: 'transparent', border: 'none', color: '#71717a', cursor: 'pointer' }} onClick={() => setSearchQuery('')}>
+            <button className={styles.clearSearchButton} onClick={() => setSearchQuery('')} title="Clear search">
               <X size={12} />
             </button>
           )}
@@ -856,17 +936,49 @@ export default function FileExplorer() {
       {/* ─── Command Ribbon ─── */}
       <div className={styles.commandBar}>
         <div className={styles.commandGroup}>
-          <button className={`${styles.commandButton} ${styles.accentButton}`} onClick={() => handleCreateNew('folder')}><Plus size={14} /><span>New Folder</span></button>
-          <button className={styles.commandButton} onClick={() => handleCreateNew('file')}><Plus size={14} /><span>New File</span></button>
-          <button className={styles.commandButton} onClick={() => fileInputRef.current?.click()}><Upload size={14} /><span>Upload</span></button>
+          {/* Primary Action Button — Solid White */}
+          <button className={styles.primaryButton} onClick={() => fileInputRef.current?.click()} title="Upload file">
+            <Upload size={14} />
+            <span>Upload</span>
+          </button>
           <input type="file" ref={fileInputRef} style={{ display: 'none' }} onChange={handleUpload} />
 
+          <button className={styles.commandButton} onClick={() => handleCreateNew('folder')} title="New Folder">
+            <Plus size={14} />
+            <span>New Folder</span>
+          </button>
+          <button className={styles.commandButton} onClick={() => handleCreateNew('file')} title="New File">
+            <Plus size={14} />
+            <span>New File</span>
+          </button>
+
           <div className={styles.commandDivider} />
-          <button className={styles.commandButton} onClick={handleCopy} disabled={!selectedItem}><Copy size={13} /><span>Copy</span></button>
-          <button className={styles.commandButton} onClick={handleCut} disabled={!selectedItem}><Scissors size={13} /><span>Cut</span></button>
-          <button className={styles.commandButton} onClick={handlePaste} disabled={!clipboard}><Clipboard size={13} /><span>Paste</span></button>
-          <button className={styles.commandButton} onClick={() => handleStartRename()} disabled={!selectedItem}><Edit2 size={13} /><span>Rename</span></button>
-          <button className={styles.commandButton} onClick={() => handleDelete()} disabled={!selectedItem} style={{ color: selectedItem ? '#f87171' : '' }}><Trash2 size={13} /><span>Delete</span></button>
+
+          <button className={styles.commandButton} onClick={handleCopy} disabled={!selectedItem} title="Copy (Ctrl+C)">
+            <Copy size={13} />
+            <span>Copy</span>
+          </button>
+          <button className={styles.commandButton} onClick={handleCut} disabled={!selectedItem} title="Cut (Ctrl+X)">
+            <Scissors size={13} />
+            <span>Cut</span>
+          </button>
+          <button className={styles.commandButton} onClick={handlePaste} disabled={!clipboard} title="Paste (Ctrl+V)">
+            <Clipboard size={13} />
+            <span>Paste</span>
+          </button>
+          <button className={styles.commandButton} onClick={() => handleStartRename()} disabled={!selectedItem} title="Rename (F2)">
+            <Edit2 size={13} />
+            <span>Rename</span>
+          </button>
+          <button
+            className={`${styles.commandButton} ${selectedItem ? styles.dangerButton : ''}`}
+            onClick={() => handleDelete()}
+            disabled={!selectedItem}
+            title="Delete"
+          >
+            <Trash2 size={13} />
+            <span>Delete</span>
+          </button>
 
           <div className={styles.commandDivider} />
 
@@ -879,13 +991,15 @@ export default function FileExplorer() {
                 setViewingFile({ path: `${currentPath}/${selectedItem.name}`, name: selectedItem.name, ext: selectedItem.ext || '' });
               }
             }}
+            title="View File"
           >
-            <Eye size={13} /><span>View</span>
+            <Eye size={13} />
+            <span>View</span>
           </button>
         </div>
       </div>
 
-      {/* ─── Sidebar + Content ─── */}
+      {/* ─── Sidebar + Content Area ─── */}
       <div className={styles.workspace}>
         {/* Sidebar */}
         <div className={styles.sidebar}>
@@ -901,35 +1015,45 @@ export default function FileExplorer() {
                   onClick={() => { if (basePath) navigateToPath(basePath); }}
                   title={`${drive.fs} (${drive.type})`}
                 >
-                  <HardDrive size={16} style={{ color: '#3b82f6' }} />
+                  <HardDrive size={15} className={styles.sidebarIcon} />
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{driveName}</span>
                 </div>
               );
             })
           ) : (
             <div className={`${styles.sidebarItem} ${currentPath === basePath ? styles.sidebarItemActive : ''}`} onClick={() => { if (basePath) navigateToPath(basePath); }}>
-              <HardDrive size={16} style={{ color: '#3b82f6' }} /><span>Home</span>
+              <HardDrive size={15} className={styles.sidebarIcon} />
+              <span>Home</span>
             </div>
           )}
 
-          {Array.isArray(drives) && drives.length > 0 && drives[0] && (
-            <div className={styles.storageIndicator}>
-              <div className={styles.storageTitle}>
-                <span>Storage</span>
-                <span>{Math.round(drives[0].use || 0)}%</span>
+          {Array.isArray(drives) && drives.length > 0 && drives[0] && (() => {
+            const usePercent = Math.round(drives[0].use || 0);
+            const progressClass = usePercent > 90
+              ? styles.storageProgressDanger
+              : usePercent > 80
+              ? styles.storageProgressWarn
+              : styles.storageProgress;
+
+            return (
+              <div className={styles.storageIndicator}>
+                <div className={styles.storageTitle}>
+                  <span>Storage</span>
+                  <span className={styles.storagePercent}>{usePercent}%</span>
+                </div>
+                <div className={styles.storageBar}>
+                  <div className={progressClass} style={{ width: `${Math.min(100, Math.max(0, usePercent))}%` }} />
+                </div>
+                <div className={styles.storageText}>
+                  {((drives[0].used || 0) / (1024 ** 3)).toFixed(1)} GB used of{' '}
+                  {((drives[0].size || 0) / (1024 ** 3)).toFixed(1)} GB
+                </div>
               </div>
-              <div className={styles.storageBar}>
-                <div className={styles.storageProgress} style={{ width: `${Math.min(100, Math.max(0, drives[0].use || 0))}%` }} />
-              </div>
-              <div className={styles.storageText}>
-                {((drives[0].used || 0) / (1024 ** 3)).toFixed(1)} GB used of{' '}
-                {((drives[0].size || 0) / (1024 ** 3)).toFixed(1)} GB
-              </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
 
-        {/* File area */}
+        {/* File Table Content Area */}
         <div
           className={styles.contentArea}
           onClick={() => { setSelectedItemName(null); setRenamingItem(null); setContextMenu(null); }}
@@ -937,23 +1061,23 @@ export default function FileExplorer() {
         >
           {isLoading && (
             <div className={styles.emptyState}>
-              <Loader2 size={32} style={{ opacity: 0.4, animation: 'spin 0.8s linear infinite' }} />
-              <div className={styles.emptyStateText}>Loading...</div>
+              <Loader2 size={28} style={{ opacity: 0.5, animation: 'spin 0.8s linear infinite' }} />
+              <div className={styles.emptyStateText}>Loading directory...</div>
             </div>
           )}
 
           {!isLoading && loadError && (
             <div className={styles.emptyState}>
-              <AlertTriangle size={36} style={{ opacity: 0.4, color: '#f87171' }} />
+              <AlertTriangle size={32} style={{ opacity: 0.7, color: 'var(--error)' }} />
               <div className={styles.emptyStateText}>{loadError}</div>
             </div>
           )}
 
           {!isLoading && !loadError && itemsToRender.length === 0 && (
             <div className={styles.emptyState}>
-              <Folder size={48} style={{ opacity: 0.15 }} />
+              <Folder size={44} style={{ opacity: 0.2 }} />
               <div className={styles.emptyStateText}>
-                {searchQuery ? 'No matches found.' : 'This folder is empty.'}
+                {searchQuery ? 'No matching files found' : 'This folder is empty'}
               </div>
             </div>
           )}
@@ -967,9 +1091,9 @@ export default function FileExplorer() {
               </div>
               <div className={styles.fileItemsContainer}>
                 {itemsToRender.map(item => {
-                  const isSelected    = selectedItemName === item.name;
+                  const isSelected     = selectedItemName === item.name;
                   const isRenamingThis = renamingItem && renamingItem.oldName === item.name;
-                  const isNewThis = item.isNewPlaceholder;
+                  const isNewThis      = item.isNewPlaceholder;
 
                   const isCutPending = clipboard && 
                     clipboard.action === 'cut' && 
@@ -980,7 +1104,7 @@ export default function FileExplorer() {
                     <div
                       key={isNewThis ? '__new_item_placeholder__' : item.name}
                       className={`${styles.fileItemRow} ${isSelected ? styles.fileItemRowSelected : ''}`}
-                      style={{ opacity: isCutPending ? 0.45 : 1, transition: 'opacity 0.2s' }}
+                      style={{ opacity: isCutPending ? 0.45 : 1 }}
                       onClick={e => {
                         e.stopPropagation();
                         if (isNewThis) return;
@@ -1013,11 +1137,7 @@ export default function FileExplorer() {
                             autoFocus
                             onFocus={e => e.target.select()}
                             onClick={e => e.stopPropagation()}
-                            style={{
-                              background: '#141416', border: '1px solid #a855f7',
-                              color: '#fff', borderRadius: '4px', padding: '2px 6px',
-                              fontSize: '13px', width: '80%', outline: 'none',
-                            }}
+                            className={styles.inlineInput}
                           />
                         ) : isRenamingThis ? (
                           <input
@@ -1025,10 +1145,14 @@ export default function FileExplorer() {
                             value={renamingItem.newName}
                             onChange={e => setRenamingItem({ ...renamingItem, newName: e.target.value })}
                             onBlur={handleFinishRename}
-                            onKeyDown={e => { if (e.key === 'Enter') handleFinishRename(); if (e.key === 'Escape') setRenamingItem(null); }}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter') handleFinishRename();
+                              if (e.key === 'Escape') setRenamingItem(null);
+                            }}
                             autoFocus
+                            onFocus={e => e.target.select()}
                             onClick={e => e.stopPropagation()}
-                            style={{ background: '#141416', border: '1px solid #a855f7', color: '#fff', borderRadius: '4px', padding: '2px 6px', fontSize: '13px', width: '80%', outline: 'none' }}
+                            className={styles.inlineInput}
                           />
                         ) : (
                           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</span>
@@ -1044,11 +1168,11 @@ export default function FileExplorer() {
           )}
         </div>
 
-        {/* Upload progress */}
+        {/* Upload Progress Overlay */}
         {uploadProgress !== null && (
           <div className={styles.uploadProgressCard}>
             <div className={styles.uploadHeader}>
-              <span className={styles.uploadTitle}>Uploading...</span>
+              <span className={styles.uploadTitle}>Uploading file...</span>
               <span className={styles.uploadPercent}>{uploadProgress}%</span>
             </div>
             <div className={styles.uploadFileName} title={uploadingFileName}>{uploadingFileName}</div>
@@ -1058,7 +1182,7 @@ export default function FileExplorer() {
           </div>
         )}
 
-        {/* ─── File Viewer overlay ─── */}
+        {/* ─── File Viewer Modal ─── */}
         {viewingFile && (
           <FileViewer
             filePath={viewingFile.path}
@@ -1073,15 +1197,12 @@ export default function FileExplorer() {
           <div
             className={styles.contextMenu}
             style={{
-              position: 'fixed',
-              top: contextMenu.y,
-              left: contextMenu.x + 180 > window.innerWidth
-                ? contextMenu.x - 180
-                : contextMenu.x,
+              top: Math.min(contextMenu.y, window.innerHeight - 220),
+              left: Math.min(contextMenu.x, window.innerWidth - 190),
             }}
             onClick={e => e.stopPropagation()}
           >
-            {/* ── Background menu (right-clicked on empty space) ── */}
+            {/* Background menu (right-clicked on empty space) */}
             {contextMenu.item === null && (
               <>
                 <div
@@ -1106,10 +1227,16 @@ export default function FileExplorer() {
                 >
                   <Plus size={13} /> New File
                 </div>
+                <div
+                  className={styles.contextMenuItem}
+                  onClick={() => { fileInputRef.current?.click(); setContextMenu(null); }}
+                >
+                  <Upload size={13} /> Upload
+                </div>
               </>
             )}
 
-            {/* ── File / Folder menu ── */}
+            {/* File / Folder menu */}
             {contextMenu.item !== null && (() => {
               const item = contextMenu.item!;
               return (
@@ -1170,8 +1297,7 @@ export default function FileExplorer() {
                   <div className={styles.contextMenuDivider} />
 
                   <div
-                    className={styles.contextMenuItem}
-                    style={{ color: '#f87171' }}
+                    className={`${styles.contextMenuItem} ${styles.contextMenuDanger}`}
                     onClick={() => { handleDelete(item.name); setContextMenu(null); }}
                   >
                     <Trash2 size={13} /> Delete
@@ -1186,11 +1312,13 @@ export default function FileExplorer() {
       {/* ─── Status Bar ─── */}
       <div className={styles.statusBar}>
         <div className={styles.statusLeft}>
-          <span>{displayedFiles.length} items</span>
+          <span>{displayedFiles.length} {displayedFiles.length === 1 ? 'item' : 'items'}</span>
           {selectedItemName && (
             <>
-              <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#71717a' }} />
-              <span>1 item selected {selectedItem && selectedItem.size !== '--' && `(${selectedItem.size})`}</span>
+              <span style={{ width: '3px', height: '3px', borderRadius: '50%', background: 'rgba(255,255,255,0.3)' }} />
+              <span style={{ color: 'var(--text-secondary)' }}>
+                1 item selected {selectedItem && selectedItem.size !== '--' && `(${selectedItem.size})`}
+              </span>
             </>
           )}
         </div>
