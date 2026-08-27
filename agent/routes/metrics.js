@@ -6,7 +6,8 @@ async function getMetrics() {
 	const cpu = await si.currentLoad();
 	const mem = await si.mem();
 	const disk = await si.fsSize();
-	return { cpu, mem, disk };
+	const network = await si.networkStats();
+	return { cpu, mem, disk, network };
 }
 
 router.get("/", (req, res) => {
