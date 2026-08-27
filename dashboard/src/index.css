@@ -1,33 +1,33 @@
 :root {
-  /* ─── Glassmorphism & Acrylic Surfaces ─── */
-  --bg-base:          oklch(10% 0.015 250);
-  --bg-surface:       rgba(18, 22, 34, 0.72);
-  --bg-surface-solid: oklch(14% 0.015 250);
-  --bg-raised:        rgba(30, 36, 52, 0.65);
-  --bg-overlay:       rgba(42, 50, 72, 0.75);
-  --bg-card:          rgba(22, 27, 40, 0.60);
-  --bg-glass-input:   rgba(10, 14, 22, 0.55);
+  /* ─── Windows 11 Mica Dark & Solid Surfaces ─── */
+  --bg-base:          #0b0f17;
+  --bg-surface:       rgba(32, 32, 36, 0.98);
+  --bg-surface-solid: #1e1e22;
+  --bg-raised:        rgba(255, 255, 255, 0.05);
+  --bg-overlay:       rgba(24, 24, 28, 0.96);
+  --bg-card:          rgba(32, 32, 36, 0.98);
+  --bg-glass-input:   rgba(255, 255, 255, 0.05);
 
-  /* ─── Glass Specular Borders & Highlights ─── */
+  /* ─── Specular Borders & Highlights ─── */
   --border-subtle:    rgba(255, 255, 255, 0.08);
-  --border-default:   rgba(255, 255, 255, 0.13);
-  --border-strong:    rgba(255, 255, 255, 0.22);
+  --border-default:   rgba(255, 255, 255, 0.12);
+  --border-strong:    rgba(255, 255, 255, 0.20);
   --border-highlight: rgba(255, 255, 255, 0.35);
 
-  /* ─── Accent: Ice Blue / Electric Cyan ─── */
-  --accent:         #38bdf8;
-  --accent-rgb:     56, 189, 248;
-  --accent-dim:     rgba(56, 189, 248, 0.12);
-  --accent-border:  rgba(56, 189, 248, 0.35);
-  --accent-glow:    rgba(56, 189, 248, 0.25);
-  --accent-text:    #7dd3fc;
-  --accent-hover:   #60a5fa;
+  /* ─── Accent: Neutral White (Unslop Standard) ─── */
+  --accent:         #ffffff;
+  --accent-rgb:     255, 255, 255;
+  --accent-dim:     rgba(255, 255, 255, 0.08);
+  --accent-border:  rgba(255, 255, 255, 0.18);
+  --accent-glow:    rgba(255, 255, 255, 0.12);
+  --accent-text:    #f4f4f5;
+  --accent-hover:   #e4e4e7;
 
   /* ─── Text Hierarchy ─── */
-  --text-primary:   oklch(96% 0.005 240);
-  --text-secondary: oklch(75% 0.012 240);
-  --text-muted:     oklch(52% 0.015 240);
-  --text-on-accent: #0f172a;
+  --text-primary:   #f4f4f5;
+  --text-secondary: #a1a1aa;
+  --text-muted:     #71717a;
+  --text-on-accent: #09090b;
 
   /* ─── Semantic Status ─── */
   --ok:        #34d399;
@@ -149,7 +149,7 @@ code, .counter {
 :focus { outline: none; }
 
 :focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid rgba(255, 255, 255, 0.60);
   outline-offset: 2px;
 }
 
