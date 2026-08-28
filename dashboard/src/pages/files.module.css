@@ -532,6 +532,34 @@
   gap: 4px;
 }
 
+.sortHeaderCol {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  user-select: none;
+  transition: color var(--duration-fast, 140ms);
+}
+
+.sortHeaderCol:hover {
+  color: #ededed;
+}
+
+.sortIcon {
+  display: inline-flex;
+  align-items: center;
+  color: #ededed;
+}
+
+.sortIconInactive {
+  opacity: 0;
+  transition: opacity var(--duration-fast, 140ms);
+}
+
+.sortHeaderCol:hover .sortIconInactive {
+  opacity: 0.35;
+}
+
 .fileItemsContainer {
   flex: 1;
   overflow-y: auto;
@@ -795,4 +823,15 @@
   background: #ffffff;
   border-radius: 2px;
   transition: width 150ms var(--ease-out-quart);
+}
+
+/* ─── Mouse Drag Selection Marquee ─── */
+
+.selectionMarquee {
+  position: fixed;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 999;
 }

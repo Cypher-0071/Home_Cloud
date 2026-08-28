@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   ArrowLeft,
   ArrowRight,
@@ -16,6 +16,8 @@ import {
   Image,
   HardDrive,
   ChevronRight,
+  ChevronUp,
+  ChevronDown,
   X,
   Upload,
   Loader2,
@@ -57,6 +59,15 @@ interface FileItem {
   isNewPlaceholder?: boolean; // temporary placeholder for inline creation
 }
 
+export type SortField = 'name' | 'size' | 'modified';
+export type SortDirection = 'asc' | 'desc';
+
+interface ClipboardState {
+  items: FileItem[];
+  sourcePath: string;
+  action: 'copy' | 'cut';
+}
+
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 function isInsideBasePath(p: string, basePath: string | null): boolean {
@@ -88,7 +99,7 @@ const AUDIO_EXTS = ['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a'];
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B';
+  if (bytes <= 0 || isNaN(bytes)) return '0 B';
   const units = ['B', 'KB', 'MB', 'GB', 'TB'];
   const i = Math.floor(Math.log(bytes) / Math.log(1024));
   return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]}`;
@@ -393,7 +404,20 @@ export default function FileExplorer() {
   const [history, setHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState<number>(0);
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [selectedItemName, setSelectedItemName] = useState<string | null>(null);
+
+  // Multi-selection state
+  const [selectedItemNames, setSelectedItemNames] = useState<Set<string>>(new Set());
+  const [lastSelectedName, setLastSelectedName] = useState<string | null>(null);
+
+  // Sorting state
+  const [sortField, setSortField] = useState<SortField>('name');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+
+  // Mouse Drag Selection (Marquee) State
+  const [marquee, setMarquee] = useState<{ startX: number; startY: number; currentX: number; currentY: number } | null>(null);
+  const itemsContainerRef = useRef<HTMLDivElement>(null);
+  const isDraggingRef = useRef<boolean>(false);
+  const dragStartSelectionRef = useRef<Set<string>>(new Set());
 
   const [currentFiles, setCurrentFiles] = useState<FileItem[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
@@ -410,11 +434,7 @@ export default function FileExplorer() {
   // Copy path feedback
   const [copiedPath, setCopiedPath] = useState<boolean>(false);
 
-  const [clipboard, setClipboard] = useState<{
-    item: FileItem;
-    sourcePath: string;
-    action: 'copy' | 'cut';
-  } | null>(null);
+  const [clipboard, setClipboard] = useState<ClipboardState | null>(null);
   const [renamingItem, setRenamingItem] = useState<{
     oldName: string;
     newName: string;
@@ -452,7 +472,8 @@ export default function FileExplorer() {
   const loadDirectory = useCallback(async (dirPath: string) => {
     setLoading(true);
     setLoadError(null);
-    setSelectedItemName(null);
+    setSelectedItemNames(new Set());
+    setLastSelectedName(null);
     setCurrentFiles([]);
     try {
       const files = await fetchFiles(dirPath);
@@ -481,26 +502,6 @@ export default function FileExplorer() {
   useEffect(() => {
     fetchDrives().then(setDrives);
   }, []);
-
-  // Ctrl+C / Ctrl+X / Ctrl+V keyboard shortcuts
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      const tag = (e.target as HTMLElement).tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
-
-      if (e.ctrlKey && e.key === 'c') {
-        if (selectedItemName) handleCopy();
-      }
-      if (e.ctrlKey && e.key === 'x') {
-        if (selectedItemName) handleCut();
-      }
-      if (e.ctrlKey && e.key === 'v') {
-        if (clipboard) handlePaste();
-      }
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [selectedItemName, clipboard]);
 
   // ─── Backend search trigger effect with debounce & cancellation ───
   useEffect(() => {
@@ -549,26 +550,190 @@ export default function FileExplorer() {
     };
   }, [searchQuery, currentPath, searchRefreshTrigger]);
 
-  // ─── Derived ───
+  // ─── Sorting Handler & Sorted Items Memo ───
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
   const currentFolderTitle = currentPath.split('/').pop() || currentPath;
   const isLoading = loading || searchLoading;
-  const displayedFiles = searchQuery ? searchResults : currentFiles;
-  
-  const itemsToRender = newItem
-    ? [
-        {
-          name: newItem.name,
-          type: newItem.type,
-          size: '--',
-          sizeRaw: 0,
-          modified: '--',
-          isNewPlaceholder: true,
-        } as FileItem,
-        ...displayedFiles,
-      ]
-    : displayedFiles;
+  const rawFiles = searchQuery ? searchResults : currentFiles;
 
-  const selectedItem = itemsToRender.find(item => item.name === selectedItemName) || null;
+  const displayedFiles = useMemo(() => {
+    const list = [...rawFiles];
+    return list.sort((a, b) => {
+      // Pin folders to the top always
+      if (a.type === 'folder' && b.type !== 'folder') return -1;
+      if (a.type !== 'folder' && b.type === 'folder') return 1;
+
+      let comparison = 0;
+      if (sortField === 'name') {
+        comparison = a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+      } else if (sortField === 'size') {
+        comparison = (a.sizeRaw ?? 0) - (b.sizeRaw ?? 0);
+      } else if (sortField === 'modified') {
+        const timeA = new Date(a.modified).getTime() || 0;
+        const timeB = new Date(b.modified).getTime() || 0;
+        comparison = timeA - timeB;
+      }
+      return sortDirection === 'asc' ? comparison : -comparison;
+    });
+  }, [rawFiles, sortField, sortDirection]);
+  
+  const itemsToRender = useMemo(() => {
+    if (!newItem) return displayedFiles;
+    return [
+      {
+        name: newItem.name,
+        type: newItem.type,
+        size: '--',
+        sizeRaw: 0,
+        modified: '--',
+        isNewPlaceholder: true,
+      } as FileItem,
+      ...displayedFiles,
+    ];
+  }, [newItem, displayedFiles]);
+
+  // Single item helper for rename / view
+  const selectedSingleItem = useMemo(() => {
+    if (selectedItemNames.size !== 1) return null;
+    const singleName = Array.from(selectedItemNames)[0];
+    return displayedFiles.find(item => item.name === singleName) || null;
+  }, [selectedItemNames, displayedFiles]);
+
+  // Total selected size calculation
+  const selectedTotalBytes = useMemo(() => {
+    let total = 0;
+    displayedFiles.forEach(f => {
+      if (selectedItemNames.has(f.name) && f.type === 'file') {
+        total += f.sizeRaw ?? 0;
+      }
+    });
+    return total;
+  }, [displayedFiles, selectedItemNames]);
+
+  // ─── Mouse Drag Selection Handler ───
+  const handleContainerMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return; // Left click only
+    const target = e.target as HTMLElement;
+    if (target.closest('input') || target.closest('button') || target.closest('a')) return;
+
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const isCtrl = e.ctrlKey || e.metaKey;
+    dragStartSelectionRef.current = isCtrl ? new Set(selectedItemNames) : new Set();
+    let hasMoved = false;
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const dx = Math.abs(moveEvent.clientX - startX);
+      const dy = Math.abs(moveEvent.clientY - startY);
+      if (!hasMoved && (dx > 4 || dy > 4)) {
+        hasMoved = true;
+        isDraggingRef.current = true;
+        window.getSelection()?.removeAllRanges();
+      }
+
+      if (hasMoved) {
+        const currentX = moveEvent.clientX;
+        const currentY = moveEvent.clientY;
+        setMarquee({ startX, startY, currentX, currentY });
+
+        const marqueeRect = {
+          left: Math.min(startX, currentX),
+          top: Math.min(startY, currentY),
+          right: Math.max(startX, currentX),
+          bottom: Math.max(startY, currentY),
+        };
+
+        if (itemsContainerRef.current) {
+          const rowEls = itemsContainerRef.current.querySelectorAll<HTMLElement>('[data-filename]');
+          const newlySelected = new Set(dragStartSelectionRef.current);
+
+          rowEls.forEach(rowEl => {
+            const fileName = rowEl.dataset.filename;
+            if (!fileName) return;
+
+            const rowRect = rowEl.getBoundingClientRect();
+            const isIntersecting = !(
+              marqueeRect.right < rowRect.left ||
+              marqueeRect.left > rowRect.right ||
+              marqueeRect.bottom < rowRect.top ||
+              marqueeRect.top > rowRect.bottom
+            );
+
+            if (isIntersecting) {
+              newlySelected.add(fileName);
+            } else if (!dragStartSelectionRef.current.has(fileName)) {
+              newlySelected.delete(fileName);
+            }
+          });
+
+          setSelectedItemNames(newlySelected);
+        }
+      }
+    };
+
+    const handleMouseUp = () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+      setMarquee(null);
+      setTimeout(() => {
+        isDraggingRef.current = false;
+      }, 50);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+  };
+
+  // ─── Item Click Handler ───
+  const handleItemClick = (e: React.MouseEvent, item: FileItem) => {
+    e.stopPropagation();
+    if (isDraggingRef.current) return;
+    if (item.isNewPlaceholder) return;
+    setContextMenu(null);
+
+    const isMulti = e.ctrlKey || e.metaKey;
+    const isRange = e.shiftKey;
+
+    if (isRange && lastSelectedName) {
+      const names = itemsToRender.map(f => f.name);
+      const startIdx = names.indexOf(lastSelectedName);
+      const endIdx = names.indexOf(item.name);
+      if (startIdx !== -1 && endIdx !== -1) {
+        const [low, high] = [Math.min(startIdx, endIdx), Math.max(startIdx, endIdx)];
+        const rangeNames = names.slice(low, high + 1);
+        setSelectedItemNames(new Set(rangeNames));
+        return;
+      }
+    }
+
+    if (isMulti) {
+      setSelectedItemNames(prev => {
+        const next = new Set(prev);
+        if (next.has(item.name)) {
+          next.delete(item.name);
+        } else {
+          next.add(item.name);
+        }
+        return next;
+      });
+      setLastSelectedName(item.name);
+    } else {
+      setSelectedItemNames(new Set([item.name]));
+      setLastSelectedName(item.name);
+    }
+
+    if (renamingItem && renamingItem.oldName !== item.name) {
+      setRenamingItem(null);
+    }
+  };
 
   // ─── Navigation ───
   const navigateToPath = (newPath: string) => {
@@ -636,7 +801,7 @@ export default function FileExplorer() {
     }
   };
 
-  // ─── Icons (Clean, Neutral, Non-Neon) ───
+  // ─── Icons ───
   const getFileIcon = (item: FileItem) => {
     if (item.type === 'folder') {
       return <Folder className={styles.iconFolder} size={16} fill="#fbbf24" color="#fbbf24" />;
@@ -690,37 +855,48 @@ export default function FileExplorer() {
     }
   };
 
+  // ─── Batch Delete Operation ───
   const handleDelete = async (itemName?: string) => {
-    const targetName = itemName ?? selectedItemName;
-    if (!targetName) return;
+    let targets: FileItem[] = [];
+    if (itemName) {
+      const found = displayedFiles.find(f => f.name === itemName);
+      if (found) targets = [found];
+    } else {
+      targets = displayedFiles.filter(f => selectedItemNames.has(f.name));
+    }
 
-    const targetItem = displayedFiles.find(f => f.name === targetName);
-    if (!targetItem) return;
+    if (targets.length === 0) return;
 
-    const targetPath = targetItem.path || `${currentPath}/${targetName}`;
+    const confirmMsg =
+      targets.length === 1
+        ? `Delete "${targets[0].name}"? This cannot be undone.`
+        : `Delete ${targets.length} items? This cannot be undone.`;
 
-    const confirmed = window.confirm(`Delete "${targetName}"? This cannot be undone.`);
-    if (!confirmed) return;
+    if (!window.confirm(confirmMsg)) return;
+
     try {
-      await axios.delete('/api/files/delete', {
-        params: { path: targetPath },
-      });
-      setSelectedItemName(null);
+      await Promise.all(
+        targets.map(t => {
+          const targetPath = t.path || `${currentPath}/${t.name}`;
+          return axios.delete('/api/files/delete', { params: { path: targetPath } });
+        })
+      );
+      setSelectedItemNames(new Set());
+      setLastSelectedName(null);
       if (searchQuery) {
         setSearchRefreshTrigger(prev => prev + 1);
       } else {
         loadDirectory(currentPath);
       }
     } catch {
-      alert(`Failed to delete "${targetName}".`);
+      alert('Failed to delete some or all selected items.');
     }
   };
 
   const handleStartRename = (itemName?: string) => {
-    const targetName = itemName ?? selectedItemName;
-    const target = targetName
-      ? displayedFiles.find(f => f.name === targetName) ?? null
-      : selectedItem;
+    const target = itemName
+      ? displayedFiles.find(f => f.name === itemName) ?? null
+      : selectedSingleItem;
     if (target) {
       setRenamingItem({
         oldName: target.name,
@@ -766,65 +942,91 @@ export default function FileExplorer() {
     }
   };
   
+  // ─── Batch Copy & Cut & Paste ───
   const handleCopy = () => {
-    if (selectedItem) {
-      const srcPath = selectedItem.path
-        ? selectedItem.path.substring(0, selectedItem.path.lastIndexOf('/'))
+    const selected = displayedFiles.filter(f => selectedItemNames.has(f.name));
+    if (selected.length > 0) {
+      const srcPath = selected[0].path
+        ? selected[0].path.substring(0, selected[0].path.lastIndexOf('/'))
         : currentPath;
-      setClipboard({ item: selectedItem, sourcePath: srcPath, action: 'copy' });
+      setClipboard({ items: selected, sourcePath: srcPath, action: 'copy' });
     }
   };
 
   const handleCut = () => {
-    if (selectedItem) {
-      const srcPath = selectedItem.path
-        ? selectedItem.path.substring(0, selectedItem.path.lastIndexOf('/'))
+    const selected = displayedFiles.filter(f => selectedItemNames.has(f.name));
+    if (selected.length > 0) {
+      const srcPath = selected[0].path
+        ? selected[0].path.substring(0, selected[0].path.lastIndexOf('/'))
         : currentPath;
-      setClipboard({ item: selectedItem, sourcePath: srcPath, action: 'cut' });
+      setClipboard({ items: selected, sourcePath: srcPath, action: 'cut' });
     }
   };
 
   const handlePaste = async () => {
-    if (!clipboard) return;
-    const src  = `${clipboard.sourcePath}/${clipboard.item.name}`;
-    const dest = `${currentPath}/${clipboard.item.name}`;
-
-    if (src === dest) {
-      setClipboard(null);
-      return;
-    }
-
-    const alreadyExists = currentFiles.some(f => f.name === clipboard.item.name);
-    if (alreadyExists) {
-      const ok = window.confirm(`"${clipboard.item.name}" already exists here. Overwrite?`);
-      if (!ok) return;
-    }
-
+    if (!clipboard || clipboard.items.length === 0) return;
     try {
+      for (const item of clipboard.items) {
+        const src = `${clipboard.sourcePath}/${item.name}`;
+        const dest = `${currentPath}/${item.name}`;
+        if (src === dest) continue;
+
+        if (clipboard.action === 'cut') {
+          await axios.patch('/api/files/move', { oldPath: src, newPath: dest });
+        } else {
+          await axios.post('/api/files/copy', { src, dest });
+        }
+      }
       if (clipboard.action === 'cut') {
-        await axios.patch('/api/files/move', { oldPath: src, newPath: dest });
         setClipboard(null);
-      } else {
-        await axios.post('/api/files/copy', { src, dest });
       }
       loadDirectory(currentPath);
     } catch (err: any) {
-      const msg = err.response?.data?.error ?? 'Paste failed';
+      const msg = err.response?.data?.error ?? 'Paste operation failed';
       alert(`Error: ${msg}`);
+      loadDirectory(currentPath);
     }
   };
+
+  // Keyboard shortcuts (Ctrl+C, Ctrl+X, Ctrl+V, Ctrl+A)
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
+        if (selectedItemNames.size > 0) handleCopy();
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'x') {
+        if (selectedItemNames.size > 0) handleCut();
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
+        if (clipboard) handlePaste();
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
+        e.preventDefault();
+        setSelectedItemNames(new Set(displayedFiles.map(f => f.name)));
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [selectedItemNames, clipboard, displayedFiles]);
 
   // ─── Context menu ───
   const handleContextMenu = (e: React.MouseEvent, item: FileItem) => {
     e.preventDefault();
     e.stopPropagation();
-    setSelectedItemName(item.name);
+    if (!selectedItemNames.has(item.name)) {
+      setSelectedItemNames(new Set([item.name]));
+      setLastSelectedName(item.name);
+    }
     setContextMenu({ x: e.clientX, y: e.clientY, item });
   };
 
   const handleBackgroundContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
-    setSelectedItemName(null);
+    setSelectedItemNames(new Set());
+    setLastSelectedName(null);
     setContextMenu({ x: e.clientX, y: e.clientY, item: null });
   };
 
@@ -952,11 +1154,11 @@ export default function FileExplorer() {
 
           <div className={styles.commandDivider} />
 
-          <button className={styles.commandButton} onClick={handleCopy} disabled={!selectedItem} title="Copy (Ctrl+C)">
+          <button className={styles.commandButton} onClick={handleCopy} disabled={selectedItemNames.size === 0} title="Copy (Ctrl+C)">
             <Copy size={13} />
             <span>Copy</span>
           </button>
-          <button className={styles.commandButton} onClick={handleCut} disabled={!selectedItem} title="Cut (Ctrl+X)">
+          <button className={styles.commandButton} onClick={handleCut} disabled={selectedItemNames.size === 0} title="Cut (Ctrl+X)">
             <Scissors size={13} />
             <span>Cut</span>
           </button>
@@ -964,15 +1166,15 @@ export default function FileExplorer() {
             <Clipboard size={13} />
             <span>Paste</span>
           </button>
-          <button className={styles.commandButton} onClick={() => handleStartRename()} disabled={!selectedItem} title="Rename (F2)">
+          <button className={styles.commandButton} onClick={() => handleStartRename()} disabled={selectedItemNames.size !== 1} title="Rename (F2)">
             <Edit2 size={13} />
             <span>Rename</span>
           </button>
           <button
-            className={`${styles.commandButton} ${selectedItem ? styles.dangerButton : ''}`}
+            className={`${styles.commandButton} ${selectedItemNames.size > 0 ? styles.dangerButton : ''}`}
             onClick={() => handleDelete()}
-            disabled={!selectedItem}
-            title="Delete"
+            disabled={selectedItemNames.size === 0}
+            title={selectedItemNames.size > 1 ? `Delete (${selectedItemNames.size} items)` : 'Delete'}
           >
             <Trash2 size={13} />
             <span>Delete</span>
@@ -980,13 +1182,13 @@ export default function FileExplorer() {
 
           <div className={styles.commandDivider} />
 
-          {/* View button — enabled when a file is selected */}
+          {/* View button — enabled when exactly 1 file is selected */}
           <button
             className={styles.commandButton}
-            disabled={!selectedItem || selectedItem.type === 'folder'}
+            disabled={!selectedSingleItem || selectedSingleItem.type === 'folder'}
             onClick={() => {
-              if (selectedItem && selectedItem.type === 'file') {
-                setViewingFile({ path: `${currentPath}/${selectedItem.name}`, name: selectedItem.name, ext: selectedItem.ext || '' });
+              if (selectedSingleItem && selectedSingleItem.type === 'file') {
+                setViewingFile({ path: `${currentPath}/${selectedSingleItem.name}`, name: selectedSingleItem.name, ext: selectedSingleItem.ext || '' });
               }
             }}
             title="View File"
@@ -1054,7 +1256,17 @@ export default function FileExplorer() {
         {/* File Table Content Area */}
         <div
           className={styles.contentArea}
-          onClick={() => { setSelectedItemName(null); setRenamingItem(null); setContextMenu(null); }}
+          onMouseDown={handleContainerMouseDown}
+          onClick={e => {
+            if (isDraggingRef.current) return;
+            const target = e.target as HTMLElement;
+            if (!target.closest('[data-filename]')) {
+              setSelectedItemNames(new Set());
+              setLastSelectedName(null);
+              setRenamingItem(null);
+              setContextMenu(null);
+            }
+          }}
           onContextMenu={handleBackgroundContextMenu}
         >
           {isLoading && (
@@ -1082,34 +1294,55 @@ export default function FileExplorer() {
 
           {!isLoading && !loadError && itemsToRender.length > 0 && (
             <>
+              {/* Column Sort Header */}
               <div className={styles.fileListHeader} onClick={e => e.stopPropagation()}>
-                <div className={styles.fileListHeaderCol}>Name</div>
-                <div className={styles.fileListHeaderCol}>Size</div>
-                <div className={styles.fileListHeaderCol}>Date Modified</div>
+                <div className={styles.sortHeaderCol} onClick={() => handleSort('name')}>
+                  <span>Name</span>
+                  {sortField === 'name' ? (
+                    sortDirection === 'asc' ? <ChevronUp size={12} className={styles.sortIcon} /> : <ChevronDown size={12} className={styles.sortIcon} />
+                  ) : (
+                    <ChevronUp size={12} className={styles.sortIconInactive} />
+                  )}
+                </div>
+
+                <div className={styles.sortHeaderCol} onClick={() => handleSort('size')}>
+                  <span>Size</span>
+                  {sortField === 'size' ? (
+                    sortDirection === 'asc' ? <ChevronUp size={12} className={styles.sortIcon} /> : <ChevronDown size={12} className={styles.sortIcon} />
+                  ) : (
+                    <ChevronUp size={12} className={styles.sortIconInactive} />
+                  )}
+                </div>
+
+                <div className={styles.sortHeaderCol} onClick={() => handleSort('modified')}>
+                  <span>Date Modified</span>
+                  {sortField === 'modified' ? (
+                    sortDirection === 'asc' ? <ChevronUp size={12} className={styles.sortIcon} /> : <ChevronDown size={12} className={styles.sortIcon} />
+                  ) : (
+                    <ChevronUp size={12} className={styles.sortIconInactive} />
+                  )}
+                </div>
               </div>
-              <div className={styles.fileItemsContainer}>
+
+              {/* Items Container with ref for intersection testing */}
+              <div className={styles.fileItemsContainer} ref={itemsContainerRef}>
                 {itemsToRender.map(item => {
-                  const isSelected     = selectedItemName === item.name;
+                  const isSelected     = selectedItemNames.has(item.name);
                   const isRenamingThis = renamingItem && renamingItem.oldName === item.name;
                   const isNewThis      = item.isNewPlaceholder;
 
                   const isCutPending = clipboard && 
                     clipboard.action === 'cut' && 
-                    clipboard.item.name === item.name && 
+                    clipboard.items.some(ci => ci.name === item.name) && 
                     clipboard.sourcePath === currentPath;
 
                   return (
                     <div
                       key={isNewThis ? '__new_item_placeholder__' : item.name}
+                      data-filename={isNewThis ? undefined : item.name}
                       className={`${styles.fileItemRow} ${isSelected ? styles.fileItemRowSelected : ''}`}
                       style={{ opacity: isCutPending ? 0.45 : 1 }}
-                      onClick={e => {
-                        e.stopPropagation();
-                        if (isNewThis) return;
-                        setContextMenu(null);
-                        setSelectedItemName(item.name);
-                        if (!isRenamingThis) setRenamingItem(null);
-                      }}
+                      onClick={e => handleItemClick(e, item)}
                       onDoubleClick={e => {
                         e.stopPropagation();
                         if (isNewThis) return;
@@ -1164,6 +1397,19 @@ export default function FileExplorer() {
               </div>
             </>
           )}
+
+          {/* Mouse Drag Selection Marquee Box */}
+          {marquee && (
+            <div
+              className={styles.selectionMarquee}
+              style={{
+                left: Math.min(marquee.startX, marquee.currentX),
+                top: Math.min(marquee.startY, marquee.currentY),
+                width: Math.abs(marquee.currentX - marquee.startX),
+                height: Math.abs(marquee.currentY - marquee.startY),
+              }}
+            />
+          )}
         </div>
 
         {/* Upload Progress Overlay */}
@@ -1208,7 +1454,7 @@ export default function FileExplorer() {
                   style={{ opacity: clipboard ? 1 : 0.4, pointerEvents: clipboard ? 'auto' : 'none' }}
                   onClick={() => { handlePaste(); setContextMenu(null); }}
                 >
-                  <Clipboard size={13} /> Paste {clipboard ? `"${clipboard.item.name}"` : ''}
+                  <Clipboard size={13} /> Paste {clipboard ? `(${clipboard.items.length} items)` : ''}
                 </div>
 
                 <div className={styles.contextMenuDivider} />
@@ -1237,9 +1483,10 @@ export default function FileExplorer() {
             {/* File / Folder menu */}
             {contextMenu.item !== null && (() => {
               const item = contextMenu.item!;
+              const isMultiSelected = selectedItemNames.size > 1;
               return (
                 <>
-                  {item.type === 'file' && (
+                  {!isMultiSelected && item.type === 'file' && (
                     <div
                       className={styles.contextMenuItem}
                       onClick={() => {
@@ -1250,37 +1497,30 @@ export default function FileExplorer() {
                       <Eye size={13} /> View
                     </div>
                   )}
-                  {item.type === 'folder' && (
-                    <div
-                      className={styles.contextMenuItem}
-                      onClick={() => { navigateToPath(`${currentPath}/${item.name}`); setContextMenu(null); }}
-                    >
-                      <Folder size={13} /> Open
-                    </div>
-                  )}
 
-                  <div className={styles.contextMenuDivider} />
-
-                  <div
-                    className={styles.contextMenuItem}
-                    onClick={() => { handleStartRename(item.name); setContextMenu(null); }}
-                  >
-                    <Edit2 size={13} /> Rename
-                  </div>
                   <div
                     className={styles.contextMenuItem}
                     onClick={() => { handleCopy(); setContextMenu(null); }}
                   >
-                    <Copy size={13} /> Copy
+                    <Copy size={13} /> Copy {isMultiSelected ? `(${selectedItemNames.size} items)` : ''}
                   </div>
                   <div
                     className={styles.contextMenuItem}
                     onClick={() => { handleCut(); setContextMenu(null); }}
                   >
-                    <Scissors size={13} /> Cut
+                    <Scissors size={13} /> Cut {isMultiSelected ? `(${selectedItemNames.size} items)` : ''}
                   </div>
 
-                  {item.type === 'file' && (
+                  {!isMultiSelected && (
+                    <div
+                      className={styles.contextMenuItem}
+                      onClick={() => { handleStartRename(item.name); setContextMenu(null); }}
+                    >
+                      <Edit2 size={13} /> Rename
+                    </div>
+                  )}
+
+                  {!isMultiSelected && item.type === 'file' && (
                     <a
                       className={styles.contextMenuItem}
                       href={`/api/files/download?path=${encodeURIComponent(`${currentPath}/${item.name}`)}`}
@@ -1296,9 +1536,9 @@ export default function FileExplorer() {
 
                   <div
                     className={`${styles.contextMenuItem} ${styles.contextMenuDanger}`}
-                    onClick={() => { handleDelete(item.name); setContextMenu(null); }}
+                    onClick={() => { handleDelete(isMultiSelected ? undefined : item.name); setContextMenu(null); }}
                   >
-                    <Trash2 size={13} /> Delete
+                    <Trash2 size={13} /> Delete {isMultiSelected ? `(${selectedItemNames.size} items)` : ''}
                   </div>
                 </>
               );
@@ -1310,12 +1550,14 @@ export default function FileExplorer() {
       {/* ─── Status Bar ─── */}
       <div className={styles.statusBar}>
         <div className={styles.statusLeft}>
-          <span>{displayedFiles.length} {displayedFiles.length === 1 ? 'item' : 'items'}</span>
-          {selectedItemName && (
+          <span>{displayedFiles.length} items</span>
+          {selectedItemNames.size > 0 && (
             <>
-              <span style={{ width: '3px', height: '3px', borderRadius: '50%', background: 'rgba(255,255,255,0.3)' }} />
-              <span style={{ color: 'var(--text-secondary)' }}>
-                1 item selected {selectedItem && selectedItem.size !== '--' && `(${selectedItem.size})`}
+              <span style={{ width: '3px', height: '3px', borderRadius: '50%', background: '#525252' }} />
+              <span>
+                {selectedItemNames.size === 1
+                  ? `1 item selected ${selectedTotalBytes > 0 ? `(${formatBytes(selectedTotalBytes)})` : ''}`
+                  : `${selectedItemNames.size} items selected (${formatBytes(selectedTotalBytes)})`}
               </span>
             </>
           )}
