@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
-import { Terminal as TerminalIcon, RefreshCw, Trash2 } from 'lucide-react';
+import { RefreshCw, Trash2 } from 'lucide-react';
 import '@xterm/xterm/css/xterm.css';
 import styles from './terminal.module.css';
 
@@ -16,12 +16,17 @@ export default function TerminalApp() {
 
   const connectSocket = useCallback((term: Terminal) => {
     if (socketRef.current) {
+      socketRef.current.onopen = null;
+      socketRef.current.onmessage = null;
+      socketRef.current.onclose = null;
+      socketRef.current.onerror = null;
       if (
         socketRef.current.readyState === WebSocket.OPEN ||
         socketRef.current.readyState === WebSocket.CONNECTING
       ) {
         socketRef.current.close();
       }
+      socketRef.current = null;
     }
 
     setStatus('connecting');
@@ -32,14 +37,11 @@ export default function TerminalApp() {
 
     socket.onopen = () => {
       setStatus('connected');
-      term.write(
-        '\r\n\x1b[1;37m==> Connected to Home Cloud Shell (bash) <==\x1b[0m\r\n\x1b[90mSession established. Type commands or press Ctrl+L to clear.\x1b[0m\r\n\r\n'
-      );
       if (fitAddonRef.current) {
         try {
           fitAddonRef.current.fit();
         } catch {
-          // Suppress layout fit errors on initial render
+          /* ignore fit error during initial mount */
         }
       }
     };
@@ -50,46 +52,44 @@ export default function TerminalApp() {
 
     socket.onclose = () => {
       setStatus('disconnected');
-      term.write('\r\n\x1b[1;31m==> Session Disconnected <==\x1b[0m\r\n');
     };
 
     socket.onerror = () => {
       setStatus('disconnected');
-      term.write('\r\n\x1b[1;31m==> Connection Error <==\x1b[0m\r\n');
     };
   }, []);
 
   useEffect(() => {
-    // 1. Initialize Terminal with Windows 11 Dark / Mica-aligned neutral palette
+    // 1. Initialize Terminal with Vercel pitch-black dark theme
     const term = new Terminal({
       cursorBlink: true,
       cursorStyle: 'block',
       fontSize: 13,
-      lineHeight: 1.2,
-      fontFamily: "'JetBrains Mono', 'Fira Code', var(--mono), monospace",
+      lineHeight: 1.25,
       letterSpacing: 0,
+      fontFamily: "'JetBrains Mono', Menlo, Monaco, 'Courier New', monospace",
+      customGlyphs: true,
       theme: {
-        background: '#18181b',
-        foreground: '#f4f4f5',
-        cursor: '#ffffff',
-        cursorAccent: '#18181b',
-        selectionBackground: 'rgba(255, 255, 255, 0.22)',
-        // Clean neutral ANSI palette (no neon oversaturation)
-        black: '#27272a',
+        background: '#000000',
+        foreground: '#ededed',
+        cursor: '#ededed',
+        cursorAccent: '#000000',
+        selectionBackground: 'rgba(255, 255, 255, 0.18)',
+        black: '#000000',
         red: '#f87171',
-        green: '#34d399',
-        yellow: '#fbbf24',
+        green: '#4ade80',
+        yellow: '#facc15',
         blue: '#60a5fa',
         magenta: '#c084fc',
-        cyan: '#38bdf8',
-        white: '#f4f4f5',
-        brightBlack: '#52525b',
+        cyan: '#22d3ee',
+        white: '#ededed',
+        brightBlack: '#666666',
         brightRed: '#fca5a5',
-        brightGreen: '#6ee7b7',
+        brightGreen: '#86efac',
         brightYellow: '#fde047',
         brightBlue: '#93c5fd',
         brightMagenta: '#d8b4fe',
-        brightCyan: '#7dd3fc',
+        brightCyan: '#67e8f9',
         brightWhite: '#ffffff',
       },
     });
@@ -105,8 +105,18 @@ export default function TerminalApp() {
       try {
         fitAddon.fit();
       } catch {
-        // Layout safety
+        /* ignore fit error during initial mount */
       }
+    }
+
+    if (typeof document !== 'undefined' && 'fonts' in document) {
+      document.fonts.ready.then(() => {
+        try {
+          fitAddon.fit();
+        } catch {
+          /* ignore fit error during font load */
+        }
+      });
     }
 
     // 2. Setup WebSocket connection
@@ -124,7 +134,7 @@ export default function TerminalApp() {
       try {
         fitAddon.fit();
       } catch {
-        // Suppress layout errors
+        /* ignore layout error during container resize */
       }
     });
 
@@ -134,24 +144,26 @@ export default function TerminalApp() {
 
     // 5. Cleanup on unmount
     return () => {
-      dataDisposable.dispose();
       resizeObserver.disconnect();
-      term.dispose();
-      if (
-        socketRef.current?.readyState === WebSocket.OPEN ||
-        socketRef.current?.readyState === WebSocket.CONNECTING
-      ) {
-        socketRef.current.close();
+      dataDisposable.dispose();
+      if (socketRef.current) {
+        socketRef.current.onopen = null;
+        socketRef.current.onmessage = null;
+        socketRef.current.onclose = null;
+        socketRef.current.onerror = null;
+        if (
+          socketRef.current.readyState === WebSocket.OPEN ||
+          socketRef.current.readyState === WebSocket.CONNECTING
+        ) {
+          socketRef.current.close();
+        }
+        socketRef.current = null;
       }
+      term.dispose();
+      xtermRef.current = null;
+      fitAddonRef.current = null;
     };
   }, [connectSocket]);
-
-  const handleReconnect = () => {
-    if (xtermRef.current) {
-      xtermRef.current.write('\r\n\x1b[90mReconnecting to terminal socket...\x1b[0m\r\n');
-      connectSocket(xtermRef.current);
-    }
-  };
 
   const handleClear = () => {
     if (xtermRef.current) {
@@ -160,71 +172,54 @@ export default function TerminalApp() {
     }
   };
 
+  const handleReconnect = () => {
+    if (xtermRef.current) {
+      xtermRef.current.clear();
+      connectSocket(xtermRef.current);
+      xtermRef.current.focus();
+    }
+  };
+
   return (
     <div className={styles.container}>
-      {/* Sleek Window Header / Tab Bar */}
       <div className={styles.headerBar}>
-        <div className={styles.headerLeft}>
+        <div className={styles.tabsGroup}>
           <div className={styles.tabBadge}>
-            <TerminalIcon size={12} style={{ color: '#a1a1aa' }} />
-            <span>bash</span>
-          </div>
-
-          <div className={styles.statusBadge}>
             <span
-              className={`${styles.statusDot} ${
+              className={
                 status === 'connected'
                   ? styles.statusDotConnected
                   : status === 'connecting'
                     ? styles.statusDotConnecting
                     : styles.statusDotDisconnected
-              }`}
+              }
             />
-            <span
-              style={{
-                color:
-                  status === 'connected'
-                    ? '#34d399'
-                    : status === 'connecting'
-                      ? '#fbbf24'
-                      : '#f87171',
-              }}
-            >
-              {status === 'connected'
-                ? 'Connected'
-                : status === 'connecting'
-                  ? 'Connecting...'
-                  : 'Disconnected'}
-            </span>
+            <span className={styles.tabTitle}>bash</span>
           </div>
         </div>
 
-        <div className={styles.headerRight}>
-          {status === 'disconnected' && (
-            <button
-              type="button"
-              className={styles.reconnectBtn}
-              onClick={handleReconnect}
-              title="Reconnect to Terminal session"
-            >
-              <RefreshCw size={11} />
-              <span>Reconnect</span>
-            </button>
-          )}
-
+        <div className={styles.actionsGroup}>
           <button
             type="button"
             className={styles.actionBtn}
             onClick={handleClear}
-            title="Clear Terminal screen"
+            title="Clear terminal"
           >
-            <Trash2 size={11} />
+            <Trash2 size={12} />
             <span>Clear</span>
+          </button>
+          <button
+            type="button"
+            className={styles.actionBtn}
+            onClick={handleReconnect}
+            title="Reconnect session"
+          >
+            <RefreshCw size={12} />
+            <span>Reconnect</span>
           </button>
         </div>
       </div>
 
-      {/* Terminal Canvas with 8px Window Padding */}
       <div className={styles.terminalWrapper}>
         <div ref={terminalRef} className={styles.terminalCanvas} />
       </div>

@@ -69,4 +69,5 @@ cookies.txt
 .playwright-cli/
 .screenshots/
 /*.png
-
+.agents/
+TEST_READY.md

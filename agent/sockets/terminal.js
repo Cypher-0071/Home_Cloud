@@ -14,7 +14,11 @@ class PTY {
 			name: "xterm-256color",
 			cols: 100,
 			cwd: process.env.HOME,
-			env: process.env,
+			env: {
+				...process.env,
+				LANG: "C.UTF-8",
+				LC_ALL: "C.UTF-8",
+			},
 		});
 		this.terminal.onData((data) => {
 			if (this.ws.readyState === 1) { // WebSocket.OPEN
