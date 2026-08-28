@@ -10,7 +10,9 @@ class PTY {
 	}
 
 	createPTY(cols = 100, rows = 30) {
-		this.terminal = pty.spawn(this.shell, [], {
+		const isZsh = /zsh$/i.test(this.shell);
+		const args = isZsh ? ["-o", "NO_PROMPT_SP", "-o", "NO_PROMPT_CR"] : [];
+		this.terminal = pty.spawn(this.shell, args, {
 			name: "xterm-256color",
 			cols: cols || 100,
 			rows: rows || 30,
@@ -60,16 +62,27 @@ function handleSystemTerminal(ws, request) {
 				return;
 			} else {
 				const ptyinstance = new PTY(ws);
-				ptyinstance.createPTY();
+				let created = false;
+				const ensurePTY = (cols, rows) => {
+					if (!created) {
+						ptyinstance.createPTY(cols, rows);
+						created = true;
+					}
+				};
 				ws.on("message", (data) => {
 					const msgStr = data.toString();
 					try {
 						const parsed = JSON.parse(msgStr);
 						if (parsed && parsed.type === "resize" && parsed.cols && parsed.rows) {
-							ptyinstance.resize(parsed.cols, parsed.rows);
+							if (!created) {
+								ensurePTY(parsed.cols, parsed.rows);
+							} else {
+								ptyinstance.resize(parsed.cols, parsed.rows);
+							}
 							return;
 						}
 					} catch {}
+					ensurePTY();
 					ptyinstance.writeTerminal(msgStr);
 				});
 				ws.on("close", () => {

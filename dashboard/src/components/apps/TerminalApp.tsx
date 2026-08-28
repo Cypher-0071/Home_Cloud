@@ -7,6 +7,106 @@ import styles from './terminal.module.css';
 
 type ConnectionStatus = 'connecting' | 'connected' | 'disconnected';
 
+type InitialStreamState = {
+  hasSeenVisible: boolean;
+  pending: string;
+};
+
+function isLeadingWhitespace(char: string): boolean {
+  const code = char.charCodeAt(0);
+  return (
+    char === '\r' ||
+    char === '\n' ||
+    char === ' ' ||
+    char === '\t' ||
+    char === '\v' ||
+    char === '\f' ||
+    code === 0
+  );
+}
+
+// Drop zsh PROMPT_SP fill, Starship add_newline, and cursor/erase setup so the
+// first glyph (~) lands at row 0. Keep SGR colors and mode CSI (h/l).
+function cleanInitialStream(raw: string, state: InitialStreamState): string {
+  const data = state.pending + raw;
+  state.pending = '';
+  if (state.hasSeenVisible) return data;
+
+  let result = '';
+  let i = 0;
+  while (i < data.length) {
+    if (state.hasSeenVisible) {
+      result += data.slice(i);
+      break;
+    }
+
+    if (isLeadingWhitespace(data[i])) {
+      i++;
+      continue;
+    }
+
+    if (data.charCodeAt(i) === 0x1b) {
+      if (i + 1 >= data.length) {
+        state.pending = data.slice(i);
+        break;
+      }
+
+      const next = data[i + 1];
+
+      if (next === ']') {
+        const bel = data.indexOf('\x07', i);
+        const st = data.indexOf('\x1b\\', i);
+        let end = -1;
+        if (bel !== -1 && st !== -1) end = Math.min(bel + 1, st + 2);
+        else if (bel !== -1) end = bel + 1;
+        else if (st !== -1) end = st + 2;
+        if (end === -1) {
+          state.pending = data.slice(i);
+          break;
+        }
+        result += data.slice(i, end);
+        i = end;
+        continue;
+      }
+
+      if (next === '[') {
+        let j = i + 2;
+        while (j < data.length && (data.charCodeAt(j) < 0x40 || data.charCodeAt(j) > 0x7e)) {
+          j++;
+        }
+        if (j >= data.length) {
+          state.pending = data.slice(i);
+          break;
+        }
+        const final = data[j];
+        if (final === 'm' || final === 'h' || final === 'l') {
+          result += data.slice(i, j + 1);
+        }
+        i = j + 1;
+        continue;
+      }
+
+      if (next === '(' || next === ')' || next === '*' || next === '+') {
+        if (i + 2 >= data.length) {
+          state.pending = data.slice(i);
+          break;
+        }
+        i += 3;
+        continue;
+      }
+
+      i += 2;
+      continue;
+    }
+
+    state.hasSeenVisible = true;
+    result += data[i];
+    i++;
+  }
+
+  return result;
+}
+
 export default function TerminalApp() {
   const terminalRef = useRef<HTMLDivElement>(null);
   const socketRef = useRef<WebSocket | null>(null);
@@ -54,13 +154,20 @@ export default function TerminalApp() {
     const socket = new WebSocket(wsUrl);
     socketRef.current = socket;
 
+    const streamState: InitialStreamState = { hasSeenVisible: false, pending: '' };
+
     socket.onopen = () => {
       setStatus('connected');
       syncDimensions();
     };
 
     socket.onmessage = (event) => {
-      term.write(event.data);
+      if (typeof event.data === 'string') {
+        const cleaned = cleanInitialStream(event.data, streamState);
+        term.write(cleaned);
+      } else {
+        term.write(event.data);
+      }
     };
 
     socket.onclose = () => {
@@ -171,8 +278,14 @@ export default function TerminalApp() {
   }, [connectSocket, syncDimensions]);
 
   const handleClear = () => {
+    if (socketRef.current?.readyState === WebSocket.OPEN) {
+      // Send Ctrl+L to the shell — it will clear the screen and repaint
+      // the full prompt (both directory info line and > cursor line).
+      // We intentionally do NOT call xterm.clear() because that would
+      // wipe the scrollback before the shell has a chance to redraw.
+      socketRef.current.send('\x0c');
+    }
     if (xtermRef.current) {
-      xtermRef.current.clear();
       xtermRef.current.focus();
     }
   };
