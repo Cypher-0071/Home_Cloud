@@ -199,10 +199,8 @@ function FileViewer({ filePath, fileName, ext, onClose }: ViewerProps) {
     <div
       style={{
         position: 'absolute', inset: 0, zIndex: 200,
-        background: 'rgba(0, 0, 0, 0.75)',
+        background: 'rgba(0, 0, 0, 0.85)',
         display: 'flex', flexDirection: 'column',
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
         animation: 'fadeIn 0.15s ease-out',
       }}
       onClick={onClose}
@@ -211,20 +209,20 @@ function FileViewer({ filePath, fileName, ext, onClose }: ViewerProps) {
       <div
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '10px 16px',
-          background: 'rgba(28, 28, 32, 0.98)',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+          padding: '8px 16px',
+          background: '#0a0a0a',
+          borderBottom: '1px solid #262626',
           flexShrink: 0,
         }}
         onClick={e => e.stopPropagation()}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <FileText size={16} style={{ color: '#ffffff' }} />
-          <span style={{ fontSize: '13px', fontWeight: 600, color: '#f4f4f5' }}>{fileName}</span>
+          <FileText size={15} style={{ color: '#ededed' }} />
+          <span style={{ fontSize: '13px', fontWeight: 600, color: '#ededed' }}>{fileName}</span>
           <span style={{
-            fontSize: '11px', color: '#a1a1aa',
-            background: 'rgba(255, 255, 255, 0.06)',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
+            fontSize: '11px', color: '#a1a1a1',
+            background: '#111111',
+            border: '1px solid #262626',
             padding: '2px 6px', borderRadius: '4px',
             fontFamily: 'var(--mono)',
           }}>{ext ? ext.toUpperCase() : 'FILE'}</span>
@@ -235,10 +233,10 @@ function FileViewer({ filePath, fileName, ext, onClose }: ViewerProps) {
             download={fileName}
             style={{
               display: 'flex', alignItems: 'center', gap: '6px',
-              padding: '6px 12px', borderRadius: '6px',
-              background: '#ffffff', color: '#09090b',
+              padding: '5px 12px', borderRadius: '6px',
+              background: '#ffffff', color: '#000000',
               fontSize: '12px', fontWeight: 550, textDecoration: 'none', cursor: 'pointer',
-              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.15)',
+              border: '1px solid transparent',
             }}
             onClick={e => e.stopPropagation()}
           >
@@ -249,8 +247,8 @@ function FileViewer({ filePath, fileName, ext, onClose }: ViewerProps) {
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               width: '28px', height: '28px', borderRadius: '6px',
-              background: 'rgba(255, 255, 255, 0.04)', border: '1px solid rgba(255, 255, 255, 0.08)',
-              color: '#a1a1aa', cursor: 'pointer',
+              background: '#111111', border: '1px solid #262626',
+              color: '#a1a1a1', cursor: 'pointer',
             }}
           >
             <X size={15} />
@@ -327,11 +325,11 @@ function FileViewer({ filePath, fileName, ext, onClose }: ViewerProps) {
                       lineHeight: '1.6',
                       fontFamily: 'var(--mono)',
                       borderRadius: '8px',
-                      border: '1px solid rgba(255, 255, 255, 0.08)',
+                      border: '1px solid #262626',
                       whiteSpace: 'pre-wrap',
                       wordBreak: 'break-word',
                       minHeight: '100%',
-                      background: '#09090b',
+                      background: '#000000',
                     }}
                   >
                     {tokens.map((line, i) => (
