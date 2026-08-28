@@ -1,83 +1,100 @@
+/* ─── Vercel Geist Dark Mode Terminal Styles ─── */
+
 .container {
   display: flex;
   flex-direction: column;
   height: 100%;
   width: 100%;
   background: #000000;
-  color: var(--text-primary, #ededed);
-  font-family: var(--sans);
   overflow: hidden;
   box-sizing: border-box;
 }
 
-/* ─── Header / Tab Bar ─── */
+/* ─── Header Bar ─── */
 .headerBar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 34px;
-  padding: 0 10px;
+  padding: 6px 12px;
   background: #0a0a0a;
   border-bottom: 1px solid #262626;
   flex-shrink: 0;
-  user-select: none;
+  gap: 8px;
+  min-height: 38px;
+  box-sizing: border-box;
 }
 
-.headerLeft {
+.tabsGroup {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
+/* ─── Active Shell Tab Pill ─── */
 .tabBadge {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 2px 8px;
+  gap: 8px;
   background: #111111;
   border: 1px solid #262626;
-  border-radius: 5px;
+  color: #ededed;
+  font-size: 12px;
+  font-weight: 500;
   font-family: var(--mono);
-  font-size: 11.5px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  user-select: none;
+  line-height: 1;
+}
+
+.tabTitle {
+  font-size: 12px;
   color: #ededed;
   font-weight: 500;
 }
 
-.statusBadge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 2px 8px;
-  border-radius: 5px;
-  font-size: 11px;
-  font-weight: 500;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-}
-
+/* ─── Status Dots (Clean, solid, static dots with NO box-shadow) ─── */
 .statusDot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
+  display: inline-block;
   flex-shrink: 0;
+  box-shadow: none;
 }
 
 .statusDotConnected {
-  background-color: #34d399;
-  box-shadow: 0 0 6px rgba(52, 211, 153, 0.4);
-}
-
-.statusDotDisconnected {
-  background-color: #f87171;
-  box-shadow: 0 0 6px rgba(248, 113, 113, 0.4);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+  background: #22c55e;
+  box-shadow: none;
 }
 
 .statusDotConnecting {
-  background-color: #fbbf24;
-  box-shadow: 0 0 6px rgba(251, 191, 36, 0.4);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+  background: #facc15;
+  box-shadow: none;
 }
 
-.headerRight {
+.statusDotDisconnected {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+  background: #ef4444;
+  box-shadow: none;
+}
+
+/* ─── Action Buttons (Clear, Reconnect) ─── */
+.actionsGroup {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -86,72 +103,86 @@
 .actionBtn {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 3px 8px;
-  border-radius: 5px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  color: #a1a1aa;
-  font-size: 11px;
+  gap: 5px;
+  background: #111111;
+  border: 1px solid #262626;
+  color: #ededed;
+  font-size: 12px;
+  font-weight: 500;
   font-family: var(--sans);
-  cursor: pointer;
-  transition:
-    background var(--duration-fast, 140ms) var(--ease-out-quart, cubic-bezier(0.25, 1, 0.5, 1)),
-    border-color var(--duration-fast, 140ms) var(--ease-out-quart, cubic-bezier(0.25, 1, 0.5, 1)),
-    color var(--duration-fast, 140ms) var(--ease-out-quart, cubic-bezier(0.25, 1, 0.5, 1));
-}
-
-.actionBtn:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #ffffff;
-  border-color: rgba(255, 255, 255, 0.14);
-}
-
-.actionBtn:active {
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.reconnectBtn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 8px;
+  padding: 4px 10px;
   border-radius: 5px;
-  background: rgba(248, 113, 113, 0.12);
-  border: 1px solid rgba(248, 113, 113, 0.25);
-  color: #fca5a5;
-  font-size: 11px;
-  font-family: var(--sans);
   cursor: pointer;
+  line-height: 1.2;
+  user-select: none;
   transition:
-    background var(--duration-fast, 140ms) var(--ease-out-quart, cubic-bezier(0.25, 1, 0.5, 1)),
-    border-color var(--duration-fast, 140ms) var(--ease-out-quart, cubic-bezier(0.25, 1, 0.5, 1)),
-    color var(--duration-fast, 140ms) var(--ease-out-quart, cubic-bezier(0.25, 1, 0.5, 1));
+    background var(--duration-fast) ease,
+    border-color var(--duration-fast) ease,
+    color var(--duration-fast) ease;
 }
 
-.reconnectBtn:hover {
-  background: rgba(248, 113, 113, 0.22);
-  border-color: rgba(248, 113, 113, 0.40);
+.actionBtn:hover:not(:disabled) {
+  background: #171717;
+  border-color: #333333;
   color: #ffffff;
 }
 
-.reconnectBtn:active {
-  background: rgba(248, 113, 113, 0.16);
+.actionBtn:active:not(:disabled) {
+  background: #222222;
 }
 
-/* ─── Terminal Body (8px Window Padding) ─── */
+.actionBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.actionBtn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* ─── Terminal Canvas Area ─── */
 .terminalWrapper {
   flex: 1;
+  min-height: 0;
   width: 100%;
   height: 100%;
+  background: #000000;
   padding: 8px;
   box-sizing: border-box;
-  background: #000000;
   overflow: hidden;
-  position: relative;
 }
 
 .terminalCanvas {
   width: 100%;
   height: 100%;
+  background: #000000;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* ─── Scoped xterm Viewport Scrollbar ─── */
+.terminalWrapper :global(.xterm-viewport) {
+  background-color: #000000 !important;
+  scrollbar-width: thin;
+  scrollbar-color: #262626 transparent;
+}
+
+.terminalWrapper :global(.xterm-viewport::-webkit-scrollbar) {
+  width: 6px;
+  height: 6px;
+}
+
+.terminalWrapper :global(.xterm-viewport::-webkit-scrollbar-track) {
+  background: transparent;
+}
+
+.terminalWrapper :global(.xterm-viewport::-webkit-scrollbar-thumb) {
+  background: #262626;
+  border-radius: 3px;
+}
+
+.terminalWrapper :global(.xterm-viewport::-webkit-scrollbar-thumb:hover) {
+  background: #333333;
 }
