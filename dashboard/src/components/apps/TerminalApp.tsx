@@ -14,6 +14,25 @@ export default function TerminalApp() {
   const fitAddonRef = useRef<FitAddon | null>(null);
   const [status, setStatus] = useState<ConnectionStatus>('connecting');
 
+  const syncDimensions = useCallback(() => {
+    if (fitAddonRef.current && xtermRef.current) {
+      try {
+        fitAddonRef.current.fit();
+        if (socketRef.current?.readyState === WebSocket.OPEN) {
+          socketRef.current.send(
+            JSON.stringify({
+              type: 'resize',
+              cols: xtermRef.current.cols,
+              rows: xtermRef.current.rows,
+            })
+          );
+        }
+      } catch {
+        /* ignore layout errors during resize */
+      }
+    }
+  }, []);
+
   const connectSocket = useCallback((term: Terminal) => {
     if (socketRef.current) {
       socketRef.current.onopen = null;
@@ -37,16 +56,7 @@ export default function TerminalApp() {
 
     socket.onopen = () => {
       setStatus('connected');
-      term.write(
-        '\r\n\x1b[1;37m==> Connected to Home Cloud Shell (bash) <==\x1b[0m\r\n\x1b[90mSession established. Type commands or press Ctrl+L to clear.\x1b[0m\r\n\r\n'
-      );
-      if (fitAddonRef.current) {
-        try {
-          fitAddonRef.current.fit();
-        } catch {
-          /* ignore fit error during initial mount */
-        }
-      }
+      syncDimensions();
     };
 
     socket.onmessage = (event) => {
@@ -55,14 +65,12 @@ export default function TerminalApp() {
 
     socket.onclose = () => {
       setStatus('disconnected');
-      term.write('\r\n\x1b[1;31m==> Session Disconnected <==\x1b[0m\r\n');
     };
 
     socket.onerror = () => {
       setStatus('disconnected');
-      term.write('\r\n\x1b[1;31m==> Connection Error <==\x1b[0m\r\n');
     };
-  }, []);
+  }, [syncDimensions]);
 
   useEffect(() => {
     // 1. Initialize Terminal with Vercel pitch-black dark theme
@@ -116,11 +124,7 @@ export default function TerminalApp() {
 
     if (typeof document !== 'undefined' && 'fonts' in document) {
       document.fonts.ready.then(() => {
-        try {
-          fitAddon.fit();
-        } catch {
-          /* ignore fit error during font load */
-        }
+        syncDimensions();
       });
     }
 
@@ -136,11 +140,7 @@ export default function TerminalApp() {
 
     // 4. Container resize observer
     const resizeObserver = new ResizeObserver(() => {
-      try {
-        fitAddon.fit();
-      } catch {
-        /* ignore layout error during container resize */
-      }
+      syncDimensions();
     });
 
     if (terminalRef.current) {
@@ -168,7 +168,7 @@ export default function TerminalApp() {
       xtermRef.current = null;
       fitAddonRef.current = null;
     };
-  }, [connectSocket]);
+  }, [connectSocket, syncDimensions]);
 
   const handleClear = () => {
     if (xtermRef.current) {
@@ -179,7 +179,7 @@ export default function TerminalApp() {
 
   const handleReconnect = () => {
     if (xtermRef.current) {
-      xtermRef.current.write('\r\n\x1b[90m==> Reconnecting to shell... <==\x1b[0m\r\n');
+      xtermRef.current.clear();
       connectSocket(xtermRef.current);
       xtermRef.current.focus();
     }
