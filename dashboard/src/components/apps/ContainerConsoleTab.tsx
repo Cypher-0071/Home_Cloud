@@ -22,30 +22,32 @@ export default function ContainerConsoleTab({ containerId, containerName, isRunn
 
     const term = new Terminal({
       cursorBlink: true,
-      fontSize: 12.5,
-      fontFamily: "'JetBrains Mono', ui-monospace, SFMono-Regular, Consolas, monospace",
+      cursorStyle: 'block',
+      fontSize: 12,
+      fontFamily: "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
       letterSpacing: 0,
+      lineHeight: 1.25,
       theme: {
-        background: '#18181b',
-        foreground: '#f4f4f5',
+        background: '#000000',
+        foreground: '#ededed',
         cursor: '#ffffff',
-        cursorAccent: '#18181b',
-        selectionBackground: 'rgba(255, 255, 255, 0.22)',
-        black: '#27272a',
-        red: '#f87171',
-        green: '#34d399',
-        yellow: '#fbbf24',
-        blue: '#60a5fa',
-        magenta: '#c084fc',
-        cyan: '#38bdf8',
-        white: '#f4f4f5',
-        brightBlack: '#52525b',
-        brightRed: '#fca5a5',
-        brightGreen: '#6ee7b7',
+        cursorAccent: '#000000',
+        selectionBackground: 'rgba(255, 255, 255, 0.25)',
+        black: '#171717',
+        red: '#ef4444',
+        green: '#22c55e',
+        yellow: '#facc15',
+        blue: '#3b82f6',
+        magenta: '#a855f7',
+        cyan: '#06b6d4',
+        white: '#ededed',
+        brightBlack: '#737373',
+        brightRed: '#f87171',
+        brightGreen: '#4ade80',
         brightYellow: '#fde047',
-        brightBlue: '#93c5fd',
-        brightMagenta: '#e9d5ff',
-        brightCyan: '#a5f3fc',
+        brightBlue: '#60a5fa',
+        brightMagenta: '#c084fc',
+        brightCyan: '#22d3ee',
         brightWhite: '#ffffff',
       },
     });
@@ -69,7 +71,7 @@ export default function ContainerConsoleTab({ containerId, containerName, isRunn
     socketRef.current = socket;
 
     socket.onopen = () => {
-      term.write(`\r\n\x1b[1;37m==> Connected to container console (${containerName}) <==\x1b[0m\r\n\r\n`);
+      term.write(`\r\n\x1b[1;37m==> Connected to ${containerName} console <==\x1b[0m\r\n\r\n`);
       if (fitAddon && term) {
         try {
           fitAddon.fit();
@@ -83,11 +85,11 @@ export default function ContainerConsoleTab({ containerId, containerName, isRunn
     };
 
     socket.onclose = () => {
-      term.write('\r\n\x1b[1;31m==> Console Connection Closed <==\x1b[0m\r\n');
+      term.write('\r\n\x1b[1;31m==> Console session ended <==\x1b[0m\r\n');
     };
 
     socket.onerror = () => {
-      term.write('\r\n\x1b[1;31m==> Console Connection Error <==\x1b[0m\r\n');
+      term.write('\r\n\x1b[1;31m==> Console connection error <==\x1b[0m\r\n');
     };
 
     term.onData((data) => {
@@ -129,9 +131,9 @@ export default function ContainerConsoleTab({ containerId, containerName, isRunn
   if (!isRunning) {
     return (
       <div className={styles.comingSoon}>
-        <AlertCircle size={28} style={{ color: 'var(--text-muted)' }} />
+        <AlertCircle size={24} style={{ color: 'var(--text-muted, #737373)' }} />
         <span className={styles.comingSoonText}>
-          Exec console unavailable. Container must be in a running state.
+          Interactive shell unavailable. Container is currently stopped.
         </span>
       </div>
     );

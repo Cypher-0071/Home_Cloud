@@ -1,5 +1,36 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { Play, Square, RefreshCw, Trash2, Box, AlertCircle, X, Cpu, HardDrive, Plus, Globe, ExternalLink, GlobeLock, Layers, FileText, Zap, Terminal } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import {
+  Play,
+  Square,
+  RefreshCw,
+  Trash2,
+  Box,
+  AlertCircle,
+  X,
+  Cpu,
+  HardDrive,
+  Plus,
+  Globe,
+  ExternalLink,
+  GlobeLock,
+  Layers,
+  FileText,
+  Zap,
+  Terminal,
+  Search,
+  Check,
+  Copy,
+  ChevronRight,
+  ChevronDown,
+  Download,
+  Activity,
+  Code,
+  Eye,
+  Sliders,
+  CheckCircle2,
+  AlertTriangle,
+} from 'lucide-react';
+import { Highlight, themes } from 'prism-react-renderer';
 import ContainerConsoleTab from './ContainerConsoleTab';
 import styles from './docker.module.css';
 import { useNetworkDetector } from '../../hooks/useNetworkDetector';
@@ -64,6 +95,11 @@ interface Stack {
   runningServicesCount: number;
   containers: StackContainer[];
   yamlExists: boolean;
+}
+
+interface LogLine {
+  timestamp: string | null;
+  text: string;
 }
 
 const QUICK_TEMPLATES: { label: string; yaml: string }[] = [
@@ -140,7 +176,7 @@ services:
 /* ─── Helpers ─── */
 
 function getStatusClass(state: string): string {
-  switch (state) {
+  switch (state.toLowerCase()) {
     case 'running':    return styles.statusRunning;
     case 'exited':     return styles.statusExited;
     case 'paused':     return styles.statusPaused;
@@ -150,20 +186,14 @@ function getStatusClass(state: string): string {
 }
 
 function getDotColor(state: string): string {
-  switch (state) {
-    case 'running':    return '#34d399';
-    case 'exited':     return '#71717a';
-    case 'paused':     return '#fbbf24';
-    case 'restarting': return '#fbbf24';
-    case 'dead':       return '#f87171';
-    default:           return '#71717a';
+  switch (state.toLowerCase()) {
+    case 'running':    return '#22c55e';
+    case 'exited':     return '#737373';
+    case 'paused':     return '#facc15';
+    case 'restarting': return '#facc15';
+    case 'dead':       return '#ef4444';
+    default:           return '#737373';
   }
-}
-
-function formatPorts(ports: DockerPort[]): string {
-  if (!ports?.length) return '—';
-  const bound = ports.filter(p => p.PublicPort);
-  return bound.length ? bound.map(p => `${p.PublicPort}→${p.PrivatePort}`).join(', ') : '—';
 }
 
 function formatAge(unix: number): string {
@@ -175,9 +205,10 @@ function formatAge(unix: number): string {
 }
 
 function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B';
+  if (!bytes || bytes === 0) return '0 B';
   const units = ['B', 'KB', 'MB', 'GB', 'TB'];
   const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  if (i < 0) return `${bytes} B`;
   return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]}`;
 }
 
@@ -202,16 +233,16 @@ function getMemoryUsage(stats: any) {
   const usage = stats.memory_stats.usage ?? 0;
   const limit = stats.memory_stats.limit ?? 0;
   const percent = limit > 0 ? (usage / limit) * 100 : 0;
-  return { usage, limit, percent };
+  return { usage, limit, percent: Math.min(100, percent) };
 }
 
 function getNetworkIO(stats: any) {
   if (!stats || !stats.networks) return { rx: 0, tx: 0 };
   let rx = 0;
   let tx = 0;
-  Object.values(stats.networks).forEach((net: any) => {
-    rx += net.rx_bytes ?? 0;
-    tx += net.tx_bytes ?? 0;
+  Object.values(stats.networks).forEach((n: any) => {
+    rx += n.rx_bytes ?? 0;
+    tx += n.tx_bytes ?? 0;
   });
   return { rx, tx };
 }
@@ -231,13 +262,230 @@ function getBlockIO(stats: any) {
   return { read, write };
 }
 
-/* ─── Component ─── */
+/* ─── Vercel / Geist Minimalist Sparkline Chart Component ─── */
+
+function SparklineChart({
+  points,
+  height = 44,
+  strokeColor = '#ffffff',
+  fillGradientId = 'spark-grad',
+}: {
+  points: number[];
+  height?: number;
+  strokeColor?: string;
+  fillGradientId?: string;
+}) {
+  if (!points || points.length < 2) {
+    return (
+      <div style={{ height: `${height}px`, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <span style={{ fontSize: '10px', color: '#525252', fontFamily: 'var(--mono)' }}>Collecting historical data…</span>
+      </div>
+    );
+  }
+
+  const W = 320;
+  const H = height;
+  const max = 100;
+
+  const coords = points.map((v, i) => {
+    const x = (i / (points.length - 1)) * W;
+    const clampedV = Math.min(100, Math.max(0, v));
+    const y = H - (clampedV / max) * (H - 6) - 3;
+    return { x, y, str: `${x.toFixed(1)},${y.toFixed(1)}` };
+  });
+
+  const polylinePoints = coords.map((c) => c.str).join(' ');
+  const areaPath = `M 0,${H} L ${coords[0].str} ${coords.map((c) => `L ${c.str}`).join(' ')} L ${W},${H} Z`;
+
+  return (
+    <div style={{ width: '100%', position: 'relative', height: `${height}px` }}>
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        preserveAspectRatio="none"
+        style={{ width: '100%', height: `${height}px`, display: 'block', overflow: 'visible' }}
+        aria-hidden="true"
+      >
+        <defs>
+          <linearGradient id={fillGradientId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={strokeColor} stopOpacity="0.25" />
+            <stop offset="100%" stopColor={strokeColor} stopOpacity="0.0" />
+          </linearGradient>
+        </defs>
+
+        {/* Baseline & mid grid lines */}
+        <line x1="0" y1={H - 1} x2={W} y2={H - 1} stroke="#262626" strokeWidth="1" />
+        <line x1="0" y1={H / 2} x2={W} y2={H / 2} stroke="#1c1c1c" strokeWidth="1" strokeDasharray="2 3" />
+
+        {/* Area fill */}
+        <path d={areaPath} fill={`url(#${fillGradientId})`} />
+
+        {/* Line stroke */}
+        <polyline
+          points={polylinePoints}
+          fill="none"
+          stroke={strokeColor}
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          vectorEffect="non-scaling-stroke"
+        />
+
+        {/* Current latest point dot */}
+        {coords.length > 0 && (
+          <circle
+            cx={coords[coords.length - 1].x}
+            cy={coords[coords.length - 1].y}
+            r="3"
+            fill={strokeColor}
+            stroke="#000000"
+            strokeWidth="1.5"
+          />
+        )}
+      </svg>
+    </div>
+  );
+}
+
+/* ─── Interactive Collapsible JSON Tree Component ─── */
+
+function JsonTreeNode({
+  name,
+  value,
+  isLast = true,
+  searchQuery = '',
+  level = 0,
+  defaultExpanded = true,
+}: {
+  name?: string;
+  value: any;
+  isLast?: boolean;
+  searchQuery?: string;
+  level?: number;
+  defaultExpanded?: boolean;
+}) {
+  const [collapsed, setCollapsed] = useState(!defaultExpanded);
+  const isObject = value !== null && typeof value === 'object';
+  const isArray = Array.isArray(value);
+
+  const renderHighlighted = (text: string) => {
+    if (!searchQuery.trim()) return <span>{text}</span>;
+    const parts = text.split(new RegExp(`(${searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'));
+    return (
+      <>
+        {parts.map((part, i) =>
+          part.toLowerCase() === searchQuery.toLowerCase() ? (
+            <mark key={i} className={styles.jsonKeyMatch}>
+              {part}
+            </mark>
+          ) : (
+            <span key={i}>{part}</span>
+          )
+        )}
+      </>
+    );
+  };
+
+  if (!isObject) {
+    let valElement: React.ReactNode;
+    if (typeof value === 'string') {
+      valElement = <span className={styles.jsonString}>"{renderHighlighted(value)}"</span>;
+    } else if (typeof value === 'number') {
+      valElement = <span className={styles.jsonNumber}>{value}</span>;
+    } else if (typeof value === 'boolean') {
+      valElement = <span className={styles.jsonBoolean}>{value ? 'true' : 'false'}</span>;
+    } else if (value === null) {
+      valElement = <span className={styles.jsonNull}>null</span>;
+    } else {
+      valElement = <span>{String(value)}</span>;
+    }
+
+    return (
+      <div className={styles.jsonLine} style={{ paddingLeft: `${level * 16}px` }}>
+        {name !== undefined && (
+          <>
+            <span className={styles.jsonKey}>{renderHighlighted(name)}</span>
+            <span style={{ color: '#525252' }}>:&nbsp;</span>
+          </>
+        )}
+        {valElement}
+        {!isLast && <span style={{ color: '#525252' }}>,</span>}
+      </div>
+    );
+  }
+
+  const keys = Object.keys(value);
+  const isEmpty = keys.length === 0;
+  const openBracket = isArray ? '[' : '{';
+  const closeBracket = isArray ? ']' : '}';
+
+  return (
+    <div className={styles.jsonNode}>
+      <div
+        className={styles.jsonLine}
+        style={{ paddingLeft: `${level * 16}px`, cursor: isEmpty ? 'default' : 'pointer' }}
+        onClick={() => !isEmpty && setCollapsed(!collapsed)}
+      >
+        {!isEmpty && (
+          <span className={styles.jsonToggle}>
+            {collapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
+          </span>
+        )}
+        {isEmpty && <span style={{ width: '12px', display: 'inline-block' }} />}
+        {name !== undefined && (
+          <>
+            <span className={styles.jsonKey}>{renderHighlighted(name)}</span>
+            <span style={{ color: '#525252' }}>:&nbsp;</span>
+          </>
+        )}
+        <span style={{ color: '#888888' }}>
+          {openBracket}
+          {collapsed && !isEmpty && <span style={{ color: '#525252', fontSize: '10px' }}>…{keys.length} items…</span>}
+          {collapsed && closeBracket}
+          {collapsed && !isLast && <span style={{ color: '#525252' }}>,</span>}
+        </span>
+      </div>
+
+      {!collapsed && !isEmpty && (
+        <div>
+          {keys.map((k, idx) => (
+            <JsonTreeNode
+              key={k}
+              name={isArray ? undefined : k}
+              value={value[k]}
+              isLast={idx === keys.length - 1}
+              searchQuery={searchQuery}
+              level={level + 1}
+              defaultExpanded={level < 1}
+            />
+          ))}
+        </div>
+      )}
+
+      {!collapsed && !isEmpty && (
+        <div className={styles.jsonLine} style={{ paddingLeft: `${level * 16 + 12}px` }}>
+          <span style={{ color: '#888888' }}>{closeBracket}</span>
+          {!isLast && <span style={{ color: '#525252' }}>,</span>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Main Component ─── */
 
 export default function DockerApp() {
   const net = useNetworkDetector();
+
   // Top Level Window Navigation
   const [activeWindowTab, setActiveWindowTab] = useState<'containers' | 'images' | 'stacks'>('containers');
 
+  // Search & Filter State
+  const [containerSearchQuery, setContainerSearchQuery] = useState('');
+  const [containerStatusFilter, setContainerStatusFilter] = useState<'all' | 'running' | 'stopped'>('all');
+  const [imageSearchQuery, setImageSearchQuery]         = useState('');
+  const [stackSearchQuery, setStackSearchQuery]         = useState('');
+
+  // Containers state
   const [containers, setContainers]           = useState<Container[]>([]);
   const [loading, setLoading]                 = useState(true);
   const [refreshing, setRefreshing]           = useState(false);
@@ -256,6 +504,7 @@ export default function DockerApp() {
   const [showDeployModal, setShowDeployModal] = useState(false);
   const [deployStackName, setDeployStackName] = useState('');
   const [deployYaml, setDeployYaml]           = useState(QUICK_TEMPLATES[0].yaml);
+  const [deployEditorMode, setDeployEditorMode] = useState<'edit' | 'preview'>('edit');
   const [deploying, setDeploying]             = useState(false);
   const [deployConsoleLogs, setDeployConsoleLogs] = useState<string[]>([]);
   const [deployError, setDeployError]         = useState<string | null>(null);
@@ -269,29 +518,30 @@ export default function DockerApp() {
   const [selectedId, setSelectedId]           = useState<string | null>(null);
   const [activeTab, setActiveTab]             = useState<'stats' | 'inspect' | 'logs' | 'console'>('stats');
 
-  // Live stats state
+  // Live stats telemetry state & rolling history
   const [statsData, setStatsData]             = useState<any | null>(null);
   const [statsLoading, setStatsLoading]       = useState(false);
   const [statsError, setStatsError]           = useState<string | null>(null);
+  const [cpuHistory, setCpuHistory]           = useState<number[]>([]);
+  const [memHistory, setMemHistory]           = useState<number[]>([]);
 
   // Inspect state
   const [inspectData, setInspectData]         = useState<any | null>(null);
   const [inspectLoading, setInspectLoading]   = useState(false);
   const [inspectError, setInspectError]       = useState<string | null>(null);
+  const [inspectSearchQuery, setInspectSearchQuery] = useState('');
+  const [jsonCopied, setJsonCopied]           = useState(false);
 
   // Live Logs state
-  interface LogLine {
-    timestamp: string | null;
-    text: string;
-  }
   const [logLines, setLogLines]               = useState<LogLine[]>([]);
   const [logsLoading, setLogsLoading]         = useState(false);
   const [logsError, setLogsError]             = useState<string | null>(null);
   const [showTimestamps, setShowTimestamps]   = useState(true);
   const [isLogPaused, setIsLogPaused]         = useState(false);
   const [autoScroll, setAutoScroll]           = useState(true);
+  const [logSearchQuery, setLogSearchQuery]   = useState('');
 
-  // Refs for tracking pause status and buffering logs without triggering stale effect closures
+  // Refs for tracking pause status and buffering logs
   const isLogPausedRef = useRef(isLogPaused);
   const logBufferRef = useRef<LogLine[]>([]);
   const logsTerminalRef = useRef<HTMLDivElement>(null);
@@ -326,6 +576,8 @@ export default function DockerApp() {
   const [exposeError, setExposeError]                   = useState<string | null>(null);
   const [exposeSuccessUrl, setExposeSuccessUrl]         = useState<string | null>(null);
 
+  /* ─── Handlers & Operations ─── */
+
   const handleExposeContainer = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!exposeModalContainer || !exposeSubdomain.trim()) return;
@@ -344,6 +596,7 @@ export default function DockerApp() {
         return;
       }
       setExposeSuccessUrl(data.url);
+      fetchContainers(true);
     } catch (err: any) {
       setExposeError(err.message || 'Network error');
     } finally {
@@ -366,7 +619,7 @@ export default function DockerApp() {
         );
         setTimeout(() => {
           fetchContainers(true);
-        }, 2000);
+        }, 1500);
       }
     } catch (err) {
       console.error('Failed to unexpose container:', err);
@@ -375,7 +628,7 @@ export default function DockerApp() {
     }
   };
 
-  // Sync ref with state
+  // Sync log pause ref
   useEffect(() => {
     isLogPausedRef.current = isLogPaused;
     if (!isLogPaused && logBufferRef.current.length > 0) {
@@ -384,9 +637,8 @@ export default function DockerApp() {
     }
   }, [isLogPaused]);
 
-  // Helper to parse Docker logs' timestamp prefix and convert to local timezone
+  // Parse Docker logs timestamp prefix
   const parseLogLine = (rawLine: string): LogLine => {
-    // Format: YYYY-MM-DDTHH:mm:ss.sssssssssZ <log message>
     const firstSpace = rawLine.indexOf(' ');
     if (firstSpace > 0) {
       const possibleTs = rawLine.substring(0, firstSpace);
@@ -414,8 +666,6 @@ export default function DockerApp() {
     return { timestamp: null, text: rawLine };
   };
 
-  // Ref so stats polling can always read the latest container state
-  // without containers being a useEffect dependency (which caused flicker)
   const containersRef = useRef<Container[]>([]);
   const consecutiveFailuresRef = useRef(0);
   useEffect(() => { containersRef.current = containers; }, [containers]);
@@ -437,7 +687,6 @@ export default function DockerApp() {
       setError(null);
     } catch (e) {
       consecutiveFailuresRef.current += 1;
-      // Only show full error screen if we have no loaded containers yet or if 3 consecutive polls fail
       if (containersRef.current.length === 0 || consecutiveFailuresRef.current >= 3) {
         setError(e instanceof Error ? e.message : 'Unknown error');
       }
@@ -549,6 +798,19 @@ export default function DockerApp() {
     }
   };
 
+  // YAML Validation Check
+  const yamlValidation = useMemo(() => {
+    if (!deployYaml.trim()) return { valid: false, message: 'YAML cannot be empty' };
+    if (deployYaml.includes('\t')) return { valid: false, message: 'Tabs are forbidden in YAML (use 2 spaces)' };
+    const lines = deployYaml.split('\n');
+    let hasServices = false;
+    for (const l of lines) {
+      if (l.trim().startsWith('services:')) hasServices = true;
+    }
+    if (!hasServices) return { valid: false, message: "Missing root 'services:' block" };
+    return { valid: true, message: 'Valid compose syntax structure' };
+  }, [deployYaml]);
+
   const handleDeploySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!deployStackName.trim() || !deployYaml.trim()) {
@@ -588,10 +850,10 @@ export default function DockerApp() {
             try {
               const payload = JSON.parse(line.slice(6));
               if (payload.text) {
-                setDeployConsoleLogs(prev => [...prev, payload.text]);
+                setDeployConsoleLogs((prev) => [...prev, payload.text]);
               }
               if (payload.status === 'success') {
-                setDeployConsoleLogs(prev => [...prev, '✓ Deployment finished successfully!']);
+                setDeployConsoleLogs((prev) => [...prev, '✓ Deployment finished successfully!']);
                 fetchStacks(true);
                 fetchContainers(true);
               } else if (payload.status === 'failed') {
@@ -600,7 +862,7 @@ export default function DockerApp() {
                   : payload.exitCode != null
                     ? `exit code ${payload.exitCode}`
                     : `process was killed (${payload.signal || 'unknown signal'}) before completing`;
-                setDeployConsoleLogs(prev => [...prev, `✗ ${reason}`]);
+                setDeployConsoleLogs((prev) => [...prev, `✗ ${reason}`]);
                 setDeployError(`Deployment failed — ${reason}`);
               }
             } catch {
@@ -632,10 +894,10 @@ export default function DockerApp() {
       try {
         const data = JSON.parse(event.data);
         if (data.text) {
-          setStackLogLines(prev => [...prev, data.text]);
+          setStackLogLines((prev) => [...prev, data.text]);
         }
       } catch {
-        setStackLogLines(prev => [...prev, event.data]);
+        setStackLogLines((prev) => [...prev, event.data]);
       }
     };
 
@@ -648,7 +910,7 @@ export default function DockerApp() {
     };
   }, [selectedStackLogsName]);
 
-  // Combined polling for containers, images, and stacks
+  // Polling loop
   useEffect(() => {
     fetchContainers();
     fetchImages();
@@ -661,32 +923,33 @@ export default function DockerApp() {
     return () => clearInterval(id);
   }, [fetchContainers, fetchImages, fetchStacks]);
 
-  // Handle active tab defaults on selection change
+  // Tab auto-switch on selection
   useEffect(() => {
     if (!selectedId) {
       setStatsData(null);
+      setCpuHistory([]);
+      setMemHistory([]);
       setInspectData(null);
       setLogLines([]);
       return;
     }
-    const container = containers.find(c => c.Id === selectedId);
+    const container = containers.find((c) => c.Id === selectedId);
     if (container && container.State !== 'running') {
       setActiveTab('inspect');
     } else {
       setActiveTab('stats');
     }
-  }, [selectedId]);
+  }, [selectedId, containers]);
 
-  // Stream stats via SSE — EventSource keeps one persistent connection open.
-  // Docker pushes data every ~1s. No setInterval needed.
-  // Cleanup calls es.close() → triggers req.on('close') on backend → statsStream.destroy().
+  // Stream stats via SSE with rolling sparkline history
   useEffect(() => {
     if (!selectedId || activeTab !== 'stats') return;
 
-    // If container isn't running, nothing to stream.
-    const initial = containersRef.current.find(c => c.Id === selectedId);
+    const initial = containersRef.current.find((c) => c.Id === selectedId);
     if (!initial || initial.State !== 'running') {
       setStatsData(null);
+      setCpuHistory([]);
+      setMemHistory([]);
       return;
     }
 
@@ -700,7 +963,13 @@ export default function DockerApp() {
         const data = JSON.parse(event.data);
         setStatsData(data);
         setStatsError(null);
-        setStatsLoading(false); // clears loading on first message
+        setStatsLoading(false);
+
+        const cpu = calculateCpuPercent(data);
+        const mem = getMemoryUsage(data);
+
+        setCpuHistory((prev) => [...prev, cpu].slice(-30));
+        setMemHistory((prev) => [...prev, mem.percent].slice(-30));
       } catch (e) {
         console.error('[stats] JSON parse error', e);
       }
@@ -713,9 +982,8 @@ export default function DockerApp() {
     };
 
     return () => {
-      es.close(); // tells backend to destroy the Docker stats stream
+      es.close();
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId, activeTab]);
 
   // Fetch inspect data
@@ -746,7 +1014,7 @@ export default function DockerApp() {
     };
   }, [selectedId, activeTab]);
 
-  // Stream logs via SSE - EventSource keeps connection open.
+  // Stream logs via SSE
   useEffect(() => {
     if (!selectedId || activeTab !== 'logs') return;
 
@@ -785,10 +1053,9 @@ export default function DockerApp() {
     return () => {
       es.close();
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId, activeTab]);
 
-  // Auto-scroll logs terminal to bottom on new logs
+  // Auto-scroll logs terminal to bottom
   useEffect(() => {
     if (logsTerminalRef.current && !isLogPaused && autoScroll) {
       logsTerminalRef.current.scrollTop = logsTerminalRef.current.scrollHeight;
@@ -807,8 +1074,7 @@ export default function DockerApp() {
         const body = await res.json().catch(() => ({}));
         const msg = body.error ?? `Action failed (${res.status})`;
         setActionError({ id: containerId, msg });
-        // Auto-dismiss after 3s
-        setTimeout(() => setActionError(null), 3000);
+        setTimeout(() => setActionError(null), 3500);
         return;
       }
       await fetchContainers(true);
@@ -819,7 +1085,7 @@ export default function DockerApp() {
     }
   };
 
-  /* ─── Image Actions ─── */
+  /* ─── Image Pull & Prune Handlers ─── */
 
   const handlePullImage = (e: React.FormEvent) => {
     e.preventDefault();
@@ -837,7 +1103,7 @@ export default function DockerApp() {
     es.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        
+
         if (data.error) {
           setPullError(data.error);
           es.close();
@@ -852,7 +1118,6 @@ export default function DockerApp() {
           setPullSuccess(true);
           es.close();
           fetchImages(true);
-          // Reset progress card after 3s
           setTimeout(() => {
             setPullingImage(null);
             setPullSuccess(false);
@@ -860,7 +1125,6 @@ export default function DockerApp() {
           return;
         }
 
-        // Layer progress updates
         if (data.id) {
           setPullLayers((prev) => {
             const currentLayer = prev[data.id] || { id: data.id, status: '', progress: '', current: 0, total: 0 };
@@ -872,7 +1136,7 @@ export default function DockerApp() {
                 progress: data.progress || '',
                 current: data.progressDetail?.current || 0,
                 total: data.progressDetail?.total || 0,
-              }
+              },
             };
           });
         }
@@ -940,14 +1204,14 @@ export default function DockerApp() {
     setRunError(null);
   };
 
-  const addPortRow = () => setRunPorts(prev => [...prev, { hostPort: '', containerPort: '' }]);
-  const removePortRow = (idx: number) => setRunPorts(prev => prev.filter((_, i) => i !== idx));
+  const addPortRow = () => setRunPorts((prev) => [...prev, { hostPort: '', containerPort: '' }]);
+  const removePortRow = (idx: number) => setRunPorts((prev) => prev.filter((_, i) => i !== idx));
 
-  const addEnvRow = () => setRunEnvs(prev => [...prev, { key: '', value: '' }]);
-  const removeEnvRow = (idx: number) => setRunEnvs(prev => prev.filter((_, i) => i !== idx));
+  const addEnvRow = () => setRunEnvs((prev) => [...prev, { key: '', value: '' }]);
+  const removeEnvRow = (idx: number) => setRunEnvs((prev) => prev.filter((_, i) => i !== idx));
 
-  const addVolumeRow = () => setRunVolumes(prev => [...prev, { hostPath: '', containerPath: '' }]);
-  const removeVolumeRow = (idx: number) => setRunVolumes(prev => prev.filter((_, i) => i !== idx));
+  const addVolumeRow = () => setRunVolumes((prev) => [...prev, { hostPath: '', containerPath: '' }]);
+  const removeVolumeRow = (idx: number) => setRunVolumes((prev) => prev.filter((_, i) => i !== idx));
 
   const handleCreateContainer = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -956,9 +1220,9 @@ export default function DockerApp() {
     setRunSubmitting(true);
     setRunError(null);
 
-    const volumes = runVolumes.filter(v => v.hostPath.trim() && v.containerPath.trim());
+    const volumes = runVolumes.filter((v) => v.hostPath.trim() && v.containerPath.trim());
     if (net.baseDir) {
-      const escaped = volumes.find(v => {
+      const escaped = volumes.find((v) => {
         const h = v.hostPath.trim();
         if (h.includes('..')) return true;
         if (h.startsWith('/') && h !== net.baseDir && !h.startsWith(net.baseDir + '/')) return true;
@@ -974,8 +1238,8 @@ export default function DockerApp() {
     const payload = {
       image: runModalImage,
       name: runContainerName.trim() || undefined,
-      ports: runPorts.filter(p => p.hostPort.trim() && p.containerPort.trim()),
-      env: runEnvs.filter(ev => ev.key.trim()).map(ev => `${ev.key.trim()}=${ev.value}`),
+      ports: runPorts.filter((p) => p.hostPort.trim() && p.containerPort.trim()),
+      env: runEnvs.filter((ev) => ev.key.trim()).map((ev) => `${ev.key.trim()}=${ev.value}`),
       volumes,
       restartPolicy: runRestartPolicy,
     };
@@ -992,7 +1256,6 @@ export default function DockerApp() {
         throw new Error(data.error || `Failed to create container (${res.status})`);
       }
 
-      // Success: close modal, switch tab to containers, refresh container list
       setRunModalImage(null);
       setActiveWindowTab('containers');
       fetchContainers(true);
@@ -1003,17 +1266,54 @@ export default function DockerApp() {
     }
   };
 
-  const selectedContainer = containers.find(c => c.Id === selectedId);
-  const runningCount = containers.filter(c => c.State === 'running').length;
-  const stoppedCount = containers.filter(c => c.State === 'exited').length;
+  /* ─── Filtering & Selection Computations ─── */
 
-  /* ─── Detail Panels Content Renders ─── */
+  const runningCount = containers.filter((c) => c.State === 'running').length;
+  const stoppedCount = containers.filter((c) => c.State === 'exited').length;
+
+  const filteredContainers = useMemo(() => {
+    return containers.filter((c) => {
+      // Status filter
+      if (containerStatusFilter === 'running' && c.State !== 'running') return false;
+      if (containerStatusFilter === 'stopped' && c.State === 'running') return false;
+
+      // Text search filter
+      if (containerSearchQuery.trim()) {
+        const q = containerSearchQuery.toLowerCase();
+        const name = (c.Names[0] ?? '').toLowerCase();
+        const image = (c.Image ?? '').toLowerCase();
+        const id = c.Id.toLowerCase();
+        return name.includes(q) || image.includes(q) || id.includes(q);
+      }
+      return true;
+    });
+  }, [containers, containerStatusFilter, containerSearchQuery]);
+
+  const filteredImages = useMemo(() => {
+    if (!imageSearchQuery.trim()) return images;
+    const q = imageSearchQuery.toLowerCase();
+    return images.filter((img) => {
+      const tag = (img.RepoTags?.[0] ?? '').toLowerCase();
+      const id = img.Id.toLowerCase();
+      return tag.includes(q) || id.includes(q);
+    });
+  }, [images, imageSearchQuery]);
+
+  const filteredStacks = useMemo(() => {
+    if (!stackSearchQuery.trim()) return stacks;
+    const q = stackSearchQuery.toLowerCase();
+    return stacks.filter((s) => s.name.toLowerCase().includes(q));
+  }, [stacks, stackSearchQuery]);
+
+  const selectedContainer = containers.find((c) => c.Id === selectedId);
+
+  /* ─── Detail Panels Content Renderers ─── */
 
   const renderStatsContent = () => {
     if (selectedContainer?.State !== 'running') {
       return (
         <div className={styles.comingSoon}>
-          <AlertCircle size={28} style={{ color: 'var(--text-muted)' }} />
+          <AlertCircle size={28} style={{ color: 'var(--text-muted, #737373)' }} />
           <span className={styles.comingSoonText}>
             Telemetry unavailable. Real-time stats are only available for running containers.
           </span>
@@ -1021,19 +1321,20 @@ export default function DockerApp() {
       );
     }
 
-    if (statsLoading) {
+    if (statsLoading && !statsData) {
       return (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px', gap: '10px' }}>
-          <div className={styles.spinner} style={{ width: '20px', height: '20px' }} />
-          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Querying container telemetry…</span>
+          <div className={styles.spinner} />
+          <span style={{ fontSize: '11px', color: 'var(--text-muted, #737373)' }}>Querying container telemetry…</span>
         </div>
       );
     }
 
-    if (statsError) {
+    if (statsError && !statsData) {
       return (
-        <div style={{ padding: '12px', color: 'var(--error)', fontSize: '11px' }}>
-          Error fetching stats: {statsError}
+        <div className={styles.alertError}>
+          <AlertCircle size={14} />
+          <span>Error streaming stats: {statsError}</span>
         </div>
       );
     }
@@ -1045,59 +1346,84 @@ export default function DockerApp() {
     const netIO = getNetworkIO(statsData);
     const diskIO = getBlockIO(statsData);
 
+    const cpuColor = cpuPercent > 85 ? '#ef4444' : cpuPercent > 60 ? '#facc15' : '#22c55e';
+    const memColor = memInfo.percent > 85 ? '#ef4444' : memInfo.percent > 60 ? '#facc15' : '#ffffff';
+
     return (
       <>
-        {/* CPU Card */}
+        {/* CPU Card with Sparkline */}
         <div className={styles.statsCard}>
           <div className={styles.statsHeader}>
-            <span>Processor (CPU)</span>
-            <Cpu size={12} style={{ color: 'var(--text-secondary)' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Cpu size={13} style={{ color: 'var(--text-secondary, #a1a1a1)' }} />
+              <span>Processor (CPU)</span>
+            </div>
+            <span style={{ fontFamily: 'var(--mono)', fontSize: '11px', color: cpuColor }}>
+              {cpuPercent.toFixed(1)}%
+            </span>
           </div>
-          <div className={styles.statsVal}>{cpuPercent.toFixed(1)}%</div>
+
+          <div className={styles.statsMetricRow}>
+            <div className={styles.statsVal}>{cpuPercent.toFixed(1)}%</div>
+            <div className={styles.statsSubVal}>Rolling 30s trend</div>
+          </div>
+
+          <SparklineChart points={cpuHistory} height={42} strokeColor={cpuColor} fillGradientId="cpu-grad" />
+
           <div className={styles.statsProgress}>
-            <div
-              className={styles.statsProgressFill}
-              style={{
-                width: `${cpuPercent}%`,
-                background: cpuPercent > 85 ? 'var(--error)' : cpuPercent > 60 ? 'var(--warn)' : '#ffffff',
-              }}
-            />
+            <div className={styles.statsProgressFill} style={{ width: `${cpuPercent}%`, background: cpuColor }} />
           </div>
         </div>
 
-        {/* Memory Card */}
+        {/* Memory Card with Sparkline */}
         <div className={styles.statsCard}>
           <div className={styles.statsHeader}>
-            <span>Memory (RAM)</span>
-            <HardDrive size={12} style={{ color: 'var(--text-secondary)' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <HardDrive size={13} style={{ color: 'var(--text-secondary, #a1a1a1)' }} />
+              <span>Memory (RAM)</span>
+            </div>
+            <span style={{ fontFamily: 'var(--mono)', fontSize: '11px', color: memColor }}>
+              {memInfo.percent.toFixed(1)}%
+            </span>
           </div>
-          <div className={styles.statsVal}>{memInfo.percent.toFixed(1)}%</div>
-          <div style={{ fontSize: '10.5px', color: 'var(--text-muted)', fontFamily: 'var(--mono)' }}>
-            {formatBytes(memInfo.usage)} / {formatBytes(memInfo.limit)}
-          </div>
-          <div className={styles.statsProgress}>
-            <div
-              className={styles.statsProgressFill}
-              style={{
-                width: `${memInfo.percent}%`,
-                background: memInfo.percent > 85 ? 'var(--error)' : memInfo.percent > 60 ? 'var(--warn)' : '#ffffff',
-              }}
-            />
-          </div>
-        </div>
 
-        {/* Network & Disk */}
-        <div className={styles.statsGrid}>
-          <div className={styles.statsCard}>
-            <div className={styles.statsHeader}>Network I/O</div>
-            <div style={{ fontSize: '11px', color: '#d4d4d8', fontFamily: 'var(--mono)', display: 'flex', flexDirection: 'column', gap: '3px' }}>
-              <span>▼ In: {formatBytes(netIO.rx)}</span>
-              <span>▲ Out: {formatBytes(netIO.tx)}</span>
+          <div className={styles.statsMetricRow}>
+            <div className={styles.statsVal}>{memInfo.percent.toFixed(1)}%</div>
+            <div className={styles.statsSubVal}>
+              {formatBytes(memInfo.usage)} / {formatBytes(memInfo.limit)}
             </div>
           </div>
+
+          <SparklineChart points={memHistory} height={42} strokeColor={memColor} fillGradientId="mem-grad" />
+
+          <div className={styles.statsProgress}>
+            <div className={styles.statsProgressFill} style={{ width: `${memInfo.percent}%`, background: memColor }} />
+          </div>
+        </div>
+
+        {/* Network & Disk I/O Cards */}
+        <div className={styles.statsGrid}>
           <div className={styles.statsCard}>
-            <div className={styles.statsHeader}>Disk I/O</div>
-            <div style={{ fontSize: '11px', color: '#d4d4d8', fontFamily: 'var(--mono)', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+            <div className={styles.statsHeader}>
+              <span>Network I/O</span>
+              <Activity size={12} style={{ color: 'var(--text-muted, #737373)' }} />
+            </div>
+            <div style={{ fontSize: '11px', color: '#ededed', fontFamily: 'var(--mono)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span style={{ color: '#22c55e' }}>▼</span> In: {formatBytes(netIO.rx)}
+              </span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span style={{ color: '#3b82f6' }}>▲</span> Out: {formatBytes(netIO.tx)}
+              </span>
+            </div>
+          </div>
+
+          <div className={styles.statsCard}>
+            <div className={styles.statsHeader}>
+              <span>Disk I/O</span>
+              <Sliders size={12} style={{ color: 'var(--text-muted, #737373)' }} />
+            </div>
+            <div style={{ fontSize: '11px', color: '#ededed', fontFamily: 'var(--mono)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
               <span>Read: {formatBytes(diskIO.read)}</span>
               <span>Write: {formatBytes(diskIO.write)}</span>
             </div>
@@ -1111,16 +1437,17 @@ export default function DockerApp() {
     if (inspectLoading) {
       return (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px', gap: '10px' }}>
-          <div className={styles.spinner} style={{ width: '20px', height: '20px' }} />
-          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Querying configuration…</span>
+          <div className={styles.spinner} />
+          <span style={{ fontSize: '11px', color: 'var(--text-muted, #737373)' }}>Loading container metadata…</span>
         </div>
       );
     }
 
     if (inspectError) {
       return (
-        <div style={{ padding: '12px', color: 'var(--error)', fontSize: '11px' }}>
-          Error fetching metadata: {inspectError}
+        <div className={styles.alertError}>
+          <AlertCircle size={14} />
+          <span>Error fetching metadata: {inspectError}</span>
         </div>
       );
     }
@@ -1132,9 +1459,30 @@ export default function DockerApp() {
     const gateway = inspectData.NetworkSettings?.Gateway || inspectData.NetworkSettings?.Networks?.bridge?.Gateway || '—';
     const ipAddress = inspectData.NetworkSettings?.IPAddress || inspectData.NetworkSettings?.Networks?.bridge?.IPAddress || '—';
 
+    const handleCopyJson = () => {
+      navigator.clipboard.writeText(JSON.stringify(inspectData, null, 2));
+      setJsonCopied(true);
+      setTimeout(() => setJsonCopied(false), 2000);
+    };
+
     return (
       <>
-        {/* Info card */}
+        {/* Inspect Toolbar: Search + Copy + Expand/Collapse */}
+        <div className={styles.inspectToolbar}>
+          <input
+            className={styles.inspectSearchInput}
+            type="text"
+            placeholder="Search JSON keys or values…"
+            value={inspectSearchQuery}
+            onChange={(e) => setInspectSearchQuery(e.target.value)}
+          />
+          <button className={styles.inspectActionBtn} onClick={handleCopyJson} title="Copy inspect JSON to clipboard">
+            {jsonCopied ? <Check size={12} style={{ color: '#22c55e' }} /> : <Copy size={12} />}
+            {jsonCopied ? 'Copied' : 'Copy JSON'}
+          </button>
+        </div>
+
+        {/* System Configuration Overview Card */}
         <div className={styles.inspectGroup}>
           <span className={styles.inspectTitle}>System Configuration</span>
           <div className={styles.inspectCard}>
@@ -1152,17 +1500,6 @@ export default function DockerApp() {
                   <td className={styles.inspectTdLabel}>Restart Policy</td>
                   <td className={styles.inspectTdValue}>{inspectData.HostConfig?.RestartPolicy?.Name || 'no'}</td>
                 </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Network card */}
-        <div className={styles.inspectGroup}>
-          <span className={styles.inspectTitle}>Network Setup</span>
-          <div className={styles.inspectCard}>
-            <table className={styles.inspectTable}>
-              <tbody>
                 <tr className={styles.inspectTr}>
                   <td className={styles.inspectTdLabel}>IP Address</td>
                   <td className={styles.inspectTdValue}>{ipAddress}</td>
@@ -1176,11 +1513,32 @@ export default function DockerApp() {
           </div>
         </div>
 
-        {/* Env vars */}
+        {/* Volumes / Mounts Card */}
+        {mounts.length > 0 && (
+          <div className={styles.inspectGroup}>
+            <span className={styles.inspectTitle}>Volume Mounts ({mounts.length})</span>
+            {mounts.map((m: any, idx: number) => (
+              <div key={idx} className={styles.inspectCard} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#737373' }}>
+                  <span>{m.Type?.toUpperCase()}</span>
+                  <span>{m.RW ? 'READ/WRITE' : 'READ-ONLY'}</span>
+                </div>
+                <div style={{ fontSize: '11px', color: '#ededed', wordBreak: 'break-all', fontFamily: 'var(--mono)' }}>
+                  <span style={{ color: '#525252' }}>Host:</span> {m.Source}
+                </div>
+                <div style={{ fontSize: '11px', color: '#ededed', wordBreak: 'break-all', fontFamily: 'var(--mono)' }}>
+                  <span style={{ color: '#525252' }}>Container:</span> {m.Destination}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Environment Variables Card */}
         {envVars.length > 0 && (
           <div className={styles.inspectGroup}>
-            <span className={styles.inspectTitle}>Environment variables ({envVars.length})</span>
-            <div className={styles.inspectCard} style={{ maxHeight: '180px', overflowY: 'auto' }}>
+            <span className={styles.inspectTitle}>Environment Variables ({envVars.length})</span>
+            <div className={styles.inspectCard} style={{ maxHeight: '160px', overflowY: 'auto' }}>
               <table className={styles.inspectTable}>
                 <tbody>
                   {envVars.map((env: string, idx: number) => {
@@ -1189,8 +1547,8 @@ export default function DockerApp() {
                     const v = eqIndex > -1 ? env.substring(eqIndex + 1) : '';
                     return (
                       <tr key={idx} className={styles.inspectTr}>
-                        <td className={styles.inspectTdLabel} style={{ width: '45%' }}>{k}</td>
-                        <td className={styles.inspectTdValue} style={{ color: '#a1a1aa' }}>{v}</td>
+                        <td className={styles.inspectTdLabel} style={{ width: '40%' }}>{k}</td>
+                        <td className={styles.inspectTdValue} style={{ color: '#34d399' }}>{v}</td>
                       </tr>
                     );
                   })}
@@ -1200,105 +1558,132 @@ export default function DockerApp() {
           </div>
         )}
 
-        {/* Mounts */}
-        {mounts.length > 0 && (
-          <div className={styles.inspectGroup}>
-            <span className={styles.inspectTitle}>Volumes / Mounts ({mounts.length})</span>
-            {mounts.map((m: any, idx: number) => (
-              <div key={idx} className={styles.inspectCard} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#71717a' }}>
-                  <span>{m.Type?.toUpperCase()}</span>
-                  <span>{m.RW ? 'READ/WRITE' : 'READ-ONLY'}</span>
-                </div>
-                <div style={{ fontSize: '11px', color: '#e4e4e7', wordBreak: 'break-all' }}>
-                  <span style={{ color: '#52525b' }}>Host:</span> {m.Source}
-                </div>
-                <div style={{ fontSize: '11px', color: '#e4e4e7', wordBreak: 'break-all' }}>
-                  <span style={{ color: '#52525b' }}>Container:</span> {m.Destination}
-                </div>
-              </div>
-            ))}
+        {/* Collapsible Interactive JSON Tree Inspector */}
+        <div className={styles.inspectGroup}>
+          <span className={styles.inspectTitle}>Raw JSON Inspection</span>
+          <div className={styles.jsonTreeContainer}>
+            <JsonTreeNode value={inspectData} searchQuery={inspectSearchQuery} defaultExpanded={false} />
           </div>
-        )}
+        </div>
       </>
     );
   };
 
   const renderLogsContent = () => {
-    if (logsLoading) {
+    if (logsLoading && logLines.length === 0) {
       return (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px', gap: '10px' }}>
-          <div className={styles.spinner} style={{ width: '20px', height: '20px' }} />
-          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Connecting to logs stream…</span>
+          <div className={styles.spinner} />
+          <span style={{ fontSize: '11px', color: 'var(--text-muted, #737373)' }}>Connecting to logs stream…</span>
         </div>
       );
     }
 
-    if (logsError) {
+    if (logsError && logLines.length === 0) {
       return (
-        <div style={{ padding: '12px', color: 'var(--error)', fontSize: '11px' }}>
-          Error streaming logs: {logsError}
+        <div className={styles.alertError}>
+          <AlertCircle size={14} />
+          <span>Error streaming logs: {logsError}</span>
         </div>
       );
     }
+
+    const filteredLogLines = logSearchQuery.trim()
+      ? logLines.filter((line) => line.text.toLowerCase().includes(logSearchQuery.toLowerCase()))
+      : logLines;
+
+    const highlightText = (text: string) => {
+      if (!logSearchQuery.trim()) return <span>{text}</span>;
+      const parts = text.split(new RegExp(`(${logSearchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'));
+      return (
+        <>
+          {parts.map((part, i) =>
+            part.toLowerCase() === logSearchQuery.toLowerCase() ? (
+              <mark key={i} className={styles.logHighlight}>
+                {part}
+              </mark>
+            ) : (
+              <span key={i}>{part}</span>
+            )
+          )}
+        </>
+      );
+    };
 
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '8px', overflow: 'hidden' }}>
+      <div className={styles.logsContainer}>
         {/* Logs controls toolbar */}
         <div className={styles.logsToolbar}>
-          <button
-            className={`${styles.logsControlBtn} ${showTimestamps ? styles.logsControlBtnActive : ''}`}
-            onClick={() => setShowTimestamps(!showTimestamps)}
-            title="Toggle Timestamps"
-          >
-            Timestamps
-          </button>
-          <button
-            className={`${styles.logsControlBtn} ${isLogPaused ? styles.logsControlBtnActive : ''}`}
-            onClick={() => setIsLogPaused(!isLogPaused)}
-            title={isLogPaused ? "Resume log stream" : "Pause log stream"}
-          >
-            {isLogPaused ? "▶ Resume" : "⏸ Pause"}
-          </button>
-          <button
-            className={`${styles.logsControlBtn} ${autoScroll ? styles.logsControlBtnActive : ''}`}
-            onClick={() => setAutoScroll(!autoScroll)}
-            title={autoScroll ? "Disable automatic scrolling" : "Enable automatic scrolling to latest log line"}
-          >
-            {autoScroll ? "↓ Auto-scroll ON" : "↓ Auto-scroll OFF"}
-          </button>
-          <button
-            className={styles.logsControlBtn}
-            onClick={() => setLogLines([])}
-            title="Clear current screen logs"
-          >
-            Clear
-          </button>
-          <a
-            href={`/api/docker/containers/${selectedId}/logs/download`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.logsControlBtn}
-            title="Download full container logs file"
-            style={{ textDecoration: 'none' }}
-          >
-            Download
-          </a>
+          <div className={styles.logsToolbarLeft}>
+            <input
+              className={styles.logsSearchInput}
+              type="text"
+              placeholder="Search logs…"
+              value={logSearchQuery}
+              onChange={(e) => setLogSearchQuery(e.target.value)}
+            />
+            {logSearchQuery.trim() && (
+              <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'var(--mono)' }}>
+                {filteredLogLines.length} match{filteredLogLines.length !== 1 ? 'es' : ''}
+              </span>
+            )}
+          </div>
+
+          <div className={styles.logsToolbarRight}>
+            <button
+              className={`${styles.logsControlBtn} ${showTimestamps ? styles.logsControlBtnActive : ''}`}
+              onClick={() => setShowTimestamps(!showTimestamps)}
+              title="Toggle Timestamps"
+            >
+              Timestamps
+            </button>
+            <button
+              className={`${styles.logsControlBtn} ${isLogPaused ? styles.logsControlBtnActive : ''}`}
+              onClick={() => setIsLogPaused(!isLogPaused)}
+              title={isLogPaused ? 'Resume live log stream' : 'Pause live log stream'}
+            >
+              {isLogPaused ? '▶ Resume' : '⏸ Pause'}
+            </button>
+            <button
+              className={`${styles.logsControlBtn} ${autoScroll ? styles.logsControlBtnActive : ''}`}
+              onClick={() => setAutoScroll(!autoScroll)}
+              title={autoScroll ? 'Disable automatic scrolling' : 'Enable automatic scrolling to latest log line'}
+            >
+              {autoScroll ? '↓ Auto ON' : '↓ Auto OFF'}
+            </button>
+            <button
+              className={styles.logsControlBtn}
+              onClick={() => setLogLines([])}
+              title="Clear current screen logs"
+            >
+              Clear
+            </button>
+            <a
+              href={`/api/docker/containers/${selectedId}/logs/download`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.logsControlBtn}
+              title="Download full container logs file"
+            >
+              <Download size={11} />
+              Download
+            </a>
+          </div>
         </div>
 
-        {/* Live log lines container */}
+        {/* Live log lines terminal */}
         <div className={styles.logsTerminal} ref={logsTerminalRef}>
-          {logLines.length === 0 ? (
-            <span style={{ color: '#52525b', fontStyle: 'italic' }}>No logs generated yet.</span>
+          {filteredLogLines.length === 0 ? (
+            <span style={{ color: '#525252', fontStyle: 'italic' }}>
+              {logSearchQuery.trim() ? 'No log lines match your search filter.' : 'No logs generated yet.'}
+            </span>
           ) : (
-            logLines.map((line, idx) => (
+            filteredLogLines.map((line, idx) => (
               <div key={idx} className={styles.logsLine}>
                 {showTimestamps && line.timestamp && (
-                  <span className={styles.logsTimestamp}>
-                    [{line.timestamp}]
-                  </span>
+                  <span className={styles.logsTimestamp}>[{line.timestamp}]</span>
                 )}
-                <span className={styles.logsText}>{line.text}</span>
+                <span className={styles.logsText}>{highlightText(line.text)}</span>
               </div>
             ))
           )}
@@ -1307,117 +1692,196 @@ export default function DockerApp() {
     );
   };
 
-  /* ── Loading ── */
-  if (loading) return (
-    <div className={styles.loadingState}>
-      <div className={styles.spinner} />
-      <span className={styles.loadingText}>Connecting to Docker engine…</span>
-    </div>
-  );
+  /* ── Loading Screen ── */
+  if (loading) {
+    return (
+      <div className={styles.loadingState}>
+        <div className={styles.spinner} />
+        <span className={styles.loadingText}>Connecting to Docker daemon…</span>
+      </div>
+    );
+  }
 
-  /* ── Error ── */
-  if (error) return (
-    <div className={styles.errorState}>
-      <AlertCircle size={32} style={{ color: 'var(--error)', opacity: 0.8 }} />
-      <p className={styles.errorTitle}>Docker Engine Unavailable</p>
-      <span className={styles.errorCode}>{error}</span>
-      <button className={styles.retryBtn} onClick={() => fetchContainers()}>
-        Retry Connection
-      </button>
-    </div>
-  );
-
-  /* ── Main view ── */
-  return (
-    <div className={styles.container}>
-
-      {/* Top Level App Navigation Header */}
-      <div className={styles.tabHeader}>
-        <button
-          className={`${styles.tabBtn} ${activeWindowTab === 'containers' ? styles.tabBtnActive : ''}`}
-          onClick={() => setActiveWindowTab('containers')}
-        >
-          Containers
-        </button>
-        <button
-          className={`${styles.tabBtn} ${activeWindowTab === 'images' ? styles.tabBtnActive : ''}`}
-          onClick={() => {
-            setActiveWindowTab('images');
-            fetchImages(true);
-          }}
-        >
-          Images
-        </button>
-        <button
-          className={`${styles.tabBtn} ${activeWindowTab === 'stacks' ? styles.tabBtnActive : ''}`}
-          onClick={() => {
-            setActiveWindowTab('stacks');
-            fetchStacks(true);
-          }}
-        >
-          Stacks
+  /* ── Engine Error Screen ── */
+  if (error) {
+    return (
+      <div className={styles.errorState}>
+        <AlertCircle size={32} style={{ color: '#ef4444' }} />
+        <p className={styles.errorTitle}>Docker Engine Unavailable</p>
+        <span className={styles.errorCode}>{error}</span>
+        <button className={styles.retryBtn} onClick={() => fetchContainers()}>
+          Retry Connection
         </button>
       </div>
+    );
+  }
 
-      {activeWindowTab === 'containers' ? (
-        <>
-          {/* Toolbar */}
-          <div className={styles.toolbar}>
-            <div className={styles.toolbarLeft}>
-              <p className={styles.toolbarTitle}>Docker Containers</p>
-              <p className={styles.toolbarSub}>
-                <span className={styles.liveDot} />
-                {containers.length} total · {runningCount} running · {stoppedCount} stopped
-              </p>
-            </div>
-            <button className={styles.refreshBtn} onClick={() => fetchContainers(true)}>
-              <RefreshCw size={12} className={refreshing ? styles.spinning : ''} />
-              Refresh
+  /* ── Main App Layout ── */
+  return (
+    <div className={styles.container}>
+      {/* ── Top Level App Navigation Header ── */}
+      <div className={styles.tabHeader}>
+        <div className={styles.tabNavGroup}>
+          <button
+            className={`${styles.tabBtn} ${activeWindowTab === 'containers' ? styles.tabBtnActive : ''}`}
+            onClick={() => setActiveWindowTab('containers')}
+          >
+            <Box size={13} />
+            <span>Containers</span>
+            <span className={styles.tabCountBadge}>{containers.length}</span>
+          </button>
+          <button
+            className={`${styles.tabBtn} ${activeWindowTab === 'images' ? styles.tabBtnActive : ''}`}
+            onClick={() => {
+              setActiveWindowTab('images');
+              fetchImages(true);
+            }}
+          >
+            <HardDrive size={13} />
+            <span>Images</span>
+            <span className={styles.tabCountBadge}>{images.length}</span>
+          </button>
+          <button
+            className={`${styles.tabBtn} ${activeWindowTab === 'stacks' ? styles.tabBtnActive : ''}`}
+            onClick={() => {
+              setActiveWindowTab('stacks');
+              fetchStacks(true);
+            }}
+          >
+            <Layers size={13} />
+            <span>Stacks</span>
+            <span className={styles.tabCountBadge}>{stacks.length}</span>
+          </button>
+        </div>
+
+        {/* Global Action Right */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {activeWindowTab === 'stacks' && (
+            <button
+              className={styles.btnPrimary}
+              onClick={() => {
+                setDeployStackName('');
+                setDeployYaml(QUICK_TEMPLATES[0].yaml);
+                setDeployConsoleLogs([]);
+                setDeployError(null);
+                setShowDeployModal(true);
+              }}
+            >
+              <Plus size={13} /> Deploy Stack
             </button>
+          )}
+
+          <button
+            className={styles.refreshBtn}
+            onClick={() => {
+              if (activeWindowTab === 'containers') fetchContainers(true);
+              else if (activeWindowTab === 'images') fetchImages(true);
+              else if (activeWindowTab === 'stacks') fetchStacks(true);
+            }}
+            disabled={refreshing || imagesLoading || stacksLoading}
+            title="Refresh current view"
+          >
+            <RefreshCw size={11} className={refreshing ? styles.spinning : ''} />
+            Refresh
+          </button>
+        </div>
+      </div>
+
+      {/* ───── CONTAINERS VIEW ───── */}
+      {activeWindowTab === 'containers' && (
+        <>
+          {/* Action Bar with Search & Filter Pills */}
+          <div className={styles.actionBar}>
+            <div className={styles.actionLeft}>
+              <div className={styles.searchWrapper}>
+                <Search size={13} className={styles.searchIcon} />
+                <input
+                  className={styles.searchInput}
+                  type="text"
+                  placeholder="Search containers by name, image, ID…"
+                  value={containerSearchQuery}
+                  onChange={(e) => setContainerSearchQuery(e.target.value)}
+                />
+                {containerSearchQuery && (
+                  <button
+                    className={styles.searchClearBtn}
+                    onClick={() => setContainerSearchQuery('')}
+                    title="Clear search"
+                  >
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
+
+              <div className={styles.filterPills}>
+                <button
+                  className={`${styles.filterPill} ${containerStatusFilter === 'all' ? styles.filterPillActive : ''}`}
+                  onClick={() => setContainerStatusFilter('all')}
+                >
+                  All ({containers.length})
+                </button>
+                <button
+                  className={`${styles.filterPill} ${containerStatusFilter === 'running' ? styles.filterPillActive : ''}`}
+                  onClick={() => setContainerStatusFilter('running')}
+                >
+                  <span className={styles.liveDot} />
+                  Running ({runningCount})
+                </button>
+                <button
+                  className={`${styles.filterPill} ${containerStatusFilter === 'stopped' ? styles.filterPillActive : ''}`}
+                  onClick={() => setContainerStatusFilter('stopped')}
+                >
+                  <span className={styles.liveDotStopped} />
+                  Stopped ({stoppedCount})
+                </button>
+              </div>
+            </div>
+
+            <div className={styles.actionRight}>
+              <div className={styles.healthSummary}>
+                <span className={runningCount > 0 ? styles.liveDot : styles.liveDotStopped} />
+                <span>{runningCount} running · {stoppedCount} stopped</span>
+              </div>
+            </div>
           </div>
 
-          {/* Stat badges */}
-          <div className={styles.statsRow}>
-            <div className={`${styles.statBadge} ${styles.statRunning}`}>
-              <span className={styles.statDot} style={{ background: 'var(--ok)' }} />
-              {runningCount} Running
-            </div>
-            <div className={`${styles.statBadge} ${styles.statStopped}`}>
-              <span className={styles.statDot} style={{ background: 'var(--text-muted)' }} />
-              {stoppedCount} Stopped
-            </div>
-            <div className={`${styles.statBadge} ${styles.statTotal}`}>
-              <Box size={11} />
-              {containers.length} Total
-            </div>
-          </div>
-
-          {/* Workspace */}
+          {/* Workspace Area: Table + Sliding Detail Drawer */}
           <div className={styles.workspace}>
-            {/* Table area */}
             <div className={styles.tableArea}>
-              {containers.length === 0 ? (
+              {filteredContainers.length === 0 ? (
                 <div className={styles.emptyState}>
                   <Box size={32} style={{ opacity: 0.15 }} />
-                  <p className={styles.emptyTitle}>No containers found</p>
-                  <p className={styles.emptySubtext}>Containers you run will appear here automatically</p>
+                  <p className={styles.emptyTitle}>
+                    {containerSearchQuery || containerStatusFilter !== 'all'
+                      ? 'No containers match your filter'
+                      : 'No containers running'}
+                  </p>
+                  <p className={styles.emptySubtext}>
+                    {containerSearchQuery || containerStatusFilter !== 'all'
+                      ? 'Try adjusting your search query or status filter'
+                      : 'Containers you run will appear here automatically'}
+                  </p>
                 </div>
               ) : (
                 <table className={styles.table}>
                   <thead className={styles.thead}>
                     <tr className={styles.theadRow}>
-                      {['Container', 'Image', 'Status', 'Ports', 'Age', 'Actions'].map(col => (
-                        <th key={col} className={styles.th}>{col}</th>
-                      ))}
+                      <th className={styles.th} style={{ width: '32px' }}></th>
+                      <th className={styles.th}>Container</th>
+                      <th className={styles.th}>Image</th>
+                      <th className={styles.th}>Status</th>
+                      <th className={styles.th}>Ports</th>
+                      <th className={styles.th}>Age</th>
+                      <th className={styles.th} style={{ textAlign: 'right' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {containers.map(c => {
-                      const name      = (c.Names[0] ?? c.Id).replace(/^\//, '');
-                      const shortId   = c.Id.substring(0, 12);
+                    {filteredContainers.map((c) => {
+                      const name = (c.Names[0] ?? c.Id).replace(/^\//, '');
+                      const shortId = c.Id.substring(0, 12);
                       const isRunning = c.State === 'running';
-                      const busy      = (suf: string) => actionLoading === `${c.Id}-${suf}`;
-                      const anyBusy   = ['start', 'stop', 'restart', 'delete'].some(busy);
+                      const busy = (suf: string) => actionLoading === `${c.Id}-${suf}`;
+                      const anyBusy = ['start', 'stop', 'restart', 'delete'].some(busy);
                       const isConfirm = confirmDeleteId === c.Id;
                       const isSelected = selectedId === c.Id;
 
@@ -1428,50 +1892,49 @@ export default function DockerApp() {
                           onClick={() => setSelectedId(c.Id)}
                           style={{ cursor: 'pointer' }}
                         >
-                          {/* Name */}
+                          {/* Status dot */}
+                          <td className={styles.td} style={{ paddingRight: 0 }}>
+                            <span className={styles.containerDot} style={{ background: getDotColor(c.State) }} />
+                          </td>
+
+                          {/* Name + Subdomain / LAN Badges */}
                           <td className={styles.td}>
-                            <div className={styles.nameCell}>
-                              <span
-                                className={styles.containerDot}
-                                style={{
-                                  background: getDotColor(c.State),
-                                }}
-                              />
-                              <div className={styles.nameInfo}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                  <span className={styles.nameText}>{name}</span>
-                                  {c.exposedRule && (
-                                    <a
-                                      href={c.exposedRule.url}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className={styles.exposedBadge}
-                                      title={`Exposed at ${c.exposedRule.url}`}
-                                      onClick={(e) => e.stopPropagation()}
-                                    >
-                                      <Globe size={9} />
-                                      <span>{c.exposedRule.subdomain}</span>
-                                      <ExternalLink size={8} />
-                                    </a>
-                                  )}
-                                  {net.serverLocalIp && c.Ports && c.Ports.some(p => p.PublicPort) && (
-                                    <a
-                                      href={`http://${net.serverLocalIp}:${c.Ports.find(p => p.PublicPort)?.PublicPort}`}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className={styles.exposedBadge}
-                                      style={{ background: 'var(--ok-dim)', color: 'var(--ok)', borderColor: 'oklch(68% 0.18 145 / 0.25)' }}
-                                      title={`Direct Local LAN link: http://${net.serverLocalIp}:${c.Ports.find(p => p.PublicPort)?.PublicPort}`}
-                                      onClick={(e) => e.stopPropagation()}
-                                    >
-                                      <Zap size={9} fill="currentColor" />
-                                      <span>LAN:{c.Ports.find(p => p.PublicPort)?.PublicPort}</span>
-                                      <ExternalLink size={8} />
-                                    </a>
-                                  )}
-                                </div>
-                                <span className={styles.idText}>{shortId}</span>
+                            <div className={styles.nameInfo}>
+                              <div className={styles.nameRow}>
+                                <span className={styles.nameText}>{name}</span>
+
+                                {c.exposedRule && (
+                                  <a
+                                    href={c.exposedRule.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={styles.exposedBadge}
+                                    title={`Public Cloudflare URL: ${c.exposedRule.url}`}
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <Globe size={9} />
+                                    <span>{c.exposedRule.subdomain}</span>
+                                    <ExternalLink size={8} />
+                                  </a>
+                                )}
+
+                                {net.serverLocalIp && c.Ports && c.Ports.some((p) => p.PublicPort) && (
+                                  <a
+                                    href={`http://${net.serverLocalIp}:${c.Ports.find((p) => p.PublicPort)?.PublicPort}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={styles.exposedBadge}
+                                    style={{ color: '#22c55e', borderColor: 'rgba(34, 197, 94, 0.25)' }}
+                                    title={`Direct Local LAN URL: http://${net.serverLocalIp}:${c.Ports.find((p) => p.PublicPort)?.PublicPort}`}
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <Zap size={9} fill="currentColor" />
+                                    <span>LAN:{c.Ports.find((p) => p.PublicPort)?.PublicPort}</span>
+                                    <ExternalLink size={8} />
+                                  </a>
+                                )}
                               </div>
+                              <span className={styles.idText}>{shortId}</span>
                             </div>
                           </td>
 
@@ -1487,20 +1950,48 @@ export default function DockerApp() {
                             </span>
                           </td>
 
-                          {/* Ports */}
+                          {/* Ports with direct one-click links */}
                           <td className={styles.td}>
-                            <span className={styles.mono}>{formatPorts(c.Ports)}</span>
+                            {c.Ports && c.Ports.length > 0 ? (
+                              <div className={styles.portLinkGroup}>
+                                {c.Ports.map((p, pIdx) => {
+                                  if (p.PublicPort && net.serverLocalIp) {
+                                    return (
+                                      <a
+                                        key={pIdx}
+                                        href={`http://${net.serverLocalIp}:${p.PublicPort}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className={styles.portLink}
+                                        title={`Open http://${net.serverLocalIp}:${p.PublicPort}`}
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        <span>{p.PublicPort}→{p.PrivatePort}</span>
+                                        <ExternalLink size={8} />
+                                      </a>
+                                    );
+                                  }
+                                  return (
+                                    <span key={pIdx} className={styles.mono}>
+                                      {p.PublicPort ? `${p.PublicPort}→${p.PrivatePort}` : `${p.PrivatePort}`}
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              <span className={styles.mono}>—</span>
+                            )}
                           </td>
 
-                          {/* Age */}
+                          {/* Created Time */}
                           <td className={styles.td}>
                             <span className={styles.dimText}>{formatAge(c.Created)}</span>
                           </td>
 
-                          {/* Actions */}
-                          <td className={styles.td} onClick={e => e.stopPropagation()}>
+                          {/* Quick Actions */}
+                          <td className={styles.td} onClick={(e) => e.stopPropagation()}>
                             {isConfirm ? (
-                              <div className={styles.deleteConfirm}>
+                              <div className={styles.deleteConfirm} style={{ justifyContent: 'flex-end' }}>
                                 <span className={styles.deleteConfirmText}>Delete?</span>
                                 <button className={styles.confirmBtn} onClick={() => doAction(c.Id, 'delete')}>
                                   Yes
@@ -1510,7 +2001,7 @@ export default function DockerApp() {
                                 </button>
                               </div>
                             ) : (
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
                                 <div className={styles.actionsCell}>
                                   {isRunning ? (
                                     <>
@@ -1532,7 +2023,7 @@ export default function DockerApp() {
                                       </button>
                                       <button
                                         className={`${styles.actionBtn} ${styles.btnNav}`}
-                                        title="Open container shell / console"
+                                        title="Open interactive shell console"
                                         onClick={() => {
                                           setSelectedId(c.Id);
                                           setActiveTab('console');
@@ -1542,7 +2033,7 @@ export default function DockerApp() {
                                       </button>
                                       <button
                                         className={`${styles.actionBtn} ${styles.btnNav}`}
-                                        title="View container logs"
+                                        title="View live container logs"
                                         onClick={() => {
                                           setSelectedId(c.Id);
                                           setActiveTab('logs');
@@ -1562,10 +2053,13 @@ export default function DockerApp() {
                                       ) : (
                                         <button
                                           className={`${styles.actionBtn} ${styles.btnExpose}`}
-                                          title="Expose container to public web via Cloudflare Tunnel"
+                                          title="Expose container via Cloudflare Tunnel"
                                           disabled={anyBusy}
                                           onClick={() => {
-                                            const rawName = (c.Names[0] ?? c.Id).replace(/^\//, '').toLowerCase().replace(/[^a-z0-9-]/g, '-');
+                                            const rawName = (c.Names[0] ?? c.Id)
+                                              .replace(/^\//, '')
+                                              .toLowerCase()
+                                              .replace(/[^a-z0-9-]/g, '-');
                                             setExposeModalContainer(c);
                                             setExposeSubdomain(rawName);
                                             setExposeError(null);
@@ -1598,6 +2092,7 @@ export default function DockerApp() {
                                       </button>
                                     </>
                                   )}
+
                                   <button
                                     className={`${styles.actionBtn} ${styles.btnDelete}`}
                                     title="Delete container"
@@ -1607,8 +2102,9 @@ export default function DockerApp() {
                                     <Trash2 size={11} />
                                   </button>
                                 </div>
+
                                 {actionError?.id === c.Id && (
-                                  <span style={{ fontSize: '10px', color: '#f87171', whiteSpace: 'nowrap' }}>
+                                  <span style={{ fontSize: '9.5px', color: '#f87171', whiteSpace: 'nowrap' }}>
                                     ⚠ {actionError.msg}
                                   </span>
                                 )}
@@ -1623,20 +2119,31 @@ export default function DockerApp() {
               )}
             </div>
 
-            {/* Selected container Detail Pane */}
+            {/* ─── Sliding Detail Drawer ─── */}
             {selectedId && selectedContainer && (
               <div className={styles.detailPane}>
                 {/* Detail Header */}
                 <div className={styles.detailHeader}>
-                  <span className={styles.detailHeaderTitle} title={selectedContainer.Names[0]?.replace(/^\//, '')}>
-                    {selectedContainer.Names[0]?.replace(/^\//, '')}
-                  </span>
-                  <button className={styles.detailCloseBtn} onClick={() => setSelectedId(null)} title="Close pane">
+                  <div className={styles.detailHeaderLeft}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span className={styles.containerDot} style={{ background: getDotColor(selectedContainer.State) }} />
+                      <span className={styles.detailHeaderTitle} title={selectedContainer.Names[0]?.replace(/^\//, '')}>
+                        {selectedContainer.Names[0]?.replace(/^\//, '')}
+                      </span>
+                    </div>
+                    <div className={styles.detailHeaderSub}>
+                      <span>{selectedContainer.Id.substring(0, 12)}</span>
+                      <span>·</span>
+                      <span>{selectedContainer.Image}</span>
+                    </div>
+                  </div>
+
+                  <button className={styles.detailCloseBtn} onClick={() => setSelectedId(null)} title="Close detail drawer">
                     <X size={14} />
                   </button>
                 </div>
 
-                {/* Detail Tabs */}
+                {/* Sub-Tab Navigation Bar */}
                 <div className={styles.detailTabs}>
                   <button
                     className={`${styles.detailTab} ${activeTab === 'stats' ? styles.detailTabActive : ''}`}
@@ -1664,12 +2171,14 @@ export default function DockerApp() {
                   </button>
                 </div>
 
-                {/* Tab content */}
+                {/* Sub-Tab Content Area */}
                 <div className={styles.detailContent}>
                   {activeTab === 'stats' && renderStatsContent()}
                   {activeTab === 'inspect' && renderInspectContent()}
                   {activeTab === 'logs' && renderLogsContent()}
-                  <div style={{ display: activeTab === 'console' ? 'block' : 'none', height: '100%', width: '100%' }}>
+
+                  {/* Console Tab: Persistent Mount to Maintain WebSocket Connection */}
+                  <div style={{ display: activeTab === 'console' ? 'flex' : 'none', height: '100%', width: '100%' }}>
                     <ContainerConsoleTab
                       key={selectedContainer.Id}
                       containerId={selectedContainer.Id}
@@ -1682,73 +2191,84 @@ export default function DockerApp() {
             )}
           </div>
 
-          {/* Status bar */}
+          {/* Status Bar */}
           <div className={styles.statusBar}>
-            <span>{containers.length} container{containers.length !== 1 ? 's' : ''}</span>
+            <span>{containers.length} container{containers.length !== 1 ? 's' : ''} ({runningCount} active)</span>
             {lastSynced && <span>Last synced {lastSynced}</span>}
           </div>
         </>
-      ) : (
-        /* ───── Images Tab UI Workspace ───── */
+      )}
+
+      {/* ───── IMAGES VIEW ───── */}
+      {activeWindowTab === 'images' && (
         <>
-          {/* Toolbar */}
-          <div className={styles.toolbar}>
-            <form className={styles.pullForm} onSubmit={handlePullImage}>
-              <input
-                className={styles.pullInput}
-                type="text"
-                value={imageInput}
-                onChange={e => setImageInput(e.target.value)}
-                placeholder="e.g. redis:alpine, nginx:latest, python:3.11"
-                disabled={!!pullingImage}
-              />
+          {/* Action Bar */}
+          <div className={styles.actionBar}>
+            <div className={styles.actionLeft}>
+              <div className={styles.searchWrapper}>
+                <Search size={13} className={styles.searchIcon} />
+                <input
+                  className={styles.searchInput}
+                  type="text"
+                  placeholder="Search local images by name or tag…"
+                  value={imageSearchQuery}
+                  onChange={(e) => setImageSearchQuery(e.target.value)}
+                />
+                {imageSearchQuery && (
+                  <button className={styles.searchClearBtn} onClick={() => setImageSearchQuery('')}>
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className={styles.actionRight}>
+              <form className={styles.pullForm} onSubmit={handlePullImage}>
+                <input
+                  className={styles.pullInput}
+                  type="text"
+                  value={imageInput}
+                  onChange={(e) => setImageInput(e.target.value)}
+                  placeholder="Pull image (e.g. redis:alpine, postgres:15)"
+                  disabled={!!pullingImage}
+                />
+                <button className={styles.pullBtn} type="submit" disabled={!!pullingImage || !imageInput.trim()}>
+                  {pullingImage ? 'Pulling…' : 'Pull Image'}
+                </button>
+              </form>
               <button
-                className={styles.pullBtn}
-                type="submit"
-                disabled={!!pullingImage || !imageInput.trim()}
+                className={styles.btnSecondary}
+                onClick={pruneImages}
+                disabled={refreshing || !!pullingImage}
+                title="Remove dangling, untagged images"
               >
-                {pullingImage ? 'Pulling…' : 'Pull Image'}
+                Prune Unused
               </button>
-            </form>
-            <button
-              className={styles.refreshBtn}
-              onClick={() => fetchImages()}
-              disabled={imagesLoading || !!pullingImage}
-              title="Refresh local images list"
-            >
-              <RefreshCw size={12} className={imagesLoading ? styles.spinning : ''} />
-              Refresh
-            </button>
-            <button
-              className={styles.refreshBtn}
-              onClick={pruneImages}
-              disabled={refreshing || !!pullingImage}
-              title="Remove dangling, untagged images"
-            >
-              Prune Unused
-            </button>
+            </div>
           </div>
 
-          {/* Pulling Progress Layer-by-Layer Card */}
+          {/* Real-time Pull Progress Card */}
           {pullingImage && (
             <div className={styles.pullProgressCard}>
               <div className={styles.pullProgressTitle}>
-                <span>Downloading {pullingImage}</span>
-                {pullSuccess && <span style={{ color: 'var(--ok)' }}>Success!</span>}
-                {pullError && <span style={{ color: 'var(--error)' }}>Failed</span>}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div className={styles.spinner} style={{ width: '12px', height: '12px', borderWidth: '1.5px' }} />
+                  <span>Downloading {pullingImage}</span>
+                </div>
+                {pullSuccess && <span style={{ color: '#22c55e' }}>✓ Pull Complete</span>}
+                {pullError && <span style={{ color: '#ef4444' }}>✗ Pull Failed</span>}
               </div>
 
               {pullError && (
-                <div style={{ color: 'var(--error)', fontSize: '11px', whiteSpace: 'pre-wrap' }}>
-                  ⚠ {pullError}
+                <div className={styles.alertError}>
+                  <span>⚠ {pullError}</span>
                 </div>
               )}
 
               {Object.keys(pullLayers).length === 0 && !pullError && !pullSuccess && (
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', fontSize: '11px', color: '#71717a' }}>
-                  <div className={styles.spinner} style={{ width: '12px', height: '12px', borderWidth: '1.5px' }} />
-                  <span>Connecting to Docker registry…</span>
-                </div>
+                <span style={{ fontSize: '11px', color: '#737373', fontFamily: 'var(--mono)' }}>
+                  Contacting Docker registry index…
+                </span>
               )}
 
               <div className={styles.pullProgressLayers}>
@@ -1772,34 +2292,38 @@ export default function DockerApp() {
             </div>
           )}
 
-          {/* Images Table list */}
+          {/* Images Table */}
           <div className={styles.tableWrapper}>
             {imagesLoading && images.length === 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px', gap: '10px', color: 'var(--text-muted)' }}>
-                <div className={styles.spinner} style={{ width: '20px', height: '20px' }} />
-                <span>Loading local images…</span>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px', gap: '10px' }}>
+                <div className={styles.spinner} />
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Loading local image catalog…</span>
               </div>
             ) : imagesError ? (
-              <div style={{ padding: '20px', color: 'var(--error)', fontSize: '12px' }}>
-                Error listing images: {imagesError}
+              <div className={styles.alertError} style={{ margin: '16px' }}>
+                <AlertCircle size={14} />
+                <span>Error listing images: {imagesError}</span>
               </div>
-            ) : images.length === 0 ? (
+            ) : filteredImages.length === 0 ? (
               <div className={styles.emptyState}>
-                <Box size={32} style={{ opacity: 0.15 }} />
+                <HardDrive size={32} style={{ opacity: 0.15 }} />
                 <p className={styles.emptyTitle}>No Docker images found</p>
-                <p className={styles.emptySubtext}>Pulled images will list here. Try pulling an image above!</p>
+                <p className={styles.emptySubtext}>Pulled images will appear here. Pull an image above to get started!</p>
               </div>
             ) : (
               <table className={styles.table}>
                 <thead className={styles.thead}>
                   <tr className={styles.theadRow}>
-                    {['Repository / Name', 'Tag', 'Image ID', 'Size', 'Created', 'Actions'].map(col => (
-                      <th key={col} className={styles.th}>{col}</th>
-                    ))}
+                    <th className={styles.th}>Repository / Name</th>
+                    <th className={styles.th}>Tag</th>
+                    <th className={styles.th}>Image ID</th>
+                    <th className={styles.th}>Size</th>
+                    <th className={styles.th}>Created</th>
+                    <th className={styles.th} style={{ textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {images.map((img) => {
+                  {filteredImages.map((img) => {
                     const idShort = img.Id.replace('sha256:', '').substring(0, 12);
                     const tagString = img.RepoTags?.[0] ?? '<none>:<none>';
                     const separatorIndex = tagString.lastIndexOf(':');
@@ -1812,48 +2336,36 @@ export default function DockerApp() {
 
                     return (
                       <tr key={img.Id} className={styles.tr}>
-                        {/* Name */}
                         <td className={styles.td}>
                           <span style={{
-                            color: isDangling ? '#71717a' : '#f4f4f5',
-                            fontWeight: isDangling ? 'normal' : '500',
-                            fontFamily: isDangling ? 'inherit' : 'monospace',
+                            color: isDangling ? '#737373' : '#ffffff',
+                            fontWeight: isDangling ? 'normal' : 600,
+                            fontFamily: isDangling ? 'inherit' : 'var(--mono)',
                             fontSize: '12px'
                           }}>
                             {repoName}
                           </span>
                         </td>
 
-                        {/* Tag */}
                         <td className={styles.td}>
-                          <span className={styles.imageBadge} style={{
-                            background: isDangling ? 'rgba(255, 255, 255, 0.03)' : 'rgba(255, 255, 255, 0.06)',
-                            borderColor: isDangling ? 'rgba(255, 255, 255, 0.06)' : 'rgba(255, 255, 255, 0.12)',
-                            color: isDangling ? 'var(--text-muted)' : 'var(--text-primary)'
-                          }}>
-                            {tag}
-                          </span>
+                          <span className={styles.imageBadge}>{tag || '<none>'}</span>
                         </td>
 
-                        {/* ID */}
                         <td className={styles.td}>
                           <span className={styles.mono}>{idShort}</span>
                         </td>
 
-                        {/* Size */}
                         <td className={styles.td}>
                           <span className={styles.dimText}>{formatBytes(img.Size)}</span>
                         </td>
 
-                        {/* Created */}
                         <td className={styles.td}>
                           <span className={styles.dimText}>{formatAge(img.Created)}</span>
                         </td>
 
-                        {/* Actions */}
                         <td className={styles.td}>
                           {isConfirm ? (
-                            <div className={styles.deleteConfirm}>
+                            <div className={styles.deleteConfirm} style={{ justifyContent: 'flex-end' }}>
                               <span className={styles.deleteConfirmText}>Delete?</span>
                               <button className={styles.confirmBtn} onClick={() => deleteImage(img.Id)}>
                                 Yes
@@ -1863,8 +2375,8 @@ export default function DockerApp() {
                               </button>
                             </div>
                           ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
-                              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
+                              <div className={styles.actionsCell}>
                                 <button
                                   className={`${styles.actionBtn} ${styles.btnStart}`}
                                   title="Run container from image"
@@ -1883,14 +2395,7 @@ export default function DockerApp() {
                                 </button>
                               </div>
                               {imageActionError?.id === img.Id && (
-                                <span style={{
-                                  fontSize: '10px',
-                                  color: '#f87171',
-                                  whiteSpace: 'nowrap',
-                                  maxWidth: '200px',
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis'
-                                }} title={imageActionError.msg}>
+                                <span style={{ fontSize: '9.5px', color: '#f87171', whiteSpace: 'nowrap' }}>
                                   ⚠ {imageActionError.msg}
                                 </span>
                               )}
@@ -1905,46 +2410,42 @@ export default function DockerApp() {
             )}
           </div>
 
-          {/* Status bar */}
+          {/* Status Bar */}
           <div className={styles.statusBar}>
             <span>{images.length} image{images.length !== 1 ? 's' : ''}</span>
-            <span>Total local size: {formatBytes(images.reduce((acc, img) => acc + img.Size, 0))}</span>
+            <span>Total size: {formatBytes(images.reduce((acc, img) => acc + img.Size, 0))}</span>
           </div>
         </>
       )}
 
+      {/* ───── STACKS VIEW ───── */}
       {activeWindowTab === 'stacks' && (
         <>
-          {/* Toolbar */}
-          <div className={styles.toolbar}>
-            <div className={styles.toolbarLeft}>
-              <p className={styles.toolbarTitle}>Docker Stacks</p>
-              <p className={styles.toolbarSub}>
-                <span className={styles.liveDot} />
-                Multi-container applications deployed via docker-compose
-              </p>
+          {/* Action Bar */}
+          <div className={styles.actionBar}>
+            <div className={styles.actionLeft}>
+              <div className={styles.searchWrapper}>
+                <Search size={13} className={styles.searchIcon} />
+                <input
+                  className={styles.searchInput}
+                  type="text"
+                  placeholder="Search stacks by name…"
+                  value={stackSearchQuery}
+                  onChange={(e) => setStackSearchQuery(e.target.value)}
+                />
+                {stackSearchQuery && (
+                  <button className={styles.searchClearBtn} onClick={() => setStackSearchQuery('')}>
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <button
-                className={styles.refreshBtn}
-                onClick={() => fetchStacks(true)}
-                title="Refresh stacks"
-              >
-                <RefreshCw size={12} className={stacksLoading ? styles.spin : ''} />
-              </button>
-              <button
-                className={styles.btnPrimary}
-                onClick={() => {
-                  setDeployStackName('');
-                  setDeployYaml(QUICK_TEMPLATES[0].yaml);
-                  setDeployConsoleLogs([]);
-                  setDeployError(null);
-                  setShowDeployModal(true);
-                }}
-              >
-                <Plus size={14} />
-                Deploy Stack
-              </button>
+
+            <div className={styles.actionRight}>
+              <div className={styles.healthSummary}>
+                <span className={styles.liveDot} />
+                <span>{stacks.filter((s) => s.status === 'running').length} active stacks</span>
+              </div>
             </div>
           </div>
 
@@ -1958,14 +2459,18 @@ export default function DockerApp() {
 
             {stacksLoading && stacks.length === 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px', gap: '10px' }}>
-                <div className={styles.spinner} style={{ width: '20px', height: '20px' }} />
+                <div className={styles.spinner} />
                 <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Loading Docker stacks…</span>
               </div>
-            ) : stacks.length === 0 ? (
+            ) : filteredStacks.length === 0 ? (
               <div className={styles.emptyState}>
-                <Box size={32} style={{ opacity: 0.15 }} />
-                <p className={styles.emptyTitle}>No Docker stacks deployed</p>
-                <p className={styles.emptySubtext}>Deploy multi-container compose files to manage them as a unified stack</p>
+                <Layers size={32} style={{ opacity: 0.15 }} />
+                <p className={styles.emptyTitle}>
+                  {stackSearchQuery ? 'No stacks match your query' : 'No Docker compose stacks deployed'}
+                </p>
+                <p className={styles.emptySubtext}>
+                  Deploy multi-container applications easily with compose templates or custom YAML
+                </p>
                 <button
                   className={styles.btnPrimary}
                   style={{ marginTop: '12px' }}
@@ -1977,12 +2482,12 @@ export default function DockerApp() {
                     setShowDeployModal(true);
                   }}
                 >
-                  <Plus size={14} /> Deploy First Stack
+                  <Plus size={13} /> Deploy First Stack
                 </button>
               </div>
             ) : (
               <div className={styles.stacksGrid}>
-                {stacks.map(s => {
+                {filteredStacks.map((s) => {
                   const isRunning = s.status === 'running';
                   const isPartial = s.status === 'partial';
                   const isActioning =
@@ -2005,13 +2510,9 @@ export default function DockerApp() {
                             }`}
                           >
                             <span
-                              className={styles.statDot}
+                              className={styles.serviceDot}
                               style={{
-                                background: isRunning
-                                  ? 'var(--ok)'
-                                  : isPartial
-                                  ? 'var(--warn)'
-                                  : 'var(--text-muted)',
+                                background: isRunning ? '#22c55e' : isPartial ? '#facc15' : '#737373',
                               }}
                             />
                             {s.status} ({s.runningServicesCount}/{s.servicesCount})
@@ -2026,7 +2527,7 @@ export default function DockerApp() {
                               disabled={isActioning}
                               onClick={() => handleStopStack(s.name)}
                             >
-                              <Square size={13} />
+                              <Square size={12} />
                             </button>
                           ) : (
                             <button
@@ -2035,7 +2536,7 @@ export default function DockerApp() {
                               disabled={isActioning}
                               onClick={() => handleStartStack(s.name)}
                             >
-                              <Play size={13} />
+                              <Play size={12} fill="currentColor" />
                             </button>
                           )}
 
@@ -2044,43 +2545,44 @@ export default function DockerApp() {
                             title="Stack Logs"
                             onClick={() => handleOpenStackLogs(s.name)}
                           >
-                            <FileText size={13} />
+                            <FileText size={12} />
                           </button>
 
                           <button
                             className={styles.stackActionBtn}
-                            title="Edit & Redeploy"
+                            title="Edit & Redeploy Stack"
                             onClick={() => handleEditStack(s.name)}
                           >
-                            <RefreshCw size={13} />
+                            <RefreshCw size={12} />
                           </button>
 
                           <button
                             className={`${styles.stackActionBtn} ${styles.stackActionDelete}`}
-                            title="Delete / Down Stack"
+                            title="Delete Stack"
                             disabled={isActioning}
                             onClick={() => handleDeleteStack(s.name)}
                           >
-                            <Trash2 size={13} />
+                            <Trash2 size={12} />
                           </button>
                         </div>
                       </div>
 
+                      {/* Services list pills */}
                       <div className={styles.stackServicesList}>
                         {s.containers.length > 0 ? (
-                          s.containers.map(c => (
-                            <span key={c.id} className={styles.servicePill} title={`${c.image} (${c.status})`}>
+                          s.containers.map((sc) => (
+                            <span key={sc.id} className={styles.servicePill} title={`${sc.image} (${sc.status})`}>
                               <span
                                 className={`${styles.serviceDot} ${
-                                  c.state === 'running' ? styles.serviceDotRunning : styles.serviceDotStopped
+                                  sc.state === 'running' ? styles.serviceDotRunning : styles.serviceDotStopped
                                 }`}
                               />
-                              {c.service}: {c.state}
+                              {sc.service}: {sc.state}
                             </span>
                           ))
                         ) : (
                           <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                            No active containers for this stack
+                            No active containers associated with stack
                           </span>
                         )}
                       </div>
@@ -2091,21 +2593,22 @@ export default function DockerApp() {
             )}
           </div>
 
+          {/* Status Bar */}
           <div className={styles.statusBar}>
             <span>{stacks.length} stack{stacks.length !== 1 ? 's' : ''}</span>
-            <span>{stacks.filter(s => s.status === 'running').length} running</span>
+            <span>{stacks.filter((s) => s.status === 'running').length} running</span>
           </div>
         </>
       )}
 
-      {/* ───── Deploy / Edit Stack Modal ───── */}
+      {/* ───── Deploy Compose Stack Modal ───── */}
       {showDeployModal && (
         <div className={styles.modalOverlay} onClick={() => !deploying && setShowDeployModal(false)}>
-          <div className={styles.modalCard} style={{ maxWidth: '640px' }} onClick={e => e.stopPropagation()}>
+          <div className={styles.modalCard} style={{ maxWidth: '680px' }} onClick={(e) => e.stopPropagation()}>
             <div className={styles.modalHeader}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Layers size={16} style={{ color: 'var(--accent)' }} />
-                <p className={styles.modalTitle}>Deploy Docker Compose Stack</p>
+              <div className={styles.modalTitle}>
+                <Layers size={15} style={{ color: '#ededed' }} />
+                <span>Deploy Docker Compose Stack</span>
               </div>
               <button
                 className={styles.modalCloseBtn}
@@ -2119,7 +2622,7 @@ export default function DockerApp() {
             <form onSubmit={handleDeploySubmit}>
               <div className={styles.modalBody}>
                 {deployError && (
-                  <div className={styles.alertError} style={{ marginBottom: '12px' }}>
+                  <div className={styles.alertError}>
                     <AlertCircle size={14} />
                     <span>{deployError}</span>
                   </div>
@@ -2131,44 +2634,122 @@ export default function DockerApp() {
                     className={styles.fieldInput}
                     type="text"
                     value={deployStackName}
-                    onChange={e => setDeployStackName(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
-                    placeholder="e.g. my-web-stack"
+                    onChange={(e) => setDeployStackName(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                    placeholder="e.g. web-app, postgres-cluster, microservices"
                     required
                     disabled={deploying}
                   />
                 </div>
 
-                <div className={styles.fieldGroup}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                    <label className={styles.fieldLabel} style={{ margin: 0 }}>docker-compose.yml</label>
-                    <select
-                      className={styles.templateSelect}
-                      onChange={e => {
-                        const val = e.target.value;
-                        const tpl = QUICK_TEMPLATES.find(t => t.label === val);
-                        if (tpl) setDeployYaml(tpl.yaml);
-                      }}
-                      disabled={deploying}
-                    >
-                      <option value="">-- Load Quick Template --</option>
-                      {QUICK_TEMPLATES.map(t => (
-                        <option key={t.label} value={t.label}>{t.label}</option>
-                      ))}
-                    </select>
+                {/* Template Selector Pills */}
+                <div>
+                  <label className={styles.fieldLabel} style={{ marginBottom: '6px', display: 'block' }}>
+                    Quick Templates
+                  </label>
+                  <div className={styles.templatePills}>
+                    {QUICK_TEMPLATES.map((t) => (
+                      <button
+                        key={t.label}
+                        type="button"
+                        className={`${styles.templatePill} ${deployYaml === t.yaml ? styles.templatePillActive : ''}`}
+                        onClick={() => setDeployYaml(t.yaml)}
+                        disabled={deploying}
+                      >
+                        {t.label}
+                      </button>
+                    ))}
                   </div>
-                  <textarea
-                    className={styles.yamlTextarea}
-                    value={deployYaml}
-                    onChange={e => setDeployYaml(e.target.value)}
-                    placeholder="paste docker-compose.yml content here..."
-                    required
-                    disabled={deploying}
-                  />
                 </div>
 
+                {/* Compose Editor with Prism Syntax Highlighting and Real-time Validation */}
+                <div className={styles.fieldGroup}>
+                  <div className={styles.yamlEditorWrapper}>
+                    <div className={styles.yamlEditorHeader}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontWeight: 600, color: '#ededed' }}>docker-compose.yml</span>
+                        <div className={styles.filterPills} style={{ padding: '1px' }}>
+                          <button
+                            type="button"
+                            className={`${styles.filterPill} ${deployEditorMode === 'edit' ? styles.filterPillActive : ''}`}
+                            onClick={() => setDeployEditorMode('edit')}
+                          >
+                            <Code size={11} /> Editor
+                          </button>
+                          <button
+                            type="button"
+                            className={`${styles.filterPill} ${deployEditorMode === 'preview' ? styles.filterPillActive : ''}`}
+                            onClick={() => setDeployEditorMode('preview')}
+                          >
+                            <Eye size={11} /> Highlight
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className={styles.yamlValidationBadge}>
+                        {yamlValidation.valid ? (
+                          <span className={styles.yamlValid}>
+                            <CheckCircle2 size={12} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '3px' }} />
+                            {yamlValidation.message}
+                          </span>
+                        ) : (
+                          <span className={styles.yamlInvalid}>
+                            <AlertTriangle size={12} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '3px' }} />
+                            {yamlValidation.message}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {deployEditorMode === 'edit' ? (
+                      <textarea
+                        className={styles.yamlTextarea}
+                        value={deployYaml}
+                        onChange={(e) => setDeployYaml(e.target.value)}
+                        placeholder="services:&#10;  web:&#10;    image: nginx:alpine"
+                        required
+                        disabled={deploying}
+                        spellCheck={false}
+                      />
+                    ) : (
+                      <div className={styles.yamlPreview}>
+                        <Highlight theme={themes.vsDark} code={deployYaml || '# Empty Compose File'} language="yaml">
+                          {({ className, style, tokens, getLineProps, getTokenProps }) => (
+                            <pre className={className} style={{ ...style, margin: 0, background: '#000000', padding: 0 }}>
+                              {tokens.map((line, i) => (
+                                <div key={i} {...getLineProps({ line })} style={{ display: 'flex' }}>
+                                  <span
+                                    style={{
+                                      width: '28px',
+                                      userSelect: 'none',
+                                      opacity: 0.35,
+                                      fontSize: '11px',
+                                      textAlign: 'right',
+                                      paddingRight: '10px',
+                                      color: '#737373',
+                                      fontFamily: 'var(--mono)',
+                                    }}
+                                  >
+                                    {i + 1}
+                                  </span>
+                                  <div>
+                                    {line.map((token, key) => (
+                                      <span key={key} {...getTokenProps({ token })} />
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
+                            </pre>
+                          )}
+                        </Highlight>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Deployment Progress Logs */}
                 {deployConsoleLogs.length > 0 && (
                   <div className={styles.fieldGroup}>
-                    <label className={styles.fieldLabel}>Deployment Progress Logs</label>
+                    <label className={styles.fieldLabel}>Deployment Progress Console</label>
                     <div className={styles.deployConsole}>
                       {deployConsoleLogs.map((line, idx) => (
                         <div key={idx}>{line}</div>
@@ -2192,7 +2773,7 @@ export default function DockerApp() {
                   className={styles.btnPrimary}
                   disabled={deploying || !deployStackName.trim() || !deployYaml.trim()}
                 >
-                  {deploying ? 'Deploying…' : 'Deploy Stack'}
+                  {deploying ? 'Deploying Stack…' : 'Deploy Stack'}
                 </button>
               </div>
             </form>
@@ -2203,26 +2784,23 @@ export default function DockerApp() {
       {/* ───── Stack Logs Modal ───── */}
       {selectedStackLogsName && (
         <div className={styles.modalOverlay} onClick={() => setSelectedStackLogsName(null)}>
-          <div className={styles.modalCard} style={{ maxWidth: '720px' }} onClick={e => e.stopPropagation()}>
+          <div className={styles.modalCard} style={{ maxWidth: '720px' }} onClick={(e) => e.stopPropagation()}>
             <div className={styles.modalHeader}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <FileText size={16} style={{ color: 'var(--accent)' }} />
-                <p className={styles.modalTitle}>Stack Logs — {selectedStackLogsName}</p>
+              <div className={styles.modalTitle}>
+                <FileText size={15} style={{ color: '#ededed' }} />
+                <span>Stack Logs — {selectedStackLogsName}</span>
               </div>
-              <button
-                className={styles.modalCloseBtn}
-                onClick={() => setSelectedStackLogsName(null)}
-              >
+              <button className={styles.modalCloseBtn} onClick={() => setSelectedStackLogsName(null)}>
                 <X size={14} />
               </button>
             </div>
 
-            <div className={styles.modalBody} style={{ padding: '10px' }}>
+            <div className={styles.modalBody} style={{ padding: '12px' }}>
               <div className={styles.deployConsole} style={{ height: '320px' }}>
                 {stackLogsLoading && stackLogLines.length === 0 ? (
-                  <span style={{ color: 'var(--text-muted)' }}>Connecting to stack logs stream…</span>
+                  <span style={{ color: 'var(--text-muted)' }}>Connecting to stack compose logs stream…</span>
                 ) : stackLogLines.length === 0 ? (
-                  <span style={{ color: 'var(--text-muted)' }}>No logs output yet</span>
+                  <span style={{ color: 'var(--text-muted)' }}>No logs emitted yet</span>
                 ) : (
                   stackLogLines.map((l, i) => <div key={i}>{l}</div>)
                 )}
@@ -2245,17 +2823,13 @@ export default function DockerApp() {
       {/* ───── Run Container Modal ───── */}
       {runModalImage && (
         <div className={styles.modalOverlay} onClick={() => setRunModalImage(null)}>
-          <div className={styles.modalCard} onClick={e => e.stopPropagation()}>
+          <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
             <div className={styles.modalHeader}>
-              <span className={styles.modalTitle}>
-                <Play size={14} style={{ color: 'var(--text-primary)' }} fill="currentColor" />
-                Run Container
-              </span>
-              <button
-                className={styles.detailCloseBtn}
-                onClick={() => setRunModalImage(null)}
-                title="Close modal"
-              >
+              <div className={styles.modalTitle}>
+                <Play size={14} fill="currentColor" style={{ color: '#ededed' }} />
+                <span>Run Container</span>
+              </div>
+              <button className={styles.modalCloseBtn} onClick={() => setRunModalImage(null)} title="Close modal">
                 <X size={14} />
               </button>
             </div>
@@ -2263,36 +2837,35 @@ export default function DockerApp() {
             <form onSubmit={handleCreateContainer} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
               <div className={styles.modalBody}>
                 {runError && (
-                  <div style={{ padding: '10px 12px', background: 'var(--error-dim)', border: '1px solid var(--error)', borderRadius: '6px', color: 'var(--error)', fontSize: '11px' }}>
-                    ⚠ {runError}
+                  <div className={styles.alertError}>
+                    <AlertCircle size={14} />
+                    <span>{runError}</span>
                   </div>
                 )}
 
-                {/* Target Image */}
                 <div className={styles.fieldGroup}>
-                  <label className={styles.fieldLabel}>Image</label>
+                  <label className={styles.fieldLabel}>Selected Image</label>
                   <input
                     className={styles.fieldInput}
                     type="text"
                     value={runModalImage}
                     readOnly
-                    style={{ opacity: 0.8, background: 'rgba(255, 255, 255, 0.03)' }}
+                    style={{ opacity: 0.8 }}
                   />
                 </div>
 
-                {/* Container Name */}
                 <div className={styles.fieldGroup}>
                   <label className={styles.fieldLabel}>Container Name (optional)</label>
                   <input
                     className={styles.fieldInput}
                     type="text"
                     value={runContainerName}
-                    onChange={e => setRunContainerName(e.target.value)}
-                    placeholder="e.g. my-redis-db"
+                    onChange={(e) => setRunContainerName(e.target.value)}
+                    placeholder="e.g. my-app-service"
                   />
                 </div>
 
-                {/* Ports Section */}
+                {/* Ports Mapping */}
                 <div>
                   <div className={styles.modalSectionTitle}>
                     <span>Port Mappings</span>
@@ -2301,7 +2874,7 @@ export default function DockerApp() {
                     </button>
                   </div>
                   {runPorts.length === 0 ? (
-                    <span style={{ fontSize: '11px', color: '#52525b', fontStyle: 'italic' }}>No port mappings configured</span>
+                    <span style={{ fontSize: '11px', color: '#737373', fontStyle: 'italic' }}>No port mappings added</span>
                   ) : (
                     <div className={styles.dynamicList}>
                       {runPorts.map((p, idx) => (
@@ -2309,22 +2882,22 @@ export default function DockerApp() {
                           <input
                             className={styles.fieldInput}
                             type="text"
-                            placeholder="Host Port (e.g. 8080)"
+                            placeholder="Host (e.g. 8080)"
                             value={p.hostPort}
-                            onChange={e => {
+                            onChange={(e) => {
                               const val = e.target.value;
-                              setRunPorts(prev => prev.map((item, i) => i === idx ? { ...item, hostPort: val } : item));
+                              setRunPorts((prev) => prev.map((item, i) => (i === idx ? { ...item, hostPort: val } : item)));
                             }}
                           />
-                          <span style={{ color: '#71717a', fontSize: '12px' }}>→</span>
+                          <span style={{ color: '#737373', fontSize: '12px' }}>→</span>
                           <input
                             className={styles.fieldInput}
                             type="text"
-                            placeholder="Container Port (e.g. 80)"
+                            placeholder="Container (e.g. 80)"
                             value={p.containerPort}
-                            onChange={e => {
+                            onChange={(e) => {
                               const val = e.target.value;
-                              setRunPorts(prev => prev.map((item, i) => i === idx ? { ...item, containerPort: val } : item));
+                              setRunPorts((prev) => prev.map((item, i) => (i === idx ? { ...item, containerPort: val } : item)));
                             }}
                           />
                           <button type="button" className={styles.iconRemoveBtn} onClick={() => removePortRow(idx)}>
@@ -2345,7 +2918,7 @@ export default function DockerApp() {
                     </button>
                   </div>
                   {runEnvs.length === 0 ? (
-                    <span style={{ fontSize: '11px', color: '#52525b', fontStyle: 'italic' }}>No environment variables configured</span>
+                    <span style={{ fontSize: '11px', color: '#737373', fontStyle: 'italic' }}>No environment variables added</span>
                   ) : (
                     <div className={styles.dynamicList}>
                       {runEnvs.map((ev, idx) => (
@@ -2355,20 +2928,20 @@ export default function DockerApp() {
                             type="text"
                             placeholder="KEY (e.g. PORT)"
                             value={ev.key}
-                            onChange={e => {
+                            onChange={(e) => {
                               const val = e.target.value;
-                              setRunEnvs(prev => prev.map((item, i) => i === idx ? { ...item, key: val } : item));
+                              setRunEnvs((prev) => prev.map((item, i) => (i === idx ? { ...item, key: val } : item)));
                             }}
                           />
-                          <span style={{ color: '#71717a', fontSize: '12px' }}>=</span>
+                          <span style={{ color: '#737373', fontSize: '12px' }}>=</span>
                           <input
                             className={styles.fieldInput}
                             type="text"
-                            placeholder="VALUE (e.g. 8080)"
+                            placeholder="VALUE (e.g. 3000)"
                             value={ev.value}
-                            onChange={e => {
+                            onChange={(e) => {
                               const val = e.target.value;
-                              setRunEnvs(prev => prev.map((item, i) => i === idx ? { ...item, value: val } : item));
+                              setRunEnvs((prev) => prev.map((item, i) => (i === idx ? { ...item, value: val } : item)));
                             }}
                           />
                           <button type="button" className={styles.iconRemoveBtn} onClick={() => removeEnvRow(idx)}>
@@ -2389,12 +2962,12 @@ export default function DockerApp() {
                     </button>
                   </div>
                   {net.baseDir && (
-                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                      Host path must be inside {net.baseDir}
+                    <span style={{ fontSize: '10.5px', color: 'var(--text-muted)', marginBottom: '4px', display: 'block' }}>
+                      Host path must reside inside {net.baseDir}
                     </span>
                   )}
                   {runVolumes.length === 0 ? (
-                    <span style={{ fontSize: '11px', color: '#52525b', fontStyle: 'italic' }}>No volume mounts configured</span>
+                    <span style={{ fontSize: '11px', color: '#737373', fontStyle: 'italic' }}>No volume mounts added</span>
                   ) : (
                     <div className={styles.dynamicList}>
                       {runVolumes.map((v, idx) => (
@@ -2404,20 +2977,20 @@ export default function DockerApp() {
                             type="text"
                             placeholder={net.baseDir ? `Host path (${net.baseDir}/…)` : 'Host path'}
                             value={v.hostPath}
-                            onChange={e => {
+                            onChange={(e) => {
                               const val = e.target.value;
-                              setRunVolumes(prev => prev.map((item, i) => i === idx ? { ...item, hostPath: val } : item));
+                              setRunVolumes((prev) => prev.map((item, i) => (i === idx ? { ...item, hostPath: val } : item)));
                             }}
                           />
-                          <span style={{ color: '#71717a', fontSize: '12px' }}>→</span>
+                          <span style={{ color: '#737373', fontSize: '12px' }}>→</span>
                           <input
                             className={styles.fieldInput}
                             type="text"
-                            placeholder="Container Path (e.g. /data)"
+                            placeholder="Container path (e.g. /app/data)"
                             value={v.containerPath}
-                            onChange={e => {
+                            onChange={(e) => {
                               const val = e.target.value;
-                              setRunVolumes(prev => prev.map((item, i) => i === idx ? { ...item, containerPath: val } : item));
+                              setRunVolumes((prev) => prev.map((item, i) => (i === idx ? { ...item, containerPath: val } : item)));
                             }}
                           />
                           <button type="button" className={styles.iconRemoveBtn} onClick={() => removeVolumeRow(idx)}>
@@ -2435,7 +3008,7 @@ export default function DockerApp() {
                   <select
                     className={styles.selectInput}
                     value={runRestartPolicy}
-                    onChange={e => setRunRestartPolicy(e.target.value)}
+                    onChange={(e) => setRunRestartPolicy(e.target.value)}
                   >
                     <option value="no">Never restart (no)</option>
                     <option value="unless-stopped">Unless stopped (unless-stopped)</option>
@@ -2445,7 +3018,6 @@ export default function DockerApp() {
                 </div>
               </div>
 
-              {/* Modal Footer */}
               <div className={styles.modalFooter}>
                 <button
                   type="button"
@@ -2455,12 +3027,8 @@ export default function DockerApp() {
                 >
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  className={styles.btnPrimary}
-                  disabled={runSubmitting}
-                >
-                  {runSubmitting ? 'Starting…' : 'Run Container'}
+                <button type="submit" className={styles.btnPrimary} disabled={runSubmitting}>
+                  {runSubmitting ? 'Starting Container…' : 'Run Container'}
                 </button>
               </div>
             </form>
@@ -2471,14 +3039,14 @@ export default function DockerApp() {
       {/* ───── Expose Container Modal ───── */}
       {exposeModalContainer && (
         <div className={styles.modalOverlay} onClick={() => setExposeModalContainer(null)}>
-          <div className={styles.modalCard} onClick={e => e.stopPropagation()}>
+          <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
             <div className={styles.modalHeader}>
-              <span className={styles.modalTitle}>
-                <Globe size={14} style={{ color: 'var(--accent)' }} />
-                Expose Container via Cloudflare
-              </span>
+              <div className={styles.modalTitle}>
+                <Globe size={15} style={{ color: '#ededed' }} />
+                <span>Expose Container via Cloudflare</span>
+              </div>
               <button
-                className={styles.detailCloseBtn}
+                className={styles.modalCloseBtn}
                 onClick={() => setExposeModalContainer(null)}
                 title="Close modal"
               >
@@ -2489,24 +3057,27 @@ export default function DockerApp() {
             <form onSubmit={handleExposeContainer} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
               <div className={styles.modalBody}>
                 {exposeError && (
-                  <div style={{ padding: '10px 12px', background: 'var(--error-dim)', border: '1px solid var(--error)', borderRadius: '6px', color: 'var(--error)', fontSize: '11px' }}>
-                    ⚠ {exposeError}
+                  <div className={styles.alertError}>
+                    <AlertCircle size={14} />
+                    <span>{exposeError}</span>
                   </div>
                 )}
 
                 {exposeSuccessUrl ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', background: 'var(--ok-dim)', border: '1px solid var(--ok)', borderRadius: '6px' }}>
-                    <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--ok)' }}>
-                      ✓ Container Successfully Exposed!
-                    </span>
-                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                      Public Endpoint:
-                    </span>
+                  <div className={styles.alertSuccess} style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
+                    <span style={{ fontWeight: 600 }}>✓ Container Successfully Exposed!</span>
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Public Endpoint:</span>
                     <a
                       href={exposeSuccessUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      style={{ fontSize: '12px', fontFamily: 'var(--mono)', color: 'var(--accent)', wordBreak: 'break-all', textDecoration: 'underline' }}
+                      style={{
+                        fontSize: '12px',
+                        fontFamily: 'var(--mono)',
+                        color: '#ededed',
+                        wordBreak: 'break-all',
+                        textDecoration: 'underline',
+                      }}
                     >
                       {exposeSuccessUrl}
                     </a>
@@ -2520,7 +3091,7 @@ export default function DockerApp() {
                         type="text"
                         value={(exposeModalContainer.Names[0] ?? exposeModalContainer.Id).replace(/^\//, '')}
                         readOnly
-                        style={{ opacity: 0.8, background: 'var(--bg-base)' }}
+                        style={{ opacity: 0.8 }}
                       />
                     </div>
 
@@ -2531,7 +3102,7 @@ export default function DockerApp() {
                           className={styles.fieldInput}
                           type="text"
                           value={exposeSubdomain}
-                          onChange={e => setExposeSubdomain(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                          onChange={(e) => setExposeSubdomain(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
                           placeholder="e.g. my-app"
                           required
                         />
@@ -2542,7 +3113,7 @@ export default function DockerApp() {
                     </div>
 
                     <div style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: '1.4' }}>
-                      This will automatically create a proxied Cloudflare CNAME record and update your Cloudflare Tunnel ingress configuration with zero downtime.
+                      This will automatically create a proxied Cloudflare CNAME record and update your tunnel ingress configuration with zero downtime.
                     </div>
                   </>
                 )}
@@ -2570,7 +3141,6 @@ export default function DockerApp() {
           </div>
         </div>
       )}
-
     </div>
   );
 }
