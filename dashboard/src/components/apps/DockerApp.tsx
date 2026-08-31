@@ -558,6 +558,8 @@ export default function DockerApp() {
   const [imageActionLoading, setImageActionLoading] = useState<string | null>(null);
   const [imageActionError, setImageActionError]     = useState<{ id: string; msg: string } | null>(null);
   const [confirmDeleteImageId, setConfirmDeleteImageId] = useState<string | null>(null);
+  const [pruningImages, setPruningImages]           = useState(false);
+  const [pruneFeedback, setPruneFeedback]           = useState<{ message: string; isError?: boolean } | null>(null);
 
   // Run Container Modal state
   const [runModalImage, setRunModalImage]           = useState<string | null>(null);
@@ -1179,16 +1181,46 @@ export default function DockerApp() {
   };
 
   const pruneImages = async () => {
-    setRefreshing(true);
+    if (pruningImages) return;
+    setPruningImages(true);
+    setPruneFeedback(null);
     try {
-      const res = await fetch('/api/docker/images/prune', { method: 'POST' });
+      const res = await fetch('/api/docker/images/prune', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ all: true }),
+      });
       if (res.ok) {
+        const data = await res.json();
+        const count = data.deletedCount ?? 0;
+        const space = data.spaceReclaimed ?? 0;
+        if (count > 0) {
+          setPruneFeedback({
+            message: `Successfully pruned ${count} unused image${count !== 1 ? 's' : ''} (${formatBytes(space)} reclaimed)`,
+            isError: false,
+          });
+        } else {
+          setPruneFeedback({
+            message: 'No unused images to prune. All images are currently in use.',
+            isError: false,
+          });
+        }
         await fetchImages(true);
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        setPruneFeedback({
+          message: errData.error || `Prune failed with status ${res.status}`,
+          isError: true,
+        });
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error('Prune images failed:', e);
+      setPruneFeedback({
+        message: e?.message || 'Failed to prune unused images',
+        isError: true,
+      });
     } finally {
-      setRefreshing(false);
+      setPruningImages(false);
     }
   };
 
@@ -2232,20 +2264,51 @@ export default function DockerApp() {
                   placeholder="Pull image (e.g. redis:alpine, postgres:15)"
                   disabled={!!pullingImage}
                 />
-                <button className={styles.pullBtn} type="submit" disabled={!!pullingImage || !imageInput.trim()}>
+                <button className={styles.pullBtn} type="submit" disabled={!!pullingImage || !imageInput.trim() || pruningImages}>
                   {pullingImage ? 'Pulling…' : 'Pull Image'}
                 </button>
               </form>
               <button
                 className={styles.btnSecondary}
                 onClick={pruneImages}
-                disabled={refreshing || !!pullingImage}
-                title="Remove dangling, untagged images"
+                disabled={refreshing || !!pullingImage || pruningImages}
+                title="Remove unused Docker images not attached to any container"
               >
-                Prune Unused
+                {pruningImages ? (
+                  <>
+                    <RefreshCw size={11} className={styles.spin} />
+                    <span>Pruning…</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={11} />
+                    <span>Prune</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
+
+          {/* Prune Status Feedback Banner */}
+          {pruneFeedback && (
+            <div
+              className={pruneFeedback.isError ? styles.alertError : styles.alertSuccess}
+              style={{ margin: '8px 16px 0 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                {pruneFeedback.isError ? <AlertCircle size={13} /> : <CheckCircle2 size={13} style={{ color: '#22c55e' }} />}
+                <span>{pruneFeedback.message}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPruneFeedback(null)}
+                style={{ background: 'transparent', border: 'none', color: 'inherit', cursor: 'pointer', display: 'flex', padding: '2px' }}
+                title="Dismiss message"
+              >
+                <X size={12} />
+              </button>
+            </div>
+          )}
 
           {/* Real-time Pull Progress Card */}
           {pullingImage && (

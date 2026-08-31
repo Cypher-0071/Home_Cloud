@@ -293,13 +293,21 @@ router.delete("/images/:id", async (req, res) => {
 
 router.post("/images/prune", async (req, res) => {
 	try {
+		const pruneAll = req.body?.all !== false && req.query?.all !== "false";
 		const opts = {
 			filters: {
-				dangling: ["true"], // Remove only dangling images
+				dangling: [pruneAll ? "false" : "true"],
 			},
 		};
-		await docker.pruneImages(opts);
-		res.json({ success: true });
+		const result = await docker.pruneImages(opts);
+		const deletedCount = (result && Array.isArray(result.ImagesDeleted)) ? result.ImagesDeleted.length : 0;
+		const spaceReclaimed = (result && typeof result.SpaceReclaimed === "number") ? result.SpaceReclaimed : 0;
+		res.json({
+			success: true,
+			deletedCount,
+			spaceReclaimed,
+			result,
+		});
 	} catch (err) {
 		return res.status(500).json({ error: err.message });
 	}
