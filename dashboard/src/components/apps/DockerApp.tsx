@@ -541,6 +541,169 @@ function JsonTreeNode({
   );
 }
 
+/* ─── Custom Local Image Autocomplete Component ─── */
+
+interface ImageAutocompleteInputProps {
+  value: string;
+  onChange: (val: string) => void;
+  localImages: string[];
+  placeholder?: string;
+  disabled?: boolean;
+  required?: boolean;
+}
+
+function ImageAutocompleteInput({
+  value,
+  onChange,
+  localImages,
+  placeholder,
+  disabled,
+  required,
+}: ImageAutocompleteInputProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [highlightIndex, setHighlightIndex] = useState(-1);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Compute matching local images only
+  const filteredImages = useMemo(() => {
+    if (!value) return [];
+    const trimmed = value.trim();
+    if (trimmed.length === 0) return [];
+
+    // If user types "/", show all locally available images
+    if (trimmed === '/') {
+      return localImages;
+    }
+
+    // If user typed "/query" or "query", search local images
+    const query = trimmed.startsWith('/') ? trimmed.slice(1).toLowerCase() : trimmed.toLowerCase();
+    if (!query) return localImages;
+
+    return localImages.filter((img) => img.toLowerCase().includes(query));
+  }, [value, localImages]);
+
+  // Dropdown visibility rule:
+  // - Must be open
+  // - Value must have at least 1 character typed
+  // - Must have matching local images
+  const shouldShow = isOpen && value.trim().length >= 1 && filteredImages.length > 0;
+
+  // Reset highlight on query change
+  useEffect(() => {
+    setHighlightIndex(-1);
+  }, [value]);
+
+  // Click outside to close
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSelect = (img: string) => {
+    onChange(img);
+    setIsOpen(false);
+    setHighlightIndex(-1);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!shouldShow) {
+      if (e.key === 'ArrowDown' && value.trim().length >= 1 && filteredImages.length > 0) {
+        setIsOpen(true);
+      }
+      return;
+    }
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setHighlightIndex((prev) => (prev < filteredImages.length - 1 ? prev + 1 : 0));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlightIndex((prev) => (prev > 0 ? prev - 1 : filteredImages.length - 1));
+    } else if (e.key === 'Enter') {
+      if (highlightIndex >= 0 && highlightIndex < filteredImages.length) {
+        e.preventDefault();
+        handleSelect(filteredImages[highlightIndex]);
+      }
+    } else if (e.key === 'Escape') {
+      setIsOpen(false);
+    }
+  };
+
+  return (
+    <div ref={containerRef} className={styles.autocompleteInputWrapper}>
+      <input
+        ref={inputRef}
+        className={styles.fieldInput}
+        type="text"
+        value={value}
+        onChange={(e) => {
+          onChange(e.target.value);
+          setIsOpen(true);
+        }}
+        onFocus={() => {
+          if (value.trim().length >= 1) {
+            setIsOpen(true);
+          }
+        }}
+        onKeyDown={handleKeyDown}
+        placeholder={placeholder}
+        required={required}
+        disabled={disabled}
+        autoComplete="off"
+        spellCheck={false}
+      />
+
+      {shouldShow && (
+        <div className={styles.autocompleteDropdown}>
+          <div
+            style={{
+              padding: '4px 8px',
+              fontSize: '10px',
+              color: '#71717a',
+              fontWeight: 600,
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+              borderBottom: '1px solid #1f1f23',
+              marginBottom: '3px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <span>Local Images ({filteredImages.length})</span>
+            <span style={{ fontSize: '9px', color: '#52525b', textTransform: 'none', fontWeight: 400 }}>
+              Type / for all
+            </span>
+          </div>
+          {filteredImages.map((img, idx) => (
+            <div
+              key={img}
+              className={`${styles.autocompleteItem} ${idx === highlightIndex ? styles.autocompleteItemHighlighted : ''}`}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                handleSelect(img);
+              }}
+              onMouseEnter={() => setHighlightIndex(idx)}
+            >
+              <div className={styles.autocompleteItemLeft}>
+                <Box size={12} className={styles.autocompleteItemIcon} />
+                <span className={styles.autocompleteItemText}>{img}</span>
+              </div>
+              <span className={styles.autocompleteLocalBadge}>local</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ─── Real-Time Live Overlaid Syntax Highlighting YAML Editor ─── */
 
 function highlightYamlValue(val: string): React.ReactNode {
@@ -2742,20 +2905,12 @@ export default function DockerApp() {
                 <input
                   className={styles.pullInput}
                   type="text"
-                  list="popular-pull-images"
                   value={imageInput}
                   onChange={(e) => setImageInput(e.target.value)}
                   placeholder="Pull image (e.g. redis:alpine, postgres:15)"
                   disabled={!!pullingImage}
                   autoComplete="off"
                 />
-                <datalist id="popular-pull-images">
-                  {suggestedImages.popular.map((img) => (
-                    <option key={`pull-pop-${img}`} value={img}>
-                      {img} (Docker Hub)
-                    </option>
-                  ))}
-                </datalist>
                 <button className={styles.pullBtn} type="submit" disabled={!!pullingImage || !imageInput.trim() || pruningImages}>
                   {pullingImage ? 'Pulling…' : 'Pull Image'}
                 </button>
@@ -3315,29 +3470,14 @@ export default function DockerApp() {
                                 </span>
                               )}
                             </div>
-                            <input
-                              className={styles.fieldInput}
-                              type="text"
-                              list={`image-suggestions-${service.id}`}
+                            <ImageAutocompleteInput
                               value={service.image}
-                              onChange={(e) => handleServiceChange(service.id, 'image', e.target.value)}
-                              placeholder="e.g. nginx:alpine, postgres:16, redis:7"
+                              onChange={(val) => handleServiceChange(service.id, 'image', val)}
+                              localImages={suggestedImages.local}
+                              placeholder="e.g. nginx:alpine (type / for all)"
                               required
                               disabled={deploying}
-                              autoComplete="off"
                             />
-                            <datalist id={`image-suggestions-${service.id}`}>
-                              {suggestedImages.local.map((img) => (
-                                <option key={`loc-${img}`} value={img}>
-                                  {img} (Local Image)
-                                </option>
-                              ))}
-                              {suggestedImages.popular.map((img) => (
-                                <option key={`pop-${img}`} value={img}>
-                                  {img} (Docker Hub)
-                                </option>
-                              ))}
-                            </datalist>
                           </div>
                         </div>
 
