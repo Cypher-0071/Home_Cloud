@@ -26,11 +26,13 @@ import {
   Activity,
   Code,
   Eye,
+  EyeOff,
   Sliders,
   CheckCircle2,
   AlertTriangle,
+  Sparkles,
+  Upload,
 } from 'lucide-react';
-import { Highlight, themes } from 'prism-react-renderer';
 import ContainerConsoleTab from './ContainerConsoleTab';
 import styles from './docker.module.css';
 import { useNetworkDetector } from '../../hooks/useNetworkDetector';
@@ -102,75 +104,143 @@ interface LogLine {
   text: string;
 }
 
-const QUICK_TEMPLATES: { label: string; yaml: string }[] = [
-  {
-    label: 'PostgreSQL + Adminer',
-    yaml: `version: "3.8"
-services:
-  db:
-    image: postgres:15-alpine
-    restart: always
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: secretpassword
-      POSTGRES_DB: mydatabase
-    ports:
-      - "5432:5432"
+interface FormPort {
+  id: string;
+  host: string;
+  container: string;
+}
 
-  adminer:
-    image: adminer:latest
-    restart: always
-    ports:
-      - "8080:8080"`
-  },
-  {
-    label: 'WordPress + MySQL',
-    yaml: `version: "3.8"
-services:
-  db:
-    image: mysql:8.0
-    restart: always
-    environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: wordpress
-      MYSQL_USER: wordpress
-      MYSQL_PASSWORD: wordpresspassword
+interface FormEnv {
+  id: string;
+  key: string;
+  value: string;
+}
 
-  wordpress:
-    image: wordpress:latest
-    restart: always
-    ports:
-      - "8000:80"
-    environment:
-      WORDPRESS_DB_HOST: db:3306
-      WORDPRESS_DB_USER: wordpress
-      WORDPRESS_DB_PASSWORD: wordpresspassword
-      WORDPRESS_DB_NAME: wordpress`
-  },
-  {
-    label: 'Nginx + Redis',
-    yaml: `version: "3.8"
-services:
-  web:
-    image: nginx:alpine
-    restart: always
-    ports:
-      - "8081:80"
+interface FormVolume {
+  id: string;
+  host: string;
+  container: string;
+}
 
-  redis:
-    image: redis:alpine
-    restart: always`
-  },
-  {
-    label: 'Blank / Custom Template',
-    yaml: `version: "3.8"
-services:
-  my-service:
-    image: nginx:alpine
-    restart: always
-    ports:
-      - "8082:80"`
+interface FormService {
+  id: string;
+  name: string;
+  image: string;
+  restart: string;
+  ports: FormPort[];
+  env: FormEnv[];
+  volumes: FormVolume[];
+  command: string;
+}
+
+const generateRandomPassword = (length = 16): string => {
+  const chars = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789!@#$%&*';
+  let pass = '';
+  for (let i = 0; i < length; i++) {
+    pass += chars.charAt(Math.floor(Math.random() * chars.length));
   }
+  return pass;
+};
+
+const createDefaultService = (index = 1): FormService => ({
+  id: Math.random().toString(36).substring(2, 9),
+  name: index === 1 ? 'web' : `service-${index}`,
+  image: '',
+  restart: 'always',
+  ports: [{ id: 'p1', host: '8080', container: '80' }],
+  env: [],
+  volumes: [],
+  command: '',
+});
+
+function generateComposeYamlFromServices(services: FormService[]): string {
+  if (!services || services.length === 0) {
+    return 'version: "3.8"\n\nservices:\n  app:\n    image: nginx:alpine\n    restart: always\n    ports:\n      - "8080:80"\n';
+  }
+
+  let yaml = 'version: "3.8"\n\nservices:\n';
+
+  for (const s of services) {
+    const sName = (s.name || 'app').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '') || 'app';
+    const sImg = (s.image || '').trim() || 'nginx:alpine';
+    const restart = s.restart || 'always';
+
+    yaml += `  ${sName}:\n`;
+    yaml += `    image: ${sImg}\n`;
+    yaml += `    restart: ${restart}\n`;
+
+    if (s.command && s.command.trim()) {
+      yaml += `    command: ${s.command.trim()}\n`;
+    }
+
+    const validPorts = s.ports.filter((p) => p.container.trim() !== '');
+    if (validPorts.length > 0) {
+      yaml += `    ports:\n`;
+      for (const p of validPorts) {
+        const h = p.host.trim();
+        const c = p.container.trim();
+        if (h) {
+          yaml += `      - "${h}:${c}"\n`;
+        } else {
+          yaml += `      - "${c}"\n`;
+        }
+      }
+    }
+
+    const validEnvs = s.env.filter((e) => e.key.trim() !== '');
+    if (validEnvs.length > 0) {
+      yaml += `    environment:\n`;
+      for (const e of validEnvs) {
+        yaml += `      ${e.key.trim()}: "${e.value}"\n`;
+      }
+    }
+
+    const validVols = s.volumes.filter((v) => v.container.trim() !== '');
+    if (validVols.length > 0) {
+      yaml += `    volumes:\n`;
+      for (const v of validVols) {
+        const h = v.host.trim();
+        const c = v.container.trim();
+        if (h) {
+          yaml += `      - ${h}:${c}\n`;
+        } else {
+          yaml += `      - ${c}\n`;
+        }
+      }
+    }
+
+    yaml += `\n`;
+  }
+
+  return yaml.trimEnd();
+}
+
+const POPULAR_DOCKER_IMAGES: string[] = [
+  'nginx:alpine',
+  'nginx:latest',
+  'postgres:16-alpine',
+  'postgres:15-alpine',
+  'redis:alpine',
+  'redis:7',
+  'node:20-alpine',
+  'node:22-alpine',
+  'python:3.12-slim',
+  'python:3.11-slim',
+  'mysql:8.0',
+  'mariadb:latest',
+  'mongo:latest',
+  'traefik:v3.0',
+  'louislam/uptime-kuma:1',
+  'portainer/portainer-ce:latest',
+  'vaultwarden/server:latest',
+  'grafana/grafana:latest',
+  'prom/prometheus:latest',
+  'wordpress:latest',
+  'nextcloud:apache',
+  'gitea/gitea:latest',
+  'memcached:alpine',
+  'rabbitmq:3-management',
+  'minio/minio:latest',
 ];
 
 /* ─── Helpers ─── */
@@ -471,6 +541,217 @@ function JsonTreeNode({
   );
 }
 
+/* ─── Real-Time Live Overlaid Syntax Highlighting YAML Editor ─── */
+
+function highlightYamlValue(val: string): React.ReactNode {
+  if (!val) return null;
+
+  const tokens: React.ReactNode[] = [];
+  const regex = /("[^"]*"|'[^']*'|\b(?:true|false|yes|no)\b|\b(?:always|unless-stopped|on-failure)\b|\b\d+\b|[^\s"'`]+|\s+)/g;
+  let match;
+
+  while ((match = regex.exec(val)) !== null) {
+    const token = match[0];
+    const key = `${match.index}-${token}`;
+    if (token.startsWith('"') || token.startsWith("'")) {
+      tokens.push(<span key={key} style={{ color: '#4ade80' }}>{token}</span>); // Emerald string
+    } else if (/^(true|false|yes|no)$/i.test(token)) {
+      tokens.push(<span key={key} style={{ color: '#f472b6', fontWeight: 600 }}>{token}</span>); // Pink boolean
+    } else if (/^\d+$/.test(token)) {
+      tokens.push(<span key={key} style={{ color: '#fb923c' }}>{token}</span>); // Orange number
+    } else if (/^(always|unless-stopped|on-failure)$/i.test(token)) {
+      tokens.push(<span key={key} style={{ color: '#c084fc', fontWeight: 500 }}>{token}</span>); // Purple restart
+    } else if (token.includes(':') && !token.startsWith('http')) {
+      const parts = token.split(':');
+      tokens.push(
+        <span key={key}>
+          <span style={{ color: '#e2e8f0' }}>{parts[0]}</span>
+          <span style={{ color: '#64748b' }}>:</span>
+          <span style={{ color: '#38bdf8' }}>{parts.slice(1).join(':')}</span>
+        </span>
+      );
+    } else {
+      tokens.push(<span key={key} style={{ color: '#e2e8f0' }}>{token}</span>);
+    }
+  }
+
+  return tokens.length > 0 ? tokens : <span>{val}</span>;
+}
+
+function highlightYamlLine(line: string): React.ReactNode {
+  if (!line) return <span>&nbsp;</span>;
+
+  // Full line comment
+  const trimmed = line.trimStart();
+  if (trimmed.startsWith('#')) {
+    const indent = line.substring(0, line.length - trimmed.length);
+    return (
+      <>
+        <span>{indent}</span>
+        <span style={{ color: '#64748b', fontStyle: 'italic' }}>{trimmed}</span>
+      </>
+    );
+  }
+
+  // Inline comment separation
+  let comment = '';
+  let content = line;
+  const hashIdx = line.indexOf(' #');
+  if (hashIdx !== -1) {
+    content = line.substring(0, hashIdx);
+    comment = line.substring(hashIdx);
+  }
+
+  // Key-value detection: indent + optional dash + key + colon + rest
+  const keyMatch = content.match(/^(\s*(?:-\s+)?)([a-zA-Z0-9_.-]+)(:)(\s*.*)$/);
+  if (keyMatch) {
+    const [, indentPrefix, keyName, colon, rest] = keyMatch;
+    return (
+      <>
+        <span style={{ color: '#64748b' }}>{indentPrefix}</span>
+        <span style={{ color: '#38bdf8', fontWeight: 600 }}>{keyName}</span>
+        <span style={{ color: '#64748b' }}>{colon}</span>
+        {highlightYamlValue(rest)}
+        {comment && <span style={{ color: '#64748b', fontStyle: 'italic' }}>{comment}</span>}
+      </>
+    );
+  }
+
+  // Dash list item without key (e.g. - "8080:80" or - ./data:/app)
+  const listMatch = content.match(/^(\s*-\s+)(.*)$/);
+  if (listMatch) {
+    const [, dashPrefix, rest] = listMatch;
+    return (
+      <>
+        <span style={{ color: '#64748b' }}>{dashPrefix}</span>
+        {highlightYamlValue(rest)}
+        {comment && <span style={{ color: '#64748b', fontStyle: 'italic' }}>{comment}</span>}
+      </>
+    );
+  }
+
+  return (
+    <>
+      {highlightYamlValue(content)}
+      {comment && <span style={{ color: '#64748b', fontStyle: 'italic' }}>{comment}</span>}
+    </>
+  );
+}
+
+function LiveYamlEditor({
+  value,
+  onChange,
+  disabled,
+  validation,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  disabled?: boolean;
+  validation: { valid: boolean; message: string };
+}) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const underlayRef = useRef<HTMLDivElement>(null);
+  const gutterRef = useRef<HTMLDivElement>(null);
+
+  const handleScroll = () => {
+    if (!textareaRef.current) return;
+    const top = textareaRef.current.scrollTop;
+    const left = textareaRef.current.scrollLeft;
+    if (underlayRef.current) {
+      underlayRef.current.scrollTop = top;
+      underlayRef.current.scrollLeft = left;
+    }
+    if (gutterRef.current) {
+      gutterRef.current.scrollTop = top;
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const ta = e.currentTarget;
+      const start = ta.selectionStart;
+      const end = ta.selectionEnd;
+      const val = ta.value;
+      const nextVal = val.substring(0, start) + '  ' + val.substring(end);
+      onChange(nextVal);
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.selectionStart = textareaRef.current.selectionEnd = start + 2;
+        }
+      }, 0);
+    }
+  };
+
+  const lineArray = useMemo(() => {
+    return (value || '').split('\n');
+  }, [value]);
+
+  return (
+    <div className={styles.yamlEditorWrapper}>
+      <div className={styles.yamlEditorHeader}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontWeight: 600, color: '#ededed' }}>docker-compose.yml</span>
+          <span style={{ fontSize: '10px', color: 'var(--text-muted, #737373)' }}>
+            ({lineArray.length} line{lineArray.length !== 1 ? 's' : ''})
+          </span>
+        </div>
+
+        <div className={styles.yamlValidationBadge}>
+          {validation.valid ? (
+            <span className={styles.yamlValid}>
+              <CheckCircle2 size={12} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '3px' }} />
+              {validation.message}
+            </span>
+          ) : (
+            <span className={styles.yamlInvalid}>
+              <AlertTriangle size={12} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '3px' }} />
+              {validation.message}
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div className={styles.yamlLiveContainer}>
+        {/* Line Numbers Gutter */}
+        <div ref={gutterRef} className={styles.yamlGutter}>
+          {lineArray.map((_, i) => (
+            <div key={i + 1} className={styles.yamlGutterLine}>
+              {i + 1}
+            </div>
+          ))}
+        </div>
+
+        {/* Highlighted Underlay + Transparent Textarea Layer */}
+        <div className={styles.yamlLiveLayer}>
+          <div ref={underlayRef} className={styles.yamlHighlightUnderlay}>
+            {lineArray.map((line, i) => (
+              <div key={i} className={styles.yamlHighlightLine}>
+                {highlightYamlLine(line)}
+              </div>
+            ))}
+          </div>
+
+          <textarea
+            ref={textareaRef}
+            className={styles.yamlTextareaOverlay}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            onScroll={handleScroll}
+            onKeyDown={handleKeyDown}
+            disabled={disabled}
+            placeholder="services:&#10;  app:&#10;    image: nginx:alpine"
+            spellCheck={false}
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ─── Main Component ─── */
 
 export default function DockerApp() {
@@ -501,13 +782,19 @@ export default function DockerApp() {
   const [stacksError, setStacksError]         = useState<string | null>(null);
 
   // Deploy Stack Modal state
-  const [showDeployModal, setShowDeployModal] = useState(false);
-  const [deployStackName, setDeployStackName] = useState('');
-  const [deployYaml, setDeployYaml]           = useState(QUICK_TEMPLATES[0].yaml);
-  const [deployEditorMode, setDeployEditorMode] = useState<'edit' | 'preview'>('edit');
-  const [deploying, setDeploying]             = useState(false);
-  const [deployConsoleLogs, setDeployConsoleLogs] = useState<string[]>([]);
-  const [deployError, setDeployError]         = useState<string | null>(null);
+  const [showDeployModal, setShowDeployModal]         = useState(false);
+  const [deployMode, setDeployMode]                   = useState<'form' | 'yaml'>('form');
+  const [deployStackName, setDeployStackName]         = useState('');
+  const [formServices, setFormServices]               = useState<FormService[]>([createDefaultService(1)]);
+  const [showEnvPasswords, setShowEnvPasswords]       = useState<Record<string, boolean>>({});
+  const [deployYaml, setDeployYaml]                   = useState(() => generateComposeYamlFromServices([createDefaultService(1)]));
+  const [deploying, setDeploying]                     = useState(false);
+  const [deployConsoleLogs, setDeployConsoleLogs]     = useState<string[]>([]);
+  const [deployError, setDeployError]                 = useState<string | null>(null);
+  const fileInputRef                                  = useRef<HTMLInputElement>(null);
+
+  // In-App Stack Delete Confirmation Dialog state
+  const [stackToDelete, setStackToDelete]             = useState<string | null>(null);
 
   // Stack Logs Modal state
   const [selectedStackLogsName, setSelectedStackLogsName] = useState<string | null>(null);
@@ -560,6 +847,26 @@ export default function DockerApp() {
   const [confirmDeleteImageId, setConfirmDeleteImageId] = useState<string | null>(null);
   const [pruningImages, setPruningImages]           = useState(false);
   const [pruneFeedback, setPruneFeedback]           = useState<{ message: string; isError?: boolean } | null>(null);
+
+  // Suggested & local images for autocomplete
+  const suggestedImages = useMemo(() => {
+    const localTags: string[] = [];
+    images.forEach((img) => {
+      if (img.RepoTags && Array.isArray(img.RepoTags)) {
+        img.RepoTags.forEach((t) => {
+          if (t && t !== '<none>:<none>') localTags.push(t);
+        });
+      }
+    });
+
+    const set = new Set(localTags);
+    const popularUncached = POPULAR_DOCKER_IMAGES.filter((img) => !set.has(img));
+
+    return {
+      local: localTags,
+      popular: popularUncached,
+    };
+  }, [images]);
 
   // Run Container Modal state
   const [runModalImage, setRunModalImage]           = useState<string | null>(null);
@@ -766,8 +1073,11 @@ export default function DockerApp() {
     }
   };
 
-  const handleDeleteStack = async (name: string) => {
-    if (!confirm(`Are you sure you want to remove stack '${name}'? This will stop containers and remove volumes.`)) return;
+  const handleDeleteStack = (name: string) => {
+    setStackToDelete(name);
+  };
+
+  const confirmAndExecuteDeleteStack = async (name: string) => {
     setActionLoading(`delete-${name}`);
     try {
       const res = await fetch(`/api/docker/stacks/${name}`, { method: 'DELETE' });
@@ -781,7 +1091,194 @@ export default function DockerApp() {
       alert(err.message);
     } finally {
       setActionLoading(null);
+      setStackToDelete(null);
     }
+  };
+
+  const openDeployModal = () => {
+    const initialServices = [createDefaultService(1)];
+    setDeployStackName('');
+    setFormServices(initialServices);
+    setDeployMode('form');
+    setDeployYaml(generateComposeYamlFromServices(initialServices));
+    setDeployConsoleLogs([]);
+    setDeployError(null);
+    setShowDeployModal(true);
+  };
+
+  const handleAddService = () => {
+    setFormServices((prev) => {
+      const next = [...prev, createDefaultService(prev.length + 1)];
+      setDeployYaml(generateComposeYamlFromServices(next));
+      return next;
+    });
+  };
+
+  const handleRemoveService = (serviceId: string) => {
+    setFormServices((prev) => {
+      if (prev.length <= 1) return prev;
+      const next = prev.filter((s) => s.id !== serviceId);
+      setDeployYaml(generateComposeYamlFromServices(next));
+      return next;
+    });
+  };
+
+  const handleServiceChange = (serviceId: string, field: keyof FormService, value: any) => {
+    setFormServices((prev) => {
+      const next = prev.map((s) => (s.id === serviceId ? { ...s, [field]: value } : s));
+      setDeployYaml(generateComposeYamlFromServices(next));
+      return next;
+    });
+  };
+
+  const handleAddPort = (serviceId: string) => {
+    setFormServices((prev) => {
+      const next = prev.map((s) => {
+        if (s.id !== serviceId) return s;
+        return {
+          ...s,
+          ports: [...s.ports, { id: Math.random().toString(36).substring(2, 7), host: '', container: '' }],
+        };
+      });
+      setDeployYaml(generateComposeYamlFromServices(next));
+      return next;
+    });
+  };
+
+  const handlePortChange = (serviceId: string, portId: string, field: 'host' | 'container', val: string) => {
+    setFormServices((prev) => {
+      const next = prev.map((s) => {
+        if (s.id !== serviceId) return s;
+        return {
+          ...s,
+          ports: s.ports.map((p) => (p.id === portId ? { ...p, [field]: val } : p)),
+        };
+      });
+      setDeployYaml(generateComposeYamlFromServices(next));
+      return next;
+    });
+  };
+
+  const handleRemovePort = (serviceId: string, portId: string) => {
+    setFormServices((prev) => {
+      const next = prev.map((s) => {
+        if (s.id !== serviceId) return s;
+        return {
+          ...s,
+          ports: s.ports.filter((p) => p.id !== portId),
+        };
+      });
+      setDeployYaml(generateComposeYamlFromServices(next));
+      return next;
+    });
+  };
+
+  const handleAddEnv = (serviceId: string) => {
+    setFormServices((prev) => {
+      const next = prev.map((s) => {
+        if (s.id !== serviceId) return s;
+        return {
+          ...s,
+          env: [...s.env, { id: Math.random().toString(36).substring(2, 7), key: '', value: '' }],
+        };
+      });
+      setDeployYaml(generateComposeYamlFromServices(next));
+      return next;
+    });
+  };
+
+  const handleEnvChange = (serviceId: string, envId: string, field: 'key' | 'value', val: string) => {
+    setFormServices((prev) => {
+      const next = prev.map((s) => {
+        if (s.id !== serviceId) return s;
+        return {
+          ...s,
+          env: s.env.map((e) => (e.id === envId ? { ...e, [field]: val } : e)),
+        };
+      });
+      setDeployYaml(generateComposeYamlFromServices(next));
+      return next;
+    });
+  };
+
+  const handleGenerateEnvPassword = (serviceId: string, envId: string) => {
+    const pass = generateRandomPassword(16);
+    handleEnvChange(serviceId, envId, 'value', pass);
+  };
+
+  const handleRemoveEnv = (serviceId: string, envId: string) => {
+    setFormServices((prev) => {
+      const next = prev.map((s) => {
+        if (s.id !== serviceId) return s;
+        return {
+          ...s,
+          env: s.env.filter((e) => e.id !== envId),
+        };
+      });
+      setDeployYaml(generateComposeYamlFromServices(next));
+      return next;
+    });
+  };
+
+  const handleAddVolume = (serviceId: string) => {
+    setFormServices((prev) => {
+      const next = prev.map((s) => {
+        if (s.id !== serviceId) return s;
+        return {
+          ...s,
+          volumes: [...s.volumes, { id: Math.random().toString(36).substring(2, 7), host: '', container: '' }],
+        };
+      });
+      setDeployYaml(generateComposeYamlFromServices(next));
+      return next;
+    });
+  };
+
+  const handleVolumeChange = (serviceId: string, volumeId: string, field: 'host' | 'container', val: string) => {
+    setFormServices((prev) => {
+      const next = prev.map((s) => {
+        if (s.id !== serviceId) return s;
+        return {
+          ...s,
+          volumes: s.volumes.map((v) => (v.id === volumeId ? { ...v, [field]: val } : v)),
+        };
+      });
+      setDeployYaml(generateComposeYamlFromServices(next));
+      return next;
+    });
+  };
+
+  const handleRemoveVolume = (serviceId: string, volumeId: string) => {
+    setFormServices((prev) => {
+      const next = prev.map((s) => {
+        if (s.id !== serviceId) return s;
+        return {
+          ...s,
+          volumes: s.volumes.filter((v) => v.id !== volumeId),
+        };
+      });
+      setDeployYaml(generateComposeYamlFromServices(next));
+      return next;
+    });
+  };
+
+  const handleYamlFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+      if (content) {
+        setDeployYaml(content);
+        const baseName = file.name.replace(/\.(ya?ml)$/i, '').toLowerCase().replace(/[^a-z0-9-]/g, '');
+        if (baseName && !deployStackName.trim()) {
+          setDeployStackName(baseName === 'docker-compose' ? 'custom-stack' : baseName);
+        }
+        setDeployMode('yaml');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
   };
 
   const handleEditStack = async (name: string) => {
@@ -791,6 +1288,7 @@ export default function DockerApp() {
         const data = await res.json();
         setDeployStackName(name);
         setDeployYaml(data.yaml || '');
+        setDeployMode('yaml');
         setDeployConsoleLogs([]);
         setDeployError(null);
         setShowDeployModal(true);
@@ -1788,21 +2286,6 @@ export default function DockerApp() {
 
         {/* Global Action Right */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {activeWindowTab === 'stacks' && (
-            <button
-              className={styles.btnPrimary}
-              onClick={() => {
-                setDeployStackName('');
-                setDeployYaml(QUICK_TEMPLATES[0].yaml);
-                setDeployConsoleLogs([]);
-                setDeployError(null);
-                setShowDeployModal(true);
-              }}
-            >
-              <Plus size={13} /> Deploy Stack
-            </button>
-          )}
-
           <button
             className={styles.refreshBtn}
             onClick={() => {
@@ -2259,11 +2742,20 @@ export default function DockerApp() {
                 <input
                   className={styles.pullInput}
                   type="text"
+                  list="popular-pull-images"
                   value={imageInput}
                   onChange={(e) => setImageInput(e.target.value)}
                   placeholder="Pull image (e.g. redis:alpine, postgres:15)"
                   disabled={!!pullingImage}
+                  autoComplete="off"
                 />
+                <datalist id="popular-pull-images">
+                  {suggestedImages.popular.map((img) => (
+                    <option key={`pull-pop-${img}`} value={img}>
+                      {img} (Docker Hub)
+                    </option>
+                  ))}
+                </datalist>
                 <button className={styles.pullBtn} type="submit" disabled={!!pullingImage || !imageInput.trim() || pruningImages}>
                   {pullingImage ? 'Pulling…' : 'Pull Image'}
                 </button>
@@ -2509,6 +3001,13 @@ export default function DockerApp() {
                 <span className={styles.liveDot} />
                 <span>{stacks.filter((s) => s.status === 'running').length} active stacks</span>
               </div>
+              <button
+                className={styles.btnPrimary}
+                onClick={openDeployModal}
+                title="Deploy a new multi-container compose stack"
+              >
+                <Plus size={12} /> Deploy Stack
+              </button>
             </div>
           </div>
 
@@ -2532,18 +3031,12 @@ export default function DockerApp() {
                   {stackSearchQuery ? 'No stacks match your query' : 'No Docker compose stacks deployed'}
                 </p>
                 <p className={styles.emptySubtext}>
-                  Deploy multi-container applications easily with compose templates or custom YAML
+                  Deploy multi-container applications easily with guided templates or custom Compose YAML
                 </p>
                 <button
                   className={styles.btnPrimary}
                   style={{ marginTop: '12px' }}
-                  onClick={() => {
-                    setDeployStackName('');
-                    setDeployYaml(QUICK_TEMPLATES[0].yaml);
-                    setDeployConsoleLogs([]);
-                    setDeployError(null);
-                    setShowDeployModal(true);
-                  }}
+                  onClick={openDeployModal}
                 >
                   <Plus size={13} /> Deploy First Stack
                 </button>
@@ -2682,7 +3175,7 @@ export default function DockerApp() {
               </button>
             </div>
 
-            <form onSubmit={handleDeploySubmit}>
+            <form onSubmit={handleDeploySubmit} className={styles.modalForm}>
               <div className={styles.modalBody}>
                 {deployError && (
                   <div className={styles.alertError}>
@@ -2691,123 +3184,408 @@ export default function DockerApp() {
                   </div>
                 )}
 
-                <div className={styles.fieldGroup}>
-                  <label className={styles.fieldLabel}>Stack Name</label>
-                  <input
-                    className={styles.fieldInput}
-                    type="text"
-                    value={deployStackName}
-                    onChange={(e) => setDeployStackName(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
-                    placeholder="e.g. web-app, postgres-cluster, microservices"
-                    required
-                    disabled={deploying}
-                  />
-                </div>
-
-                {/* Template Selector Pills */}
-                <div>
-                  <label className={styles.fieldLabel} style={{ marginBottom: '6px', display: 'block' }}>
-                    Quick Templates
-                  </label>
-                  <div className={styles.templatePills}>
-                    {QUICK_TEMPLATES.map((t) => (
-                      <button
-                        key={t.label}
-                        type="button"
-                        className={`${styles.templatePill} ${deployYaml === t.yaml ? styles.templatePillActive : ''}`}
-                        onClick={() => setDeployYaml(t.yaml)}
-                        disabled={deploying}
-                      >
-                        {t.label}
-                      </button>
-                    ))}
+                {/* Stack Name & Controls Bar */}
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
+                  <div className={styles.fieldGroup} style={{ flex: 1, marginBottom: 0 }}>
+                    <label className={styles.fieldLabel}>Stack Name</label>
+                    <input
+                      className={styles.fieldInput}
+                      type="text"
+                      value={deployStackName}
+                      onChange={(e) => {
+                        const name = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
+                        setDeployStackName(name);
+                      }}
+                      placeholder="e.g. my-app, production-stack, backend"
+                      required
+                      disabled={deploying}
+                    />
                   </div>
-                </div>
 
-                {/* Compose Editor with Prism Syntax Highlighting and Real-time Validation */}
-                <div className={styles.fieldGroup}>
-                  <div className={styles.yamlEditorWrapper}>
-                    <div className={styles.yamlEditorHeader}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontWeight: 600, color: '#ededed' }}>docker-compose.yml</span>
-                        <div className={styles.filterPills} style={{ padding: '1px' }}>
-                          <button
-                            type="button"
-                            className={`${styles.filterPill} ${deployEditorMode === 'edit' ? styles.filterPillActive : ''}`}
-                            onClick={() => setDeployEditorMode('edit')}
-                          >
-                            <Code size={11} /> Editor
-                          </button>
-                          <button
-                            type="button"
-                            className={`${styles.filterPill} ${deployEditorMode === 'preview' ? styles.filterPillActive : ''}`}
-                            onClick={() => setDeployEditorMode('preview')}
-                          >
-                            <Eye size={11} /> Highlight
-                          </button>
-                        </div>
-                      </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                    <label className={styles.fieldLabel} style={{ marginBottom: 0 }}>Mode & Import</label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        accept=".yml,.yaml,text/yaml,text/plain"
+                        onChange={handleYamlFileUpload}
+                        style={{ display: 'none' }}
+                      />
+                      <button
+                        type="button"
+                        className={styles.btnSecondary}
+                        style={{ padding: '3px 8px', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px', height: '26px' }}
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={deploying}
+                        title="Upload a docker-compose.yml file from disk"
+                      >
+                        <Upload size={11} /> Upload YAML
+                      </button>
 
-                      <div className={styles.yamlValidationBadge}>
-                        {yamlValidation.valid ? (
-                          <span className={styles.yamlValid}>
-                            <CheckCircle2 size={12} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '3px' }} />
-                            {yamlValidation.message}
-                          </span>
-                        ) : (
-                          <span className={styles.yamlInvalid}>
-                            <AlertTriangle size={12} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '3px' }} />
-                            {yamlValidation.message}
-                          </span>
-                        )}
+                      <div className={styles.filterPills}>
+                        <button
+                          type="button"
+                          className={`${styles.filterPill} ${deployMode === 'form' ? styles.filterPillActive : ''}`}
+                          onClick={() => {
+                            setDeployMode('form');
+                            setDeployYaml(generateComposeYamlFromServices(formServices));
+                          }}
+                          disabled={deploying}
+                          title="Configure any stack using simple visual form fields"
+                        >
+                          <Sliders size={11} /> Form View
+                        </button>
+                        <button
+                          type="button"
+                          className={`${styles.filterPill} ${deployMode === 'yaml' ? styles.filterPillActive : ''}`}
+                          onClick={() => {
+                            setDeployMode('yaml');
+                            setDeployYaml(generateComposeYamlFromServices(formServices));
+                          }}
+                          disabled={deploying}
+                          title="Edit raw Compose YAML with live line numbers and syntax validation"
+                        >
+                          <Code size={11} /> YAML Editor
+                        </button>
                       </div>
                     </div>
-
-                    {deployEditorMode === 'edit' ? (
-                      <textarea
-                        className={styles.yamlTextarea}
-                        value={deployYaml}
-                        onChange={(e) => setDeployYaml(e.target.value)}
-                        placeholder="services:&#10;  web:&#10;    image: nginx:alpine"
-                        required
-                        disabled={deploying}
-                        spellCheck={false}
-                      />
-                    ) : (
-                      <div className={styles.yamlPreview}>
-                        <Highlight theme={themes.vsDark} code={deployYaml || '# Empty Compose File'} language="yaml">
-                          {({ className, style, tokens, getLineProps, getTokenProps }) => (
-                            <pre className={className} style={{ ...style, margin: 0, background: '#000000', padding: 0 }}>
-                              {tokens.map((line, i) => (
-                                <div key={i} {...getLineProps({ line })} style={{ display: 'flex' }}>
-                                  <span
-                                    style={{
-                                      width: '28px',
-                                      userSelect: 'none',
-                                      opacity: 0.35,
-                                      fontSize: '11px',
-                                      textAlign: 'right',
-                                      paddingRight: '10px',
-                                      color: '#737373',
-                                      fontFamily: 'var(--mono)',
-                                    }}
-                                  >
-                                    {i + 1}
-                                  </span>
-                                  <div>
-                                    {line.map((token, key) => (
-                                      <span key={key} {...getTokenProps({ token })} />
-                                    ))}
-                                  </div>
-                                </div>
-                              ))}
-                            </pre>
-                          )}
-                        </Highlight>
-                      </div>
-                    )}
                   </div>
                 </div>
+
+                {/* Mode 1: Universal Multi-Service Form View */}
+                {deployMode === 'form' ? (
+                  <div className={styles.servicesList}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px' }}>
+                      <span className={styles.modalSectionTitle} style={{ margin: 0 }}>
+                        Defined Services ({formServices.length})
+                      </span>
+                      <button
+                        type="button"
+                        className={styles.addBtnSub}
+                        onClick={handleAddService}
+                        disabled={deploying}
+                      >
+                        <Plus size={11} /> Add Service
+                      </button>
+                    </div>
+
+                    {formServices.map((service, sIdx) => (
+                      <div key={service.id} className={styles.serviceCard}>
+                        {/* Service Card Header */}
+                        <div className={styles.serviceCardHeader}>
+                          <div className={styles.serviceCardTitle}>
+                            <Box size={13} style={{ color: '#3b82f6' }} />
+                            <span>Service #{sIdx + 1}: {service.name || 'Untitled'}</span>
+                          </div>
+                          {formServices.length > 1 && (
+                            <button
+                              type="button"
+                              className={styles.iconBtnSmall}
+                              title="Delete service"
+                              onClick={() => handleRemoveService(service.id)}
+                              disabled={deploying}
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Service Name & Image */}
+                        <div className={styles.formGrid}>
+                          <div className={styles.fieldGroup}>
+                            <label className={styles.fieldLabel}>Service Name</label>
+                            <input
+                              className={styles.fieldInput}
+                              type="text"
+                              value={service.name}
+                              onChange={(e) => handleServiceChange(service.id, 'name', e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))}
+                              placeholder="e.g. web, api, db, redis"
+                              required
+                              disabled={deploying}
+                            />
+                          </div>
+
+                          <div className={styles.fieldGroup}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                              <label className={styles.fieldLabel}>Container Image</label>
+                              {suggestedImages.local.length > 0 && (
+                                <span style={{ fontSize: '10px', color: '#22c55e', fontFamily: 'var(--mono)' }}>
+                                  {suggestedImages.local.length} local available
+                                </span>
+                              )}
+                            </div>
+                            <input
+                              className={styles.fieldInput}
+                              type="text"
+                              list={`image-suggestions-${service.id}`}
+                              value={service.image}
+                              onChange={(e) => handleServiceChange(service.id, 'image', e.target.value)}
+                              placeholder="e.g. nginx:alpine, postgres:16, redis:7"
+                              required
+                              disabled={deploying}
+                              autoComplete="off"
+                            />
+                            <datalist id={`image-suggestions-${service.id}`}>
+                              {suggestedImages.local.map((img) => (
+                                <option key={`loc-${img}`} value={img}>
+                                  {img} (Local Image)
+                                </option>
+                              ))}
+                              {suggestedImages.popular.map((img) => (
+                                <option key={`pop-${img}`} value={img}>
+                                  {img} (Docker Hub)
+                                </option>
+                              ))}
+                            </datalist>
+                          </div>
+                        </div>
+
+                        {/* Restart Policy & Command */}
+                        <div className={styles.formGrid}>
+                          <div className={styles.fieldGroup}>
+                            <label className={styles.fieldLabel}>Restart Policy</label>
+                            <select
+                              className={styles.selectInput}
+                              value={service.restart}
+                              onChange={(e) => handleServiceChange(service.id, 'restart', e.target.value)}
+                              disabled={deploying}
+                            >
+                              <option value="always">always</option>
+                              <option value="unless-stopped">unless-stopped</option>
+                              <option value="on-failure">on-failure</option>
+                              <option value="no">no</option>
+                            </select>
+                          </div>
+
+                          <div className={styles.fieldGroup}>
+                            <label className={styles.fieldLabel}>Custom Command (Optional)</label>
+                            <input
+                              className={styles.fieldInput}
+                              type="text"
+                              value={service.command}
+                              onChange={(e) => handleServiceChange(service.id, 'command', e.target.value)}
+                              placeholder="e.g. npm start, python app.py"
+                              disabled={deploying}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Port Mappings */}
+                        <div className={styles.subSection}>
+                          <div className={styles.subSectionHeader}>
+                            <span>Port Mappings (Host:Container)</span>
+                            <button
+                              type="button"
+                              className={styles.addBtnSub}
+                              onClick={() => handleAddPort(service.id)}
+                              disabled={deploying}
+                            >
+                              <Plus size={10} /> Add Port
+                            </button>
+                          </div>
+                          {service.ports.length === 0 ? (
+                            <span style={{ fontSize: '10.5px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                              No port mappings defined
+                            </span>
+                          ) : (
+                            service.ports.map((p) => (
+                              <div key={p.id} className={styles.subRow}>
+                                <input
+                                  className={`${styles.fieldInput} ${styles.subRowInput}`}
+                                  type="text"
+                                  value={p.host}
+                                  onChange={(e) => handlePortChange(service.id, p.id, 'host', e.target.value)}
+                                  placeholder="Host Port (e.g. 8080)"
+                                  disabled={deploying}
+                                />
+                                <span style={{ color: '#525252', fontSize: '12px' }}>:</span>
+                                <input
+                                  className={`${styles.fieldInput} ${styles.subRowInput}`}
+                                  type="text"
+                                  value={p.container}
+                                  onChange={(e) => handlePortChange(service.id, p.id, 'container', e.target.value)}
+                                  placeholder="Container Port (e.g. 80)"
+                                  disabled={deploying}
+                                />
+                                <button
+                                  type="button"
+                                  className={styles.iconBtnSmall}
+                                  onClick={() => handleRemovePort(service.id, p.id)}
+                                  disabled={deploying}
+                                  title="Remove port"
+                                >
+                                  <X size={12} />
+                                </button>
+                              </div>
+                            ))
+                          )}
+                        </div>
+
+                        {/* Environment Variables */}
+                        <div className={styles.subSection}>
+                          <div className={styles.subSectionHeader}>
+                            <span>Environment Variables (KEY=VALUE)</span>
+                            <button
+                              type="button"
+                              className={styles.addBtnSub}
+                              onClick={() => handleAddEnv(service.id)}
+                              disabled={deploying}
+                            >
+                              <Plus size={10} /> Add Variable
+                            </button>
+                          </div>
+                          {service.env.length === 0 ? (
+                            <span style={{ fontSize: '10.5px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                              No environment variables defined
+                            </span>
+                          ) : (
+                            service.env.map((e) => {
+                              const showVal = showEnvPasswords[e.id];
+                              return (
+                                <div key={e.id} className={styles.subRow}>
+                                  <input
+                                    className={`${styles.fieldInput} ${styles.subRowInput}`}
+                                    type="text"
+                                    value={e.key}
+                                    onChange={(evt) => handleEnvChange(service.id, e.id, 'key', evt.target.value)}
+                                    placeholder="KEY (e.g. DB_PASS)"
+                                    disabled={deploying}
+                                  />
+                                  <span style={{ color: '#525252', fontSize: '12px' }}>=</span>
+                                  <div className={styles.passwordInputWrapper}>
+                                    <input
+                                      className={styles.fieldInput}
+                                      type={showVal ? 'text' : 'password'}
+                                      value={e.value}
+                                      onChange={(evt) => handleEnvChange(service.id, e.id, 'value', evt.target.value)}
+                                      placeholder="VALUE"
+                                      disabled={deploying}
+                                    />
+                                    <button
+                                      type="button"
+                                      className={styles.passwordToggleBtn}
+                                      onClick={() => setShowEnvPasswords((prev) => ({ ...prev, [e.id]: !prev[e.id] }))}
+                                      title={showVal ? 'Hide password' : 'Show password'}
+                                    >
+                                      {showVal ? <EyeOff size={12} /> : <Eye size={12} />}
+                                    </button>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    className={styles.iconBtnSmall}
+                                    onClick={() => handleGenerateEnvPassword(service.id, e.id)}
+                                    title="Generate random password"
+                                    disabled={deploying}
+                                  >
+                                    <Sparkles size={12} style={{ color: '#60a5fa' }} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className={styles.iconBtnSmall}
+                                    onClick={() => handleRemoveEnv(service.id, e.id)}
+                                    disabled={deploying}
+                                    title="Remove variable"
+                                  >
+                                    <X size={12} />
+                                  </button>
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+
+                        {/* Volume Mounts */}
+                        <div className={styles.subSection}>
+                          <div className={styles.subSectionHeader}>
+                            <span>Volume Mounts (Host:Container)</span>
+                            <button
+                              type="button"
+                              className={styles.addBtnSub}
+                              onClick={() => handleAddVolume(service.id)}
+                              disabled={deploying}
+                            >
+                              <Plus size={10} /> Add Volume
+                            </button>
+                          </div>
+                          {service.volumes.length === 0 ? (
+                            <span style={{ fontSize: '10.5px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                              No volume mounts defined
+                            </span>
+                          ) : (
+                            service.volumes.map((v) => (
+                              <div key={v.id} className={styles.subRow}>
+                                <input
+                                  className={`${styles.fieldInput} ${styles.subRowInput}`}
+                                  type="text"
+                                  value={v.host}
+                                  onChange={(e) => handleVolumeChange(service.id, v.id, 'host', e.target.value)}
+                                  placeholder="Host Path or Volume (e.g. ./data)"
+                                  disabled={deploying}
+                                />
+                                <span style={{ color: '#525252', fontSize: '12px' }}>:</span>
+                                <input
+                                  className={`${styles.fieldInput} ${styles.subRowInput}`}
+                                  type="text"
+                                  value={v.container}
+                                  onChange={(e) => handleVolumeChange(service.id, v.id, 'container', e.target.value)}
+                                  placeholder="Container Path (e.g. /var/lib/data)"
+                                  disabled={deploying}
+                                />
+                                <button
+                                  type="button"
+                                  className={styles.iconBtnSmall}
+                                  onClick={() => handleRemoveVolume(service.id, v.id)}
+                                  disabled={deploying}
+                                  title="Remove volume"
+                                >
+                                  <X size={12} />
+                                </button>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    ))}
+
+                    <button
+                      type="button"
+                      className={styles.addServiceBtn}
+                      onClick={handleAddService}
+                      disabled={deploying}
+                    >
+                      <Plus size={13} /> Add Another Service
+                    </button>
+
+                    {/* Summary Bar linking to YAML */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '6px', borderTop: '1px solid #1a1a1a', fontSize: '11px', color: 'var(--text-muted)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <CheckCircle2 size={12} style={{ color: '#22c55e' }} />
+                        <span>Compose YAML synchronized ({deployYaml.split('\n').length} lines)</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDeployMode('yaml');
+                          setDeployYaml(generateComposeYamlFromServices(formServices));
+                        }}
+                        style={{ background: 'transparent', border: 'none', color: '#60a5fa', cursor: 'pointer', fontSize: '11px', textDecoration: 'underline' }}
+                      >
+                        View in YAML Editor →
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  /* Mode 2: Live Overlaid Syntax Highlighting YAML Editor */
+                  <div className={styles.fieldGroup} style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', margin: 0 }}>
+                    <LiveYamlEditor
+                      value={deployYaml}
+                      onChange={setDeployYaml}
+                      disabled={deploying}
+                      validation={yamlValidation}
+                    />
+                  </div>
+                )}
 
                 {/* Deployment Progress Logs */}
                 {deployConsoleLogs.length > 0 && (
@@ -2829,17 +3607,95 @@ export default function DockerApp() {
                   onClick={() => setShowDeployModal(false)}
                   disabled={deploying}
                 >
-                  Close
+                  Cancel
                 </button>
                 <button
                   type="submit"
                   className={styles.btnPrimary}
-                  disabled={deploying || !deployStackName.trim() || !deployYaml.trim()}
+                  disabled={deploying || !yamlValidation.valid || !deployStackName.trim()}
                 >
                   {deploying ? 'Deploying Stack…' : 'Deploy Stack'}
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ───── In-App Remove Stack Confirmation Modal ───── */}
+      {stackToDelete && (
+        <div className={styles.modalOverlay} onClick={() => !actionLoading && setStackToDelete(null)}>
+          <div
+            className={styles.modalCard}
+            style={{ maxWidth: '440px', border: '1px solid #ef4444' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={styles.modalHeader}>
+              <div className={styles.modalTitle} style={{ color: '#ef4444' }}>
+                <AlertTriangle size={15} />
+                <span>Remove Docker Stack</span>
+              </div>
+              <button
+                className={styles.modalCloseBtn}
+                onClick={() => !actionLoading && setStackToDelete(null)}
+                disabled={Boolean(actionLoading)}
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            <div className={styles.modalBody} style={{ padding: '16px', gap: '12px' }}>
+              <p style={{ margin: 0, fontSize: '13px', color: '#ededed', lineHeight: '1.5' }}>
+                Are you sure you want to remove stack{' '}
+                <strong style={{ color: '#ffffff', fontFamily: 'var(--mono)' }}>{stackToDelete}</strong>?
+              </p>
+              <div
+                style={{
+                  padding: '10px 12px',
+                  background: 'rgba(239, 68, 68, 0.08)',
+                  border: '1px solid rgba(239, 68, 68, 0.25)',
+                  borderRadius: '6px',
+                  fontSize: '11px',
+                  color: '#fca5a5',
+                  lineHeight: '1.4',
+                }}
+              >
+                ⚠ This will permanently stop and remove all associated containers, networks, and volumes managed by this stack.
+              </div>
+            </div>
+
+            <div className={styles.modalFooter}>
+              <button
+                type="button"
+                className={styles.btnSecondary}
+                onClick={() => setStackToDelete(null)}
+                disabled={Boolean(actionLoading)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className={styles.btnDanger}
+                style={{
+                  background: '#ef4444',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '6px 14px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+                disabled={Boolean(actionLoading)}
+                onClick={() => confirmAndExecuteDeleteStack(stackToDelete)}
+              >
+                <Trash2 size={13} />
+                {actionLoading === `delete-${stackToDelete}` ? 'Removing…' : 'Remove Stack'}
+              </button>
+            </div>
           </div>
         </div>
       )}

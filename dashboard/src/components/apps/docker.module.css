@@ -1471,7 +1471,8 @@
   align-items: center;
   justify-content: center;
   z-index: 100;
-  padding: 16px;
+  padding: 12px;
+  overflow: hidden;
 }
 
 .modalCard {
@@ -1479,11 +1480,21 @@
   border: 1px solid #262626;
   border-radius: 10px;
   width: 100%;
-  max-width: 580px;
-  max-height: 88vh;
+  max-width: 680px;
+  height: calc(100% - 16px);
+  max-height: 590px;
+  min-height: 420px;
   display: flex;
   flex-direction: column;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.9);
+  overflow: hidden;
+}
+
+.modalForm {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -1494,6 +1505,7 @@
   padding: 12px 16px;
   border-bottom: 1px solid #262626;
   background: #0a0a0a;
+  flex-shrink: 0;
 }
 
 .modalTitle {
@@ -1525,12 +1537,14 @@
 }
 
 .modalBody {
-  padding: 16px;
+  padding: 14px 16px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
   background: #0a0a0a;
+  flex: 1;
+  min-height: 0;
 }
 
 .modalSectionTitle {
@@ -1650,6 +1664,7 @@
   padding: 12px 16px;
   border-top: 1px solid #262626;
   background: #0a0a0a;
+  flex-shrink: 0;
 }
 
 /* ─── Stacks Grid & Compose Cards ─── */
@@ -1840,6 +1855,166 @@
   font-weight: 600;
 }
 
+/* ─── Multi-Service Form Builder ─── */
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.servicesList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.serviceCard {
+  background: #050505;
+  border: 1px solid #262626;
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.serviceCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #1a1a1a;
+}
+
+.serviceCardTitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: #ededed;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.subSection {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: #000000;
+  border: 1px solid #1f1f1f;
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.subSectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary, #a1a1a1);
+  margin-bottom: 2px;
+}
+
+.subRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.subRowInput {
+  flex: 1;
+  min-width: 0;
+}
+
+.addBtnSub {
+  background: #171717;
+  border: 1px solid #333333;
+  color: #ededed;
+  border-radius: 4px;
+  padding: 2px 7px;
+  font-size: 10.5px;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.12s ease;
+}
+
+.addBtnSub:hover {
+  background: #262626;
+  color: #ffffff;
+  border-color: #404040;
+}
+
+.addServiceBtn {
+  background: #0a0a0a;
+  border: 1px dashed #333333;
+  color: #ededed;
+  border-radius: 6px;
+  padding: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.addServiceBtn:hover {
+  background: #141414;
+  border-color: #555555;
+  color: #ffffff;
+}
+
+.iconBtnSmall {
+  background: transparent;
+  border: none;
+  color: var(--text-muted, #737373);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.12s ease;
+}
+
+.iconBtnSmall:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.passwordInputWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.passwordToggleBtn {
+  position: absolute;
+  right: 6px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted, #737373);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+}
+
+.passwordToggleBtn:hover {
+  color: #ededed;
+}
+
+/* ─── Live Overlaid YAML Code Editor ─── */
+
 .yamlEditorWrapper {
   position: relative;
   display: flex;
@@ -1848,6 +2023,9 @@
   border: 1px solid #262626;
   border-radius: 7px;
   overflow: hidden;
+  flex: 1;
+  min-height: 240px;
+  height: 100%;
 }
 
 .yamlEditorHeader {
@@ -1858,6 +2036,7 @@
   background: #050505;
   border-bottom: 1px solid #262626;
   font-size: 10.5px;
+  flex-shrink: 0;
 }
 
 .yamlValidationBadge {
@@ -1876,31 +2055,100 @@
   color: #facc15;
 }
 
-.yamlTextarea {
-  width: 100%;
-  height: 220px;
+.yamlLiveContainer {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  height: 100%;
   background: #000000;
-  border: none;
-  color: #f4f4f5;
+  overflow: hidden;
   font-family: var(--mono, monospace);
   font-size: 12px;
-  line-height: 1.45;
-  padding: 10px 12px;
-  resize: vertical;
-  outline: none;
-  tab-size: 2;
+  line-height: 18px;
+}
+
+.yamlGutter {
+  width: 38px;
+  background: #050505;
+  border-right: 1px solid #262626;
+  padding: 10px 0;
+  user-select: none;
+  overflow: hidden;
+  text-align: right;
+  color: #555555;
+  font-family: var(--mono, monospace);
+  font-size: 12px;
+  line-height: 18px;
+  flex-shrink: 0;
+}
+
+.yamlGutterLine {
+  padding-right: 8px;
+  height: 18px;
+  line-height: 18px;
   box-sizing: border-box;
 }
 
-.yamlPreview {
-  height: 220px;
-  overflow: auto;
-  background: #000000;
-  padding: 10px 12px;
+.yamlLiveLayer {
+  position: relative;
+  flex: 1;
+  height: 100%;
+  overflow: hidden;
+}
+
+.yamlHighlightUnderlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   margin: 0;
+  padding: 10px 12px;
   font-family: var(--mono, monospace);
   font-size: 12px;
-  line-height: 1.45;
+  line-height: 18px;
+  white-space: pre;
+  overflow: hidden;
+  pointer-events: none;
+  box-sizing: border-box;
+  color: #ededed;
+}
+
+.yamlHighlightLine {
+  height: 18px;
+  line-height: 18px;
+  box-sizing: border-box;
+  white-space: pre;
+}
+
+.yamlTextareaOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 10px 12px;
+  font-family: var(--mono, monospace);
+  font-size: 12px;
+  line-height: 18px;
+  white-space: pre;
+  overflow: auto;
+  background: transparent;
+  color: transparent;
+  caret-color: #38bdf8;
+  border: none;
+  outline: none;
+  resize: none;
+  tab-size: 2;
+  box-sizing: border-box;
+  z-index: 2;
+}
+
+.yamlTextareaOverlay::selection {
+  background: rgba(56, 189, 248, 0.28);
+  color: transparent;
 }
 
 .deployConsole {
@@ -1916,6 +2164,114 @@
   line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-all;
+}
+
+/* ─── Autocomplete Dropdown Component ─── */
+
+.autocompleteInputWrapper {
+  position: relative;
+  width: 100%;
+}
+
+.autocompleteDropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: #0a0a0a;
+  border: 1px solid #262626;
+  border-radius: 6px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 60;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7), 0 2px 6px rgba(0, 0, 0, 0.5);
+  padding: 3px;
+}
+
+.autocompleteDropdown::-webkit-scrollbar {
+  width: 4px;
+}
+
+.autocompleteDropdown::-webkit-scrollbar-track {
+  background: #0a0a0a;
+}
+
+.autocompleteDropdown::-webkit-scrollbar-thumb {
+  background: #262626;
+  border-radius: 2px;
+}
+
+.autocompleteDropdown::-webkit-scrollbar-thumb:hover {
+  background: #404040;
+}
+
+.autocompleteItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  background: transparent;
+  transition: background 0.1s ease, color 0.1s ease;
+  user-select: none;
+}
+
+.autocompleteItem:hover,
+.autocompleteItemHighlighted {
+  background: #171717;
+}
+
+.autocompleteItemLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.autocompleteItemIcon {
+  color: var(--text-muted, #737373);
+  flex-shrink: 0;
+}
+
+.autocompleteItem:hover .autocompleteItemIcon,
+.autocompleteItemHighlighted .autocompleteItemIcon {
+  color: #ededed;
+}
+
+.autocompleteItemText {
+  font-family: var(--mono, monospace);
+  font-size: 11.5px;
+  color: #d4d4d4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.autocompleteItem:hover .autocompleteItemText,
+.autocompleteItemHighlighted .autocompleteItemText {
+  color: #ffffff;
+}
+
+.autocompleteLocalBadge {
+  font-size: 9.5px;
+  font-family: var(--mono, monospace);
+  font-weight: 500;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-muted, #737373);
+  border: 1px solid #262626;
+  flex-shrink: 0;
+  letter-spacing: 0.02em;
+}
+
+.autocompleteItem:hover .autocompleteLocalBadge,
+.autocompleteItemHighlighted .autocompleteLocalBadge {
+  color: #a1a1a1;
+  border-color: #333333;
+  background: rgba(255, 255, 255, 0.08);
 }
 
 /* ─── Animations ─── */
