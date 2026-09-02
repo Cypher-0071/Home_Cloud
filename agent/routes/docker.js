@@ -8,6 +8,9 @@ const {
 	addIngressRule,
 	removeIngressRule,
 	reloadCloudflared,
+	exposeContainer,
+	unexposeContainer,
+	validateSubdomain,
 } = require("../services/ingress");
 const { CF_DOMAIN } = require("../config");
 const { BASE_DIR, jailPath } = require("../paths");
@@ -113,13 +116,13 @@ router.delete("/containers/:id/delete", async (req, res) => {
 			for (const key in ports) {
 				if (ports[key] && ports[key].length > 0) {
 					const hostPort = ports[key][0].HostPort;
-					if (hostPort && removeIngressByPort(hostPort)) {
+					if (hostPort && (await removeIngressByPort(hostPort))) {
 						removedAny = true;
 					}
 				}
 			}
 			if (removedAny) {
-				reloadCloudflared();
+				await reloadCloudflared();
 			}
 		}
 
@@ -456,6 +459,9 @@ router.post("/containers/:id/expose", async (req, res) => {
 	}
 
 	try {
+		// Validate and normalize subdomain format and check reserved words early
+		const cleanSubdomain = validateSubdomain(subdomain);
+
 		const container = docker.getContainer(id);
 		const info = await container.inspect();
 		const ports = info.NetworkSettings.Ports || {};
@@ -474,17 +480,16 @@ router.post("/containers/:id/expose", async (req, res) => {
 				.json({ error: "Container does not have any mapped host ports" });
 		}
 
-		addIngressRule(subdomain, hostPort);
-		reloadCloudflared();
+		const result = await exposeContainer(cleanSubdomain, hostPort);
 
 		return res.json({
 			success: true,
-			url: `https://${subdomain}.${CF_DOMAIN}`,
-			subdomain,
+			url: result.url,
+			subdomain: result.subdomain,
 			hostPort,
 		});
 	} catch (err) {
-		return res.status(500).json({ error: err.message });
+		return res.status(400).json({ error: err.message });
 	}
 });
 
@@ -496,11 +501,11 @@ router.post("/containers/:id/unexpose", async (req, res) => {
 	}
 
 	try {
-		removeIngressRule(subdomain);
-		reloadCloudflared();
+		const cleanSubdomain = String(subdomain).trim().toLowerCase();
+		await unexposeContainer(cleanSubdomain);
 		return res.json({ success: true });
 	} catch (err) {
-		return res.status(500).json({ error: err.message });
+		return res.status(400).json({ error: err.message });
 	}
 });
 

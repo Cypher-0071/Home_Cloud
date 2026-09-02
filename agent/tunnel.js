@@ -36,13 +36,20 @@ function startTunnel() {
 		});
 
 		child.on("error", (err) => {
-			if (!resolved) reject(err);
+			if (!resolved) {
+				resolved = true;
+				reject(err);
+			}
 		});
 
 		child.on("close", (code) => {
 			console.log(`[tunnel] Cloudflare process exited with code ${code}`);
 			if (activeChild === child) {
 				activeChild = null;
+			}
+			if (!resolved) {
+				resolved = true;
+				reject(new Error(`cloudflared exited with code ${code}`));
 			}
 		});
 	});
