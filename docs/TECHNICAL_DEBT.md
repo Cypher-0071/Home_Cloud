@@ -50,26 +50,22 @@ This document outlines the current technical limitations, security tradeoffs, an
 * **Debt**: In `agent/routes/auth.js`, `process.env.PASSWORD === req.body.password` performs direct equality comparison without verifying that `process.env.PASSWORD` is truthy and non-empty.
 * **Tradeoff**: If `PASSWORD` is omitted in the server `.env`, `undefined === undefined` evaluates to `true`, potentially allowing unauthenticated requests to log in with an empty JSON body `{}`.
 
-### 13. Named Docker Volumes Blocked by Path Jailing
-* **Debt**: In `agent/routes/docker.js` (`/containers/create`), volume mounts are validated strictly with `jailPath(v.hostPath)`.
-* **Tradeoff**: Standard named Docker volumes (e.g. `pgdata`, `mariadb_data`) without path separators are rejected with `403 Forbidden ("Host path must be inside BASE_DIR")`. The backend lacks differentiation between host directory bind mounts and named Docker volumes.
-
-### 14. Docker Compose Engine Hybridization & V2 Spec Gaps
+### 13. Docker Compose Engine Hybridization & V2 Spec Gaps
 * **Debt**: In `agent/routes/stacks.js`, stack management mixes the legacy `dockerode-compose` library with raw `docker compose` CLI child process executions.
 * **Tradeoff**: `dockerode-compose` does not support modern Compose Specification V2 features (e.g., `develop`, modern port ranges, profiles). Standardizing entirely on streaming `docker compose` CLI child processes will ensure uniform Compose V2 compatibility.
 
-### 15. Ingress YAML Autowiring Race Condition & Concurrency Locking
+### 14. Ingress YAML Autowiring Race Condition & Concurrency Locking
 * **Debt**: In `agent/services/ingress.js`, `config.yaml` is read, modified, and written synchronously on container expose/unexpose operations without concurrency locks or job queues.
 * **Tradeoff**: Rapid or concurrent container operations can cause race conditions during Cloudflare ingress configuration updates, risking YAML syntax corruption.
 
-### 16. One-Way Form-to-YAML Synchronization in Deploy Modal
+### 15. One-Way Form-to-YAML Synchronization in Deploy Modal
 * **Debt**: In `DockerApp.tsx`, visual form fields dynamically serialize into `docker-compose.yml`, but custom YAML edits made inside the YAML Editor are not parsed back into visual form cards when switching back to Form View.
 * **Tradeoff**: Switching back to Form View after making edits in the YAML Editor causes Form View to retain its previous visual state rather than reflecting the updated YAML contents.
 
-### 17. File Explorer Breadcrumb Overflow on Deep Paths
+### 16. File Explorer Breadcrumb Overflow on Deep Paths
 * **Debt**: In `dashboard/src/pages/files.tsx`, deep directory hierarchies can push breadcrumb links off-screen.
 * **Tradeoff**: The breadcrumbs container does not auto-scroll horizontally to keep the active terminal folder in view on narrow screens or deeply nested directories.
 
-### 18. System Monitor Historical Data Loss on Window Unmount
+### 17. System Monitor Historical Data Loss on Window Unmount
 * **Debt**: In `SystemMonitorApp.tsx`, 60-second rolling CPU and memory metrics history are held in React component state.
 * **Tradeoff**: Minimizing or closing the Activity Monitor window unmounts the component and resets the historical trend lines, rather than persisting metric buffers in a background context or hook singleton.

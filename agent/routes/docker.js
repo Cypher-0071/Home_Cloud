@@ -379,18 +379,43 @@ router.post("/containers/create", async (req, res) => {
 		});
 	}
 
+function isNamedVolume(val) {
+	if (!val || typeof val !== "string") return false;
+	const trimmed = val.trim();
+	if (
+		trimmed.startsWith("/") ||
+		trimmed.startsWith(".") ||
+		trimmed.startsWith("~") ||
+		trimmed.includes("/") ||
+		trimmed.includes("\\")
+	) {
+		return false;
+	}
+	return /^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/.test(trimmed);
+}
+
 	const bindsArray = [];
 
 	if (Array.isArray(req.body.volumes)) {
 		for (const v of req.body.volumes) {
 			if (!v.hostPath || !v.containerPath) continue;
-			const host = jailPath(v.hostPath);
-			if (!host) {
-				return res.status(403).json({
-					error: `Host path must be inside ${BASE_DIR}`,
-				});
+			const rawHost = String(v.hostPath).trim();
+			const rawContainer = String(v.containerPath).trim();
+			if (!rawHost || !rawContainer) continue;
+
+			if (isNamedVolume(rawHost)) {
+				// Native Docker named volume (e.g., pgdata, redis_data)
+				bindsArray.push(`${rawHost}:${rawContainer}:rw`);
+			} else {
+				// Host filesystem bind mount -> must be jailed inside BASE_DIR
+				const host = jailPath(rawHost);
+				if (!host) {
+					return res.status(403).json({
+						error: `Host path must be inside ${BASE_DIR}`,
+					});
+				}
+				bindsArray.push(`${host}:${rawContainer}:rw`);
 			}
-			bindsArray.push(`${host}:${v.containerPath}:rw`);
 		}
 	}
 

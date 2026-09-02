@@ -153,12 +153,28 @@ const createDefaultService = (index = 1): FormService => ({
   command: '',
 });
 
+function isDockerNamedVolume(val: string): boolean {
+  if (!val) return false;
+  const trimmed = val.trim();
+  if (
+    trimmed.startsWith('/') ||
+    trimmed.startsWith('.') ||
+    trimmed.startsWith('~') ||
+    trimmed.includes('/') ||
+    trimmed.includes('\\')
+  ) {
+    return false;
+  }
+  return /^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/.test(trimmed);
+}
+
 function generateComposeYamlFromServices(services: FormService[]): string {
   if (!services || services.length === 0) {
     return 'version: "3.8"\n\nservices:\n  app:\n    image: nginx:alpine\n    restart: always\n    ports:\n      - "8080:80"\n';
   }
 
   let yaml = 'version: "3.8"\n\nservices:\n';
+  const namedVolumes = new Set<string>();
 
   for (const s of services) {
     const sName = (s.name || 'app').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '') || 'app';
@@ -203,12 +219,23 @@ function generateComposeYamlFromServices(services: FormService[]): string {
         const c = v.container.trim();
         if (h) {
           yaml += `      - ${h}:${c}\n`;
+          if (isDockerNamedVolume(h)) {
+            namedVolumes.add(h);
+          }
         } else {
           yaml += `      - ${c}\n`;
         }
       }
     }
 
+    yaml += `\n`;
+  }
+
+  if (namedVolumes.size > 0) {
+    yaml += `volumes:\n`;
+    for (const vol of Array.from(namedVolumes)) {
+      yaml += `  ${vol}:\n`;
+    }
     yaml += `\n`;
   }
 
