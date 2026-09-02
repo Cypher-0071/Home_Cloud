@@ -434,6 +434,13 @@ export default function FileExplorer() {
   // Copy path feedback
   const [copiedPath, setCopiedPath] = useState<boolean>(false);
 
+  // Address Bar & Breadcrumbs State & Refs
+  const breadcrumbsRef = useRef<HTMLDivElement>(null);
+  const activeBreadcrumbRef = useRef<HTMLSpanElement>(null);
+  const pathInputRef = useRef<HTMLInputElement>(null);
+  const [isEditingPath, setIsEditingPath] = useState<boolean>(false);
+  const [pathInputValue, setPathInputValue] = useState<string>('');
+
   const [clipboard, setClipboard] = useState<ClipboardState | null>(null);
   const [renamingItem, setRenamingItem] = useState<{
     oldName: string;
@@ -738,7 +745,7 @@ export default function FileExplorer() {
   // ─── Navigation ───
   const navigateToPath = (newPath: string) => {
     setRenamingItem(null);
-    const cleanPath = newPath.replace(/\/$/, '');
+    const cleanPath = newPath.replace(/\/$/, '') || '/';
     if (!isInsideBasePath(cleanPath, basePath)) return;
     const newHistory = history.slice(0, historyIndex + 1);
     newHistory.push(cleanPath);
@@ -746,6 +753,67 @@ export default function FileExplorer() {
     setHistoryIndex(newHistory.length - 1);
     setCurrentPath(cleanPath);
     setSearchQuery('');
+  };
+
+  // Auto-scroll breadcrumbs horizontally so active folder is in view
+  useEffect(() => {
+    if (!isEditingPath) {
+      if (activeBreadcrumbRef.current) {
+        activeBreadcrumbRef.current.scrollIntoView({
+          behavior: 'smooth',
+          inline: 'nearest',
+          block: 'nearest',
+        });
+      } else if (breadcrumbsRef.current) {
+        breadcrumbsRef.current.scrollTo({
+          left: breadcrumbsRef.current.scrollWidth,
+          behavior: 'smooth',
+        });
+      }
+    }
+  }, [currentPath, isEditingPath]);
+
+  // Focus and select all text when switching to direct path input mode
+  useEffect(() => {
+    if (isEditingPath && pathInputRef.current) {
+      pathInputRef.current.focus();
+      pathInputRef.current.select();
+    }
+  }, [isEditingPath]);
+
+  // Translate vertical wheel rolling over breadcrumbs into horizontal scrolling
+  const handleBreadcrumbWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    if (breadcrumbsRef.current && e.deltaY !== 0) {
+      breadcrumbsRef.current.scrollLeft += e.deltaY;
+    }
+  };
+
+  // Handle Enter to submit or Escape to cancel in direct path input mode
+  const handlePathInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const raw = pathInputValue.trim();
+      if (raw) {
+        let resolved = raw;
+        if (!raw.startsWith('/')) {
+          resolved = `${currentPath}/${raw}`.replace(/\/+/g, '/');
+        } else {
+          resolved = resolved.replace(/\/+/g, '/');
+        }
+        if (resolved.length > 1 && resolved.endsWith('/')) {
+          resolved = resolved.slice(0, -1);
+        }
+        if (!isInsideBasePath(resolved, basePath)) {
+          alert(`Path must be inside base directory: ${basePath || '/'}`);
+          return;
+        }
+        navigateToPath(resolved);
+      }
+      setIsEditingPath(false);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      setIsEditingPath(false);
+    }
   };
 
   const handleBack = () => {
@@ -988,12 +1056,18 @@ export default function FileExplorer() {
     }
   };
 
-  // Keyboard shortcuts (Ctrl+C, Ctrl+X, Ctrl+V, Ctrl+A)
+  // Keyboard shortcuts (Ctrl+C, Ctrl+X, Ctrl+V, Ctrl+A, Ctrl+L)
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement).tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
 
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'l') {
+        e.preventDefault();
+        setPathInputValue(currentPath);
+        setIsEditingPath(true);
+        return;
+      }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
         if (selectedItemNames.size > 0) handleCopy();
       }
@@ -1010,7 +1084,7 @@ export default function FileExplorer() {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [selectedItemNames, clipboard, displayedFiles]);
+  }, [selectedItemNames, clipboard, displayedFiles, currentPath]);
 
   // ─── Context menu ───
   const handleContextMenu = (e: React.MouseEvent, item: FileItem) => {
@@ -1079,36 +1153,84 @@ export default function FileExplorer() {
         </div>
 
         {/* Breadcrumb Path Bar */}
-        <div className={styles.addressInputWrapper}>
-          <div className={styles.breadcrumbsScrollArea}>
-            {pathSegments.length === 0 ? (
-              <span className={`${styles.breadcrumbSegment} ${styles.breadcrumbSegmentActive}`}>/</span>
-            ) : (
-              pathSegments.map((segment, index) => {
-                const isLast = index === pathSegments.length - 1;
-                const isBaseAncestor = index < baseSegments.length - 1;
-                return (
-                  <React.Fragment key={index}>
-                    {isBaseAncestor ? (
-                      <span className={styles.breadcrumbSegment}>{segment}</span>
-                    ) : (
-                      <span
-                        className={`${styles.breadcrumbSegment} ${isLast ? styles.breadcrumbSegmentActive : ''}`}
-                        onClick={() => navigateToPath(buildPathUpTo(index))}
-                        title={buildPathUpTo(index)}
-                      >
-                        {segment}
-                      </span>
-                    )}
-                    {!isLast && <ChevronRight size={12} className={styles.breadcrumbDivider} />}
-                  </React.Fragment>
-                );
-              })
-            )}
-          </div>
+        <div
+          className={styles.addressInputWrapper}
+          onClick={() => {
+            if (!isEditingPath) {
+              setPathInputValue(currentPath);
+              setIsEditingPath(true);
+            }
+          }}
+        >
+          {isEditingPath ? (
+            <input
+              ref={pathInputRef}
+              className={styles.pathInput}
+              type="text"
+              value={pathInputValue}
+              onChange={(e) => setPathInputValue(e.target.value)}
+              onKeyDown={handlePathInputKeyDown}
+              onBlur={() => setIsEditingPath(false)}
+              placeholder={basePath || '/'}
+              spellCheck={false}
+              autoComplete="off"
+            />
+          ) : (
+            <div
+              ref={breadcrumbsRef}
+              className={styles.breadcrumbsScrollArea}
+              onWheel={handleBreadcrumbWheel}
+            >
+              {pathSegments.length === 0 ? (
+                <span
+                  className={`${styles.breadcrumbSegment} ${styles.breadcrumbSegmentActive}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (basePath) navigateToPath(basePath);
+                  }}
+                >
+                  /
+                </span>
+              ) : (
+                pathSegments.map((segment, index) => {
+                  const isLast = index === pathSegments.length - 1;
+                  const isBaseAncestor = index < baseSegments.length - 1;
+                  return (
+                    <React.Fragment key={index}>
+                      {isBaseAncestor ? (
+                        <span
+                          className={styles.breadcrumbSegment}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {segment}
+                        </span>
+                      ) : (
+                        <span
+                          ref={isLast ? activeBreadcrumbRef : undefined}
+                          className={`${styles.breadcrumbSegment} ${isLast ? styles.breadcrumbSegmentActive : ''}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigateToPath(buildPathUpTo(index));
+                          }}
+                          title={buildPathUpTo(index)}
+                        >
+                          {segment}
+                        </span>
+                      )}
+                      {!isLast && <ChevronRight size={12} className={styles.breadcrumbDivider} />}
+                    </React.Fragment>
+                  );
+                })
+              )}
+            </div>
+          )}
           <button
             className={styles.copyPathButton}
-            onClick={handleCopyPath}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleCopyPath();
+            }}
             title={copiedPath ? 'Copied to clipboard!' : 'Copy path'}
           >
             {copiedPath ? <Check size={13} style={{ color: 'var(--ok)' }} /> : <Copy size={13} />}
