@@ -36,19 +36,32 @@ wss.on("connection", (socket, request) => {
 
 app.use(express.json());
 app.use(cookieParser());
+
+// Public endpoints (no auth required)
 app.use("/api/auth", auth);
+
+// Public Healthcheck & Local LAN Detection endpoint with CORS & Private Network Access support
+app.all("/api/health", (req, res) => {
+	res.setHeader("Access-Control-Allow-Origin", "*");
+	res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+	res.setHeader("Access-Control-Allow-Headers", "*");
+	res.setHeader("Access-Control-Allow-Private-Network", "true");
+	if (req.method === "OPTIONS") {
+		return res.sendStatus(204);
+	}
+	res.json({ status: "ok" });
+});
+
+// Network metadata (local IP discovery for LAN switching)
+app.use("/api/network", require("./routes/network"));
+
+// Authenticated endpoints
 app.use("/api", authMiddleware);
 app.use("/api/metrics", require("./routes/metrics"));
 app.use("/api/files", require("./routes/file"));
 app.use("/api/docker/stacks", require("./routes/stacks"));
 app.use("/api/docker", require("./routes/docker"));
-app.use("/api/network", require("./routes/network"));
 app.use(express.static(path.join(__dirname, "../dashboard/dist")));
-
-app.get("/api/health", (req, res) => {
-	res.setHeader("Access-Control-Allow-Origin", "*");
-	res.json({ status: "ok" });
-});
 
 app.get("/{*path}", (req, res) => {
 	res.sendFile(path.join(__dirname, "../dashboard/dist", "index.html"));

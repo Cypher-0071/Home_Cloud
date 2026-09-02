@@ -327,9 +327,13 @@ export default function Desktop() {
           ) : (
             <div
               className="tray-tunnel"
+              onClick={net.serverLocalIp ? net.redirectToLocal : undefined}
+              style={{ cursor: net.serverLocalIp ? 'pointer' : 'default' }}
               title={
                 net.isLocalLAN
                   ? `Redirecting to local Wi-Fi LAN (${net.serverLocalIp || 'detecting…'})…`
+                  : net.serverLocalIp
+                  ? `Connected over Cloudflare Remote Tunnel. Click to switch to local LAN (http://${net.serverLocalIp}:${net.serverLocalPort})`
                   : 'Connected over Cloudflare Remote Tunnel'
               }
             >
