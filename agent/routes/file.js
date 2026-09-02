@@ -194,10 +194,51 @@ router.get("/search", async (req, res) => {
 	if (!query) {
 		return res.json([]);
 	}
+	let settled = false;
+	const safeRespond = (status, data) => {
+		if (settled || res.headersSent) return;
+		settled = true;
+		res.status(status).json(data);
+	};
+
 	// Spawn fd to recursively list all file paths (colorless, starting at currentDir)
 	const fd = spawn("fdfind", ["--color", "never", ".", currentDir]);
 	// Spawn fzf in filter mode to perform fast fuzzy matching on the incoming file list
 	const fzf = spawn("fzf", ["-f", query]);
+
+	// Clean up child processes safely
+	const cleanup = () => {
+		try {
+			if (!fd.killed) fd.kill();
+		} catch (_) {}
+		try {
+			if (!fzf.killed) fzf.kill();
+		} catch (_) {}
+	};
+
+	// Catch spawn and process errors on both workers to prevent server crash
+	fd.on("error", (err) => {
+		cleanup();
+		safeRespond(500, { error: `File searcher error: ${err.message}` });
+	});
+
+	fzf.on("error", (err) => {
+		cleanup();
+		safeRespond(500, { error: `Fuzzy matcher error: ${err.message}` });
+	});
+
+	// Handle broken pipe (EPIPE) gracefully if fzf closes before fdfind finishes streaming
+	fzf.stdin.on("error", (err) => {
+		if (err.code !== "EPIPE") {
+			console.error("[file search] fzf.stdin error:", err.message);
+		}
+	});
+
+	fd.stdout.on("error", (err) => {
+		if (err.code !== "EPIPE") {
+			console.error("[file search] fd.stdout error:", err.message);
+		}
+	});
 
 	// Pipe the output of fd directly into fzf's input
 	fd.stdout.pipe(fzf.stdin);
@@ -214,10 +255,17 @@ router.get("/search", async (req, res) => {
 	});
 
 	fzf.on("close", async (code) => {
+		// When fzf finishes, terminate fd immediately so it doesn't stay scanning as a background zombie
+		try {
+			if (!fd.killed) fd.kill();
+		} catch (_) {}
+
+		if (settled || res.headersSent) return;
+
 		// fzf exits with code 1 if no matches are found, which is a normal state
 		if (code !== 0 && code !== 1 && stderr) {
 			console.error(`fzf search error: ${stderr}`);
-			return res.status(500).json({ error: "Search failed" });
+			return safeRespond(500, { error: "Search failed" });
 		}
 
 		const filePaths = stdout.split("\n").filter(Boolean).slice(0, 50); // limit to top 50 matches
@@ -247,17 +295,16 @@ router.get("/search", async (req, res) => {
 					}
 				}),
 			);
-			res.json(metadata.filter(Boolean));
+			safeRespond(200, metadata.filter(Boolean));
 		} catch (err) {
 			console.error(err);
-			res.status(500).json({ error: "Failed to gather file metadata" });
+			safeRespond(500, { error: "Failed to gather file metadata" });
 		}
 	});
 
 	// If the client aborts the request, kill both processes immediately
 	req.on("close", () => {
-		if (fd.killed === false) fd.kill();
-		if (fzf.killed === false) fzf.kill();
+		cleanup();
 	});
 });
 
