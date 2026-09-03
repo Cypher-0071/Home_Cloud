@@ -34,14 +34,6 @@ This document outlines the current technical limitations, security tradeoffs, an
 * **Debt**: The application has the base directory for file management statically hardcoded to `/home/rudra-unix` in backend configuration scripts.
 * **Tradeoff**: Distributing the app to other server hosts or operating systems requires manual search-and-replace edits of source code, instead of reading base directories dynamically from a centralized configuration file or `.env` variable.
 
-### 9. Docker Compose Engine Hybridization & V2 Spec Gaps
-* **Debt**: In `agent/routes/stacks.js`, stack management mixes the legacy `dockerode-compose` library with raw `docker compose` CLI child process executions.
-* **Tradeoff**: `dockerode-compose` does not support modern Compose Specification V2 features (e.g., `develop`, modern port ranges, profiles). Standardizing entirely on streaming `docker compose` CLI child processes will ensure uniform Compose V2 compatibility.
-
-### 10. One-Way Form-to-YAML Synchronization in Deploy Modal
-* **Debt**: In `DockerApp.tsx`, visual form fields dynamically serialize into `docker-compose.yml`, but custom YAML edits made inside the YAML Editor are not parsed back into visual form cards when switching back to Form View.
-* **Tradeoff**: Switching back to Form View after making edits in the YAML Editor causes Form View to retain its previous visual state rather than reflecting the updated YAML contents.
-
-### 11. System Monitor Historical Data Loss on Window Unmount
+### 9. System Monitor Historical Data Loss on Window Unmount
 * **Debt**: In `SystemMonitorApp.tsx`, 60-second rolling CPU and memory metrics history are held in React component state.
 * **Tradeoff**: Minimizing or closing the Activity Monitor window unmounts the component and resets the historical trend lines, rather than persisting metric buffers in a background context or hook singleton.

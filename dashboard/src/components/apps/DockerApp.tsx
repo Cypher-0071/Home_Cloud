@@ -36,6 +36,7 @@ import {
 import ContainerConsoleTab from './ContainerConsoleTab';
 import styles from './docker.module.css';
 import { useNetworkDetector } from '../../hooks/useNetworkDetector';
+import * as yaml from 'js-yaml';
 
 /* ─── Types ─── */
 
@@ -240,6 +241,224 @@ function generateComposeYamlFromServices(services: FormService[]): string {
   }
 
   return yaml.trimEnd();
+}
+
+interface ParseYamlResult {
+  success: boolean;
+  services?: FormService[];
+  error?: string;
+}
+
+function parseComposeYamlToServices(yamlStr: string, existingServices: FormService[] = []): ParseYamlResult {
+  if (!yamlStr || !yamlStr.trim()) {
+    return {
+      success: true,
+      services: [createDefaultService(1)],
+    };
+  }
+
+  let doc: any;
+  try {
+    doc = yaml.load(yamlStr);
+  } catch (err: any) {
+    return {
+      success: false,
+      error: `YAML syntax error: ${err.reason || err.message || 'Invalid YAML format'}`,
+    };
+  }
+
+  if (!doc || typeof doc !== 'object') {
+    return {
+      success: false,
+      error: 'YAML document must define an object with a "services" block.',
+    };
+  }
+
+  if (!doc.services || typeof doc.services !== 'object' || Array.isArray(doc.services)) {
+    return {
+      success: false,
+      error: 'Missing root "services:" mapping in compose YAML.',
+    };
+  }
+
+  const existingMap = new Map<string, FormService>();
+  for (const s of existingServices) {
+    if (s.name) {
+      existingMap.set(s.name.toLowerCase(), s);
+    }
+  }
+
+  const parsedServices: FormService[] = [];
+  const serviceKeys = Object.keys(doc.services);
+
+  if (serviceKeys.length === 0) {
+    return {
+      success: true,
+      services: [createDefaultService(1)],
+    };
+  }
+
+  for (const sKey of serviceKeys) {
+    const sVal = doc.services[sKey];
+    if (!sVal || typeof sVal !== 'object') continue;
+
+    const existing = existingMap.get(sKey.toLowerCase());
+    const serviceId = existing ? existing.id : Math.random().toString(36).substring(2, 9);
+
+    // Image
+    const image = typeof sVal.image === 'string' ? sVal.image.trim() : '';
+
+    // Restart policy
+    let restart = 'always';
+    if (typeof sVal.restart === 'string') {
+      const r = sVal.restart.trim().toLowerCase();
+      if (['always', 'unless-stopped', 'on-failure', 'no'].includes(r)) {
+        restart = r;
+      } else {
+        restart = sVal.restart.trim();
+      }
+    }
+
+    // Command
+    let command = '';
+    if (typeof sVal.command === 'string') {
+      command = sVal.command.trim();
+    } else if (Array.isArray(sVal.command)) {
+      command = sVal.command.map(String).join(' ');
+    }
+
+    // Ports
+    const ports: FormPort[] = [];
+    if (Array.isArray(sVal.ports)) {
+      for (const p of sVal.ports) {
+        if (typeof p === 'string' || typeof p === 'number') {
+          const str = String(p).trim();
+          const clean = str.replace(/^['"]|['"]$/g, '');
+          const parts = clean.split(':');
+          if (parts.length === 1) {
+            ports.push({
+              id: Math.random().toString(36).substring(2, 7),
+              host: '',
+              container: parts[0].trim(),
+            });
+          } else if (parts.length === 2) {
+            ports.push({
+              id: Math.random().toString(36).substring(2, 7),
+              host: parts[0].trim(),
+              container: parts[1].trim(),
+            });
+          } else if (parts.length >= 3) {
+            ports.push({
+              id: Math.random().toString(36).substring(2, 7),
+              host: parts[parts.length - 2].trim(),
+              container: parts[parts.length - 1].trim(),
+            });
+          }
+        } else if (p && typeof p === 'object') {
+          const target = p.target != null ? String(p.target) : '';
+          const published = p.published != null ? String(p.published) : '';
+          if (target || published) {
+            ports.push({
+              id: Math.random().toString(36).substring(2, 7),
+              host: published,
+              container: target,
+            });
+          }
+        }
+      }
+    }
+
+    // Environment
+    const env: FormEnv[] = [];
+    if (sVal.environment) {
+      if (Array.isArray(sVal.environment)) {
+        for (const item of sVal.environment) {
+          if (typeof item === 'string') {
+            const eqIdx = item.indexOf('=');
+            if (eqIdx !== -1) {
+              const k = item.slice(0, eqIdx).trim();
+              const v = item.slice(eqIdx + 1).replace(/^['"]|['"]$/g, '');
+              if (k) {
+                env.push({
+                  id: Math.random().toString(36).substring(2, 7),
+                  key: k,
+                  value: v,
+                });
+              }
+            } else if (item.trim()) {
+              env.push({
+                id: Math.random().toString(36).substring(2, 7),
+                key: item.trim(),
+                value: '',
+              });
+            }
+          }
+        }
+      } else if (typeof sVal.environment === 'object') {
+        for (const [k, v] of Object.entries(sVal.environment)) {
+          env.push({
+            id: Math.random().toString(36).substring(2, 7),
+            key: String(k).trim(),
+            value: v != null ? String(v) : '',
+          });
+        }
+      }
+    }
+
+    // Volumes
+    const volumes: FormVolume[] = [];
+    if (Array.isArray(sVal.volumes)) {
+      for (const v of sVal.volumes) {
+        if (typeof v === 'string') {
+          const str = v.trim().replace(/^['"]|['"]$/g, '');
+          const parts = str.split(':');
+          if (parts.length === 1) {
+            volumes.push({
+              id: Math.random().toString(36).substring(2, 7),
+              host: '',
+              container: parts[0].trim(),
+            });
+          } else if (parts.length >= 2) {
+            volumes.push({
+              id: Math.random().toString(36).substring(2, 7),
+              host: parts[0].trim(),
+              container: parts[1].trim(),
+            });
+          }
+        } else if (v && typeof v === 'object') {
+          const src = v.source != null ? String(v.source) : '';
+          const tgt = v.target != null ? String(v.target) : '';
+          if (src || tgt) {
+            volumes.push({
+              id: Math.random().toString(36).substring(2, 7),
+              host: src,
+              container: tgt,
+            });
+          }
+        }
+      }
+    }
+
+    parsedServices.push({
+      id: serviceId,
+      name: sKey,
+      image,
+      restart,
+      ports,
+      env,
+      volumes,
+      command,
+    });
+  }
+
+  if (parsedServices.length === 0) {
+    return {
+      success: true,
+      services: [createDefaultService(1)],
+    };
+  }
+
+  return { success: true, services: parsedServices };
 }
 
 const POPULAR_DOCKER_IMAGES: string[] = [
@@ -1460,11 +1679,16 @@ export default function DockerApp() {
       const content = event.target?.result as string;
       if (content) {
         setDeployYaml(content);
+        const parsed = parseComposeYamlToServices(content, formServices);
+        if (parsed.success && parsed.services) {
+          setFormServices(parsed.services);
+        }
         const baseName = file.name.replace(/\.(ya?ml)$/i, '').toLowerCase().replace(/[^a-z0-9-]/g, '');
         if (baseName && !deployStackName.trim()) {
           setDeployStackName(baseName === 'docker-compose' ? 'custom-stack' : baseName);
         }
         setDeployMode('yaml');
+        setDeployError(null);
       }
     };
     reader.readAsText(file);
@@ -1476,8 +1700,13 @@ export default function DockerApp() {
       const res = await fetch(`/api/docker/stacks/${name}`);
       if (res.ok) {
         const data = await res.json();
+        const yamlContent = data.yaml || '';
         setDeployStackName(name);
-        setDeployYaml(data.yaml || '');
+        setDeployYaml(yamlContent);
+        const parsed = parseComposeYamlToServices(yamlContent);
+        if (parsed.success && parsed.services) {
+          setFormServices(parsed.services);
+        }
         setDeployMode('yaml');
         setDeployConsoleLogs([]);
         setDeployError(null);
@@ -1486,6 +1715,34 @@ export default function DockerApp() {
     } catch (err: any) {
       alert(err.message);
     }
+  };
+
+  const switchToFormView = () => {
+    if (!deployYaml.trim()) {
+      const initial = [createDefaultService(1)];
+      setFormServices(initial);
+      setDeployYaml(generateComposeYamlFromServices(initial));
+      setDeployMode('form');
+      setDeployError(null);
+      return;
+    }
+
+    const parseResult = parseComposeYamlToServices(deployYaml, formServices);
+    if (!parseResult.success || !parseResult.services) {
+      setDeployError(parseResult.error || 'Failed to parse Compose YAML for Form View');
+      return;
+    }
+
+    setFormServices(parseResult.services);
+    setDeployMode('form');
+    setDeployError(null);
+  };
+
+  const switchToYamlView = () => {
+    const updatedYaml = generateComposeYamlFromServices(formServices);
+    setDeployYaml(updatedYaml);
+    setDeployMode('yaml');
+    setDeployError(null);
   };
 
   // YAML Validation Check
@@ -1503,10 +1760,21 @@ export default function DockerApp() {
 
   const handleDeploySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!deployStackName.trim() || !deployYaml.trim()) {
+
+    // Ensure deployed YAML reflects current Form View state if submitting from Form View
+    const yamlToDeploy = deployMode === 'form'
+      ? generateComposeYamlFromServices(formServices)
+      : deployYaml;
+
+    if (!deployStackName.trim() || !yamlToDeploy.trim()) {
       setDeployError('Stack name and YAML content are required.');
       return;
     }
+
+    if (deployMode === 'form' && yamlToDeploy !== deployYaml) {
+      setDeployYaml(yamlToDeploy);
+    }
+
     setDeploying(true);
     setDeployError(null);
     setDeployConsoleLogs(['Deploying stack…']);
@@ -1515,7 +1783,7 @@ export default function DockerApp() {
       const res = await fetch('/api/docker/stacks/deploy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: deployStackName.trim(), yaml: deployYaml }),
+        body: JSON.stringify({ name: deployStackName.trim(), yaml: yamlToDeploy }),
       });
 
       if (!res.ok) {
@@ -3409,10 +3677,7 @@ export default function DockerApp() {
                         <button
                           type="button"
                           className={`${styles.filterPill} ${deployMode === 'form' ? styles.filterPillActive : ''}`}
-                          onClick={() => {
-                            setDeployMode('form');
-                            setDeployYaml(generateComposeYamlFromServices(formServices));
-                          }}
+                          onClick={switchToFormView}
                           disabled={deploying}
                           title="Configure any stack using simple visual form fields"
                         >
@@ -3421,10 +3686,7 @@ export default function DockerApp() {
                         <button
                           type="button"
                           className={`${styles.filterPill} ${deployMode === 'yaml' ? styles.filterPillActive : ''}`}
-                          onClick={() => {
-                            setDeployMode('yaml');
-                            setDeployYaml(generateComposeYamlFromServices(formServices));
-                          }}
+                          onClick={switchToYamlView}
                           disabled={deploying}
                           title="Edit raw Compose YAML with live line numbers and syntax validation"
                         >
@@ -3732,10 +3994,7 @@ export default function DockerApp() {
                       </div>
                       <button
                         type="button"
-                        onClick={() => {
-                          setDeployMode('yaml');
-                          setDeployYaml(generateComposeYamlFromServices(formServices));
-                        }}
+                        onClick={switchToYamlView}
                         style={{ background: 'transparent', border: 'none', color: '#60a5fa', cursor: 'pointer', fontSize: '11px', textDecoration: 'underline' }}
                       >
                         View in YAML Editor →
