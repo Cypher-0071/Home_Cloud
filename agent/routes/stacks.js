@@ -5,8 +5,22 @@ const path = require("path");
 const os = require("os");
 const { spawn } = require("child_process");
 const Docker = require("dockerode");
-const DockerCompose = require("dockerode-compose");
 const docker = new Docker();
+
+function runCompose(args) {
+	return new Promise((resolve, reject) => {
+		const child = spawn("docker", ["compose", ...args]);
+		let stderr = "";
+		child.stderr.on("data", (chunk) => {
+			stderr += chunk.toString("utf8");
+		});
+		child.on("error", reject);
+		child.on("close", (code) => {
+			if (code === 0) resolve();
+			else reject(new Error(stderr.trim() || `docker compose exited with code ${code}`));
+		});
+	});
+}
 
 const STACKS_DIR = path.resolve(path.join(os.homedir(), ".home-cloud", "stacks"));
 if (!fs.existsSync(STACKS_DIR)) {
@@ -203,17 +217,20 @@ router.post("/:name/start", async (req, res) => {
 		return res.status(400).json({ error: "Invalid stack name" });
 	}
 	const stackPath = path.join(stackFolder, "docker-compose.yml");
+	const composeArgs = fs.existsSync(stackPath)
+		? ["-f", stackPath, "-p", name]
+		: ["-p", name];
 
 	try {
-		if (fs.existsSync(stackPath)) {
-			const compose = new DockerCompose(docker, stackPath, name);
-			await compose.up();
-		} else {
-			const child = spawn("docker", ["compose", "-p", name, "start"]);
-			await new Promise((resolve, reject) => {
-				child.on("error", reject);
-				child.on("close", (code) => (code === 0 ? resolve() : reject(new Error(`Exit code ${code}`))));
-			});
+		try {
+			await runCompose([...composeArgs, "start"]);
+		} catch (err) {
+			// If containers were never created or need recreating, run `up -d`
+			if (fs.existsSync(stackPath)) {
+				await runCompose([...composeArgs, "up", "-d"]);
+			} else {
+				throw err;
+			}
 		}
 		res.json({ success: true });
 	} catch (err) {
@@ -221,7 +238,7 @@ router.post("/:name/start", async (req, res) => {
 	}
 });
 
-// POST /api/docker/stacks/:name/stop - Stop stack containers
+// POST /api/docker/stacks/:name/stop - Stop stack containers (non-destructive)
 router.post("/:name/stop", async (req, res) => {
 	const { name } = req.params;
 	const stackFolder = resolveStackFolder(name);
@@ -229,18 +246,12 @@ router.post("/:name/stop", async (req, res) => {
 		return res.status(400).json({ error: "Invalid stack name" });
 	}
 	const stackPath = path.join(stackFolder, "docker-compose.yml");
+	const composeArgs = fs.existsSync(stackPath)
+		? ["-f", stackPath, "-p", name]
+		: ["-p", name];
 
 	try {
-		if (fs.existsSync(stackPath)) {
-			const compose = new DockerCompose(docker, stackPath, name);
-			await compose.down();
-		} else {
-			const child = spawn("docker", ["compose", "-p", name, "stop"]);
-			await new Promise((resolve, reject) => {
-				child.on("error", reject);
-				child.on("close", (code) => (code === 0 ? resolve() : reject(new Error(`Exit code ${code}`))));
-			});
-		}
+		await runCompose([...composeArgs, "stop"]);
 		res.json({ success: true });
 	} catch (err) {
 		res.status(500).json({ error: err.message });
@@ -255,25 +266,15 @@ router.delete("/:name", async (req, res) => {
 		return res.status(400).json({ error: "Invalid stack name" });
 	}
 	const stackPath = path.join(stackFolder, "docker-compose.yml");
+	const composeArgs = fs.existsSync(stackPath)
+		? ["-f", stackPath, "-p", name]
+		: ["-p", name];
 
 	try {
-		if (fs.existsSync(stackPath)) {
-			try {
-				const compose = new DockerCompose(docker, stackPath, name);
-				await compose.down({ volumes: true }).catch(() => null);
-			} catch {
-				const child = spawn("docker", ["compose", "-p", name, "down", "-v"]);
-				await new Promise((resolve) => {
-					child.on("error", resolve);
-					child.on("close", resolve);
-				});
-			}
-		} else {
-			const child = spawn("docker", ["compose", "-p", name, "down", "-v"]);
-			await new Promise((resolve, reject) => {
-				child.on("error", reject);
-				child.on("close", resolve);
-			});
+		try {
+			await runCompose([...composeArgs, "down", "-v", "--remove-orphans"]);
+		} catch (downErr) {
+			console.warn(`[stacks] compose down failed for ${name}:`, downErr.message);
 		}
 
 		if (fs.existsSync(stackFolder)) {
