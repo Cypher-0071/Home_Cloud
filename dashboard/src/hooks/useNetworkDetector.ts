@@ -96,18 +96,33 @@ async function runDetectionOnce(): Promise<NetworkDetectorResult> {
 }
 
 export function useNetworkDetector(): NetworkDetectorResult {
-  const [state, setState] = useState<NetworkDetectorResult>(
-    cachedResult || {
+  const [state, setState] = useState<NetworkDetectorResult>(() => {
+    if (cachedResult) return cachedResult;
+    const hostname = window.location.hostname;
+    const isIpAddress = /^(\d{1,3}\.){3}\d{1,3}$/.test(hostname) || hostname === 'localhost';
+    if (isIpAddress) {
+      return {
+        isLocalLAN: true,
+        isDirectLocal: true,
+        serverLocalIp: hostname,
+        serverLocalPort: parseInt(window.location.port || '3000', 10),
+        baseDir: null,
+        cfDomain: '',
+        checking: false,
+        redirectToLocal: () => {},
+      };
+    }
+    return {
       isLocalLAN: false,
       isDirectLocal: false,
       serverLocalIp: null,
       serverLocalPort: 3000,
       baseDir: null,
       cfDomain: '',
-      checking: !cachedResult,
+      checking: true,
       redirectToLocal: () => {},
-    }
-  );
+    };
+  });
 
   useEffect(() => {
     if (cachedResult) {

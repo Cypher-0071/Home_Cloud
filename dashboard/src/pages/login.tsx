@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useNetworkDetector } from '../hooks/useNetworkDetector';
 import styles from './login.module.css';
 
 export default function Login() {
@@ -8,6 +9,7 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const net = useNetworkDetector();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -43,6 +45,23 @@ export default function Login() {
       setIsLoading(false);
     }
   };
+
+  if (net.checking) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.card}>
+          <div className={styles.header}>
+            <h1 className={styles.title}>Home Cloud</h1>
+            <p className={styles.subtitle}>Checking local network route...</p>
+          </div>
+          <div className={styles.checkingContainer}>
+            <span className={styles.checkingSpinner} aria-hidden="true" />
+            <span className={styles.checkingText}>Detecting fastest route…</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.container}>
