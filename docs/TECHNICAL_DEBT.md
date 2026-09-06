@@ -14,19 +14,23 @@ This document outlines the current technical limitations, security tradeoffs, op
 * **Debt**: In `agent/routes/file.js` (`router.get("/")`), `Promise.all(files.map(async (file) => fs.stat(filepath)))` queries metadata for all directory entries. `fs.stat` follows symbolic links and throws `ENOENT` if the target file does not exist (dangling symlink).
 * **Tradeoff / Risk**: If a directory contains even a single broken symlink (common in development repos, `.cache`, or `node_modules`), the unhandled error rejects the entire `Promise.all` and returns HTTP 403 `Error reading directory`, completely preventing the user from viewing that folder in File Explorer.
 
+### 3. Double Login on Split-Horizon LAN Auto-Switching
+* **Debt**: When accessing Home Cloud via the remote Cloudflare subdomain (`https://dash.home-cloud.live`), the login page (`login.tsx`) mounts and prompts for credentials immediately on the remote origin without running network detection first. After the user signs in on the subdomain, the desktop loads and `useNetworkDetector.ts` detects that the client is physically on the local home Wi-Fi network, triggering an auto-redirect to `http://<local-ip>:3000`. Because browser cookies are origin-isolated, the local IP origin lacks a session cookie, causing `ProtectedRoute.tsx` to redirect the user back to the login screen on the LAN. The user is forced to authenticate twice in a row.
+* **Tradeoff / Solution**: Local network detection (`/api/network/info` + micro-ping) should run on the login screen *before* displaying the passcode input or submitting credentials. If local Wi-Fi connectivity is confirmed, the browser should immediately transition to `http://<local-ip>:3000/login` so the user only signs in once directly on the destination origin.
+
 ---
 
 ## ⚡ Performance & Architecture Gaps
 
-### 3. Tunnel Process Recycling Race Condition
+### 4. Tunnel Process Recycling Race Condition
 * **Debt**: In `agent/tunnel.js` (`startTunnel()`), recycling an existing tunnel process sends `activeChild.kill("SIGTERM")` and immediately calls `spawn("cloudflared")` on the next line without awaiting the previous process's `close` event.
 * **Tradeoff / Risk**: If the outgoing `cloudflared` process takes 100–300ms to clean up socket bindings and release credentials, the newly spawned instance can collide, causing transient restart failures or warnings.
 
-### 4. Monolithic Dashboard Bundle & Missing Route/Window Code-Splitting
+### 5. Monolithic Dashboard Bundle & Missing Route/Window Code-Splitting
 * **Debt**: In `dashboard/src/pages/desktop.tsx`, all OS window applications (`DockerApp.tsx`, `FileExplorer`, `TerminalApp.tsx`, and `SystemMonitorApp.tsx`) are statically imported at the root. `DockerApp.tsx` alone contains ~4,500 lines.
 * **Tradeoff / Risk**: Vite bundles the entire desktop and all application logic into a single monolithic `~950 kB` JavaScript chunk (`dist/assets/index-*.js`), increasing initial page load latency. Using `React.lazy()` dynamic imports for window applications would cut the initial load bundle by ~60%.
 
-### 5. Uncached Filesystem Drive Metrics
+### 6. Uncached Filesystem Drive Metrics
 * **Debt**: In `agent/routes/file.js` (`router.get("/drives")`), `si.fsSize()` executes a system shell call (`df`) every time File Explorer opens or navigates to a folder.
 * **Tradeoff / Risk**: Rapid directory browsing repeatedly shells out to disk inspection utilities, adding unnecessary latency and CPU overhead. A 5–10 second in-memory cache would eliminate this overhead.
 
@@ -34,15 +38,15 @@ This document outlines the current technical limitations, security tradeoffs, op
 
 ## 🔒 Intentional MVP Architectural Tradeoffs
 
-### 6. Hardcoded Security Password
+### 7. Hardcoded Security Password
 * **Debt**: The security passcode is loaded statically from environment variables (`process.env.PASSWORD`) on the agent.
 * **Tradeoff**: There is no client-side UI or API endpoint to change the security passcode dynamically. Password updates require manual editing of the `.env` file on the spare PC and restarting the agent.
 
-### 7. Single-Tenant Authentication
+### 8. Single-Tenant Authentication
 * **Debt**: Authentication handles a single authorized user session via a shared token cookie.
 * **Tradeoff**: Multi-user tenancy, role-based access controls (RBAC), and session expiration control panels do not exist. Any user possessing the passcode obtains root control over the system shell.
 
-### 8. Hardcoded Networking & Service Ports
+### 9. Hardcoded Networking & Service Ports
 * **Debt**: The agent port `3000` is hardcoded. Cloudflare Tunnel endpoints and VNC terminal target protocols are configured statically.
 * **Tradeoff**: Users cannot change binding interfaces or re-route inbound connections to alternative local ports without modifying the agent startup script.
 
@@ -50,19 +54,18 @@ This document outlines the current technical limitations, security tradeoffs, op
 
 ## ⏳ Deferred Roadmap Milestones
 
-### 9. Terminal WebSocket Disconnections & Session Resumption (Deferred to Resume Session Milestone)
-* **Debt**: The dashboard WebSocket connection for terminal sessions in `TerminalApp.tsx` closes permanently on network hiccups, and the backend immediately destroys the underlying PTY shell process on connection close.
-* **Tradeoff**: There is no automatic exponential backoff reconnection mechanism; users must refresh the browser page or re-open the terminal window if the connection drops.
-* **Roadmap Plan**: Deferring standalone reconnection fixes to the unified **"Resume Session"** milestone, which will introduce persistent headless PTY sessions (daemonized bash/tmux-style processes) and desktop window state persistence so that shell sessions and running commands survive browser restarts, device switching, and network disconnects seamlessly.
+### 10. Desktop Window Layout State Persistence (Deferred to Resume Session Milestone)
+* **Debt**: Active open windows, positions, and coordinates are held in transient React state in `desktop.tsx` and reset upon browser refresh.
+* **Tradeoff**: Refreshing the browser or logging in from another device opens a blank desktop shell rather than restoring the user's active window layout.
 
-### 10. File Explorer Usability & Navigation (Deferred)
+### 11. File Explorer Usability & Navigation (Deferred)
 * **Debt**: Keyboard navigation (Arrow keys, Enter to open, Delete/Backspace to delete) is not implemented.
 * **Tradeoff**: Users must perform all navigation and operations via mouse actions, limiting efficiency.
 
-### 11. Grid / Tiles View Toggle (Deferred)
+### 12. Grid / Tiles View Toggle (Deferred)
 * **Debt**: The file list is locked to the tabular list row layout.
 * **Tradeoff**: Alternate visual layouts (such as grid or tiles view) are not implemented, making browsing visual media (like images) less convenient.
 
-### 12. Details Info Pane (Deferred)
+### 13. Details Info Pane (Deferred)
 * **Debt**: The side info pane for displaying file details, large previews, and extended metadata is not rendered.
 * **Tradeoff**: Users cannot inspect detailed file properties without viewing or opening the file.
