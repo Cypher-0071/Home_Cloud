@@ -82,7 +82,7 @@ flowchart TB
     subgraph AGENT["Node.js Agent  ·  Express v5 + ws  ·  :3000  ·  CommonJS"]
       HTTP["http.createServer(app)"]
       WSS["ws.WebSocketServer({ server })<br/>same port, upgrade event"]
-      PIPE["1. express.json + cookie-parser<br/>2. /api/auth   PUBLIC<br/>3. /api/*      JWT middleware<br/>4. metrics · files · stacks · docker · network<br/>5. express.static ../dashboard/dist<br/>6. GET /api/health  auth-gated CORS *<br/>7. GET /{*path} → index.html"]
+      PIPE["1. express.json + cookie-parser<br/>2. /api/auth, /api/health, /api/network  PUBLIC<br/>3. /api/*      JWT middleware (/api/auth/me)<br/>4. metrics · files · stacks · docker<br/>5. express.static ../dashboard/dist<br/>6. GET /{*path} → index.html"]
       AUTH["routes/auth.js + middleware/auth.js<br/>jwt.sign 7d  ·  httpOnly + secure cookie"]
       MET["routes/metrics.js<br/>SSE every 2s + :heartbeat 15s"]
       FILES["routes/file.js<br/>BASE_DIR=/home/rudra-unix"]
@@ -190,7 +190,7 @@ home_cloud/
         ├── App.tsx              BrowserRouter routes
         ├── hooks/useNetworkDetector.ts
         ├── components/
-        │   ├── ProtectedRoute.tsx     GET /api/health
+        │   ├── ProtectedRoute.tsx     GET /api/auth/me
         │   ├── OSWindow.tsx           drag / resize / min / max / close
         │   └── apps/
         │       ├── SystemMonitorApp.tsx
@@ -255,20 +255,20 @@ flowchart TB
   EXP --> JSON["express.json"]
   JSON --> CK["cookie-parser"]
   CK --> R1["/api/auth/*   PUBLIC"]
-  R1 --> MW["/api/*   authMiddleware"]
+  CK --> HL["GET /api/health   PUBLIC (PNA + CORS)"]
+  CK --> NET["/api/network   PUBLIC (LAN IP)"]
+  CK --> MW["/api/*   authMiddleware"]
   MW --> R2["/api/metrics"]
   MW --> R3["/api/files"]
   MW --> R4["/api/docker/stacks   mounted first"]
   MW --> R5["/api/docker"]
-  MW --> R6["/api/network"]
-  MW --> HL["GET /api/health"]
   CK --> ST["express.static ../dashboard/dist"]
   ST --> SPA["GET /{*path} → index.html"]
 
   class IN,UPG in
   class WSS,EXEC,HOST ws
-  class R1 pub
-  class MW,R2,R3,R4,R5,R6,HL prot
+  class R1,HL,NET pub
+  class MW,R2,R3,R4,R5 prot
   class ST,SPA spa
 ```
 
@@ -277,13 +277,14 @@ Mount order is load-bearing:
 | Order | Mount | Why it is there |
 |------:|-------|-----------------|
 | 1 | `express.json` + `cookie-parser` | Body + `req.cookies.token` |
-| 2 | `/api/auth` | Login/logout must work without a cookie |
-| 3 | `/api` + `authMiddleware` | Everything else under `/api` needs JWT |
-| 4 | `/api/docker/stacks` **before** `/api/docker` | Otherwise `:id` on docker would swallow `stacks` |
-| 5 | `/api/docker`, `/api/files`, `/api/metrics`, `/api/network` | Feature routers |
-| 6 | `express.static(dashboard/dist)` | Built SPA assets |
-| 7 | `GET /api/health` | Auth-gated liveness; `ProtectedRoute` and LAN probe |
-| 8 | `GET /{*path}` → `index.html` | React Router deep links (`/docker`, `/files`, …) |
+| 2 | `/api/auth` | Login/logout/me verification (`/me` validates session cookie) |
+| 3 | `GET /api/health` | Public liveness probe with CORS `*` & Private Network Access (PNA) |
+| 4 | `/api/network` | Public local IP discovery for split-horizon LAN switching |
+| 5 | `/api` + `authMiddleware` | Everything else under `/api` requires valid JWT |
+| 6 | `/api/docker/stacks` **before** `/api/docker` | Otherwise `:id` on docker would swallow `stacks` |
+| 7 | `/api/docker`, `/api/files`, `/api/metrics` | Authenticated feature routers |
+| 8 | `express.static(dashboard/dist)` | Built SPA assets |
+| 9 | `GET /{*path}` → `index.html` | React Router deep links (`/docker`, `/files`, …) |
 
 ### 4.2 Auth
 
@@ -321,9 +322,9 @@ sequenceDiagram
   end
 ```
 
-`httpOnly` keeps the token out of JS (XSS). `secure` means it only rides HTTPS — correct on the tunnel, awkward on raw `http://192.168.x.x:3000` unless the browser already has a cookie from a previous HTTPS session or `secure` is flipped for LAN.
+`httpOnly` keeps the token out of JS (XSS). `secure` dynamically respects the transport: set to `true` over HTTPS and `false` over plain HTTP LAN, so both remote tunnel and local IP sessions save cookies reliably.
 
-`ProtectedRoute` does **not** read the cookie. It `GET /api/health`. 200 means the middleware accepted the cookie; 401 sends the user to `/login`.
+`ProtectedRoute` does **not** parse the cookie in JS. It queries `GET /api/auth/me`. 200 means the server verified the cookie JWT; 401 sends the user to `/login`.
 
 ### 4.3 API surface
 
@@ -331,15 +332,16 @@ sequenceDiagram
 
 | Method | Path | Notes |
 |--------|------|-------|
-| POST | `/api/auth/login` | Sets cookie |
+| POST | `/api/auth/login` | Validates passcode, signs JWT, sets `token` cookie |
+| GET | `/api/auth/me` | Validates active session token cookie (`{ authenticated: true }`) |
 | POST | `/api/auth/logout` | `clearCookie('token')` |
 
 **Health / network**
 
 | Method | Path | Notes |
 |--------|------|-------|
-| GET | `/api/health` | `{status:"ok"}`, CORS `*`, still behind JWT middleware |
-| GET | `/api/network/info` | First non-virtual IPv4 + port `3000` |
+| GET | `/api/health` | `{status:"ok"}`, public, CORS `*`, Private Network Access (PNA) header |
+| GET | `/api/network/info` | First non-virtual IPv4 + port `3000` (public for LAN discovery) |
 
 **Metrics** (`routes/metrics.js`)
 
@@ -387,16 +389,16 @@ Guard is `path.resolve` then `startsWith(BASE_DIR)` (no trailing-slash variant).
 | DELETE | `/api/docker/images/:id` | 409 if in use |
 | POST | `/api/docker/images/prune` | |
 
-**Stacks** (`routes/stacks.js`) — disk + compose CLI + `dockerode-compose`
+**Stacks** (`routes/stacks.js`) — disk + native Docker Compose CLI
 
 | Method | Path | Notes |
 |--------|------|-------|
 | GET | `/api/docker/stacks` | folders in `~/.home-cloud/stacks` ∪ compose-project labels |
 | GET | `/api/docker/stacks/:name` | YAML + member containers |
 | POST | `/api/docker/stacks/deploy` | write YAML, `docker compose -p <name> up -d --remove-orphans`, SSE lines |
-| POST | `/api/docker/stacks/:name/start` | `dockerode-compose.up()` or `docker compose start` |
-| POST | `/api/docker/stacks/:name/stop` | `compose.down()` or `docker compose stop` |
-| DELETE | `/api/docker/stacks/:name` | `down({volumes:true})` + `rm -rf` stack dir |
+| POST | `/api/docker/stacks/:name/start` | `docker compose -p <name> start` (with `up -d` fallback) |
+| POST | `/api/docker/stacks/:name/stop` | `docker compose -p <name> stop` (non-destructive) |
+| DELETE | `/api/docker/stacks/:name` | `docker compose -p <name> down -v --remove-orphans` + `rm -rf` stack dir |
 | GET | `/api/docker/stacks/:name/logs` | SSE `docker compose logs -f --tail=200` |
 
 ---
@@ -411,8 +413,8 @@ flowchart TB
   classDef shell fill:#1e1635,stroke:#c4b5fd,color:#e8eaed
   classDef app fill:#0d3d38,stroke:#14b8a6,color:#e8eaed
 
-  RR["App.tsx  BrowserRouter"] --> PUB["/login"]
-  RR --> PR["ProtectedRoute → GET /api/health"]
+  RR["App.tsx  BrowserRouter"] --> PUB["/login (pre-login LAN detection)"]
+  RR --> PR["ProtectedRoute → GET /api/auth/me"]
   PR --> D["/  /terminal  /metrics  /files  /docker<br/>all render Desktop"]
 
   D --> WS["pages/desktop.tsx"]
@@ -514,7 +516,7 @@ sequenceDiagram
   end
 ```
 
-Stop and delete walk the published ports the other way: `removeIngressByPort(hostPort)` then the same restart.
+Container deletion (`DELETE /api/docker/containers/:id/delete`) walks published ports: `await removeIngressByPort(hostPort)` then reloads cloudflared. Temporary container `stop` intentionally leaves ingress rules intact so restarting the container preserves domain routing.
 
 Ingress file shape the agent actually edits:
 
@@ -554,7 +556,7 @@ flowchart TD
   classDef ok fill:#12261a,stroke:#4ade80,color:#e8eaed
   classDef rem fill:#2a1a10,stroke:#fb923c,color:#e8eaed
 
-  S["Desktop mounts useNetworkDetector"] --> H{"hostname is dotted IPv4<br/>or localhost?"}
+  S["Login & Desktop mount useNetworkDetector"] --> H{"hostname is dotted IPv4<br/>or localhost?"}
   H -->|yes| LAN["isDirectLocal = true<br/>tray: LAN (192.168.x.x)<br/>stay, already on Wi-Fi"]
   H -->|no  dash.home-cloud.live| INFO["GET /api/network/info<br/>skip docker/veth/br-/tun/…"]
   INFO --> P["fetch http://&lt;lan-ip&gt;:3000/api/health<br/>AbortController 1500ms  mode:cors"]
@@ -566,7 +568,7 @@ flowchart TD
   class TUN rem
 ```
 
-When the redirect succeeds, the browser talks to the Agent at gigabit LAN RTT and never hairpins through Cloudflare. When it fails (phone on 4G, or LAN IP unreachable), the Cloudflare path is unchanged.
+When the redirect succeeds, the browser talks to the Agent at gigabit LAN RTT and never hairpins through Cloudflare. When it fails (phone on 4G, or LAN IP unreachable), the Cloudflare path is unchanged. Pre-login detection runs on `login.tsx` to ensure users on home Wi-Fi are redirected directly to the LAN origin *before* signing in, avoiding double authentication.
 
 ---
 
@@ -637,7 +639,7 @@ These exist in `docs/implementation/` as future work, not as running processes:
 | `*.homecloud.app` central SaaS | V4 |
 | Vite dev proxy | Missing — use the Agent origin |
 
-Known debts that affect the picture: hardcoded `:3000`, hardcoded `BASE_DIR`, hardcoded cloudflared config path in `tunnel.js` vs `HOME`-relative path in `ingress.js`, terminal WS has no reconnect, `/api/health` is auth-gated which makes an unauthenticated CORS LAN probe fragile.
+Known debts that affect the picture: hardcoded `:3000`, hardcoded `BASE_DIR`, hardcoded cloudflared config path in `tunnel.js` vs `HOME`-relative path in `ingress.js`. (Resolved debts: terminal WS now features decoupled persistent PTY sessions with 5MB scrollback replay and auto-reconnect, and `/api/health` is a public CORS/PNA endpoint).
 
 ---
 
