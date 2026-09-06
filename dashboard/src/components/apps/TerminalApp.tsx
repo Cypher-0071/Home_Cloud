@@ -17,31 +17,11 @@ type InitialStreamState = {
   pending: string;
 };
 
-const SESSION_STORAGE_KEY = 'home_cloud.terminal.sessionId';
-const SESSION_ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
+// Host-side session, not browser storage. Incognito / another device
+// must hit the same id or they spawn a second PTY and "lose" the first.
+const SESSION_ID = 'term_main';
 const BASE_RECONNECT_MS = 500;
 const MAX_RECONNECT_MS = 15000;
-
-function getOrCreateSessionId(): string {
-  try {
-    const existing = window.localStorage.getItem(SESSION_STORAGE_KEY);
-    if (existing && SESSION_ID_RE.test(existing)) return existing;
-  } catch {
-    /* private mode / blocked storage */
-  }
-
-  const id =
-    typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-      ? `term_${crypto.randomUUID()}`
-      : `term_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
-
-  try {
-    window.localStorage.setItem(SESSION_STORAGE_KEY, id);
-  } catch {
-    /* ignore */
-  }
-  return id;
-}
 
 function parseControlMessage(data: unknown): ControlMessage | null {
   if (typeof data !== 'string' || !data.startsWith('{"type":')) return null;
@@ -155,7 +135,6 @@ export default function TerminalApp() {
   const socketRef = useRef<WebSocket | null>(null);
   const xtermRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
-  const sessionIdRef = useRef<string | null>(null);
   const unmountedRef = useRef(false);
   const suppressReconnectRef = useRef(false);
   const pendingKillRef = useRef(false);
@@ -163,10 +142,6 @@ export default function TerminalApp() {
   const reconnectTimerRef = useRef<number | null>(null);
   const connectSocketRef = useRef<(term: Terminal) => void>(() => {});
   const [status, setStatus] = useState<ConnectionStatus>('connecting');
-
-  if (sessionIdRef.current === null) {
-    sessionIdRef.current = getOrCreateSessionId();
-  }
 
   const clearReconnectTimer = useCallback(() => {
     if (reconnectTimerRef.current !== null) {
@@ -228,9 +203,7 @@ export default function TerminalApp() {
     }
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const sessionId = sessionIdRef.current ?? getOrCreateSessionId();
-    sessionIdRef.current = sessionId;
-    const wsUrl = `${protocol}//${window.location.host}/terminal?sessionId=${encodeURIComponent(sessionId)}`;
+    const wsUrl = `${protocol}//${window.location.host}/terminal?sessionId=${encodeURIComponent(SESSION_ID)}`;
     const socket = new WebSocket(wsUrl);
     socketRef.current = socket;
 

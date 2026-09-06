@@ -73,7 +73,7 @@ class TerminalBuffer {
 class TerminalSession {
 	constructor(id) {
 		this.id = id;
-		this.ws = null;
+		this.clients = new Set();
 		this.terminal = null;
 		this.buffer = new TerminalBuffer();
 		this.shell =
@@ -105,11 +105,7 @@ class TerminalSession {
 
 		this.terminal.onData((data) => {
 			this.buffer.write(data);
-			if (this.ws && this.ws.readyState === 1) {
-				try {
-					this.ws.send(data);
-				} catch {}
-			}
+			this._broadcast(data);
 		});
 
 		this.terminal.onExit(() => {
@@ -118,15 +114,9 @@ class TerminalSession {
 	}
 
 	attach(ws) {
-		if (this.ws && this.ws !== ws) {
-			try {
-				this.ws.close();
-			} catch {}
-		}
+		this.clients.add(ws);
 
 		const snapshot = this.buffer.get();
-		this.ws = ws;
-
 		const restored = Boolean(this.terminal);
 		try {
 			ws.send(JSON.stringify({ type: "session", restored }));
@@ -137,8 +127,16 @@ class TerminalSession {
 	}
 
 	detach(ws) {
-		if (this.ws === ws) {
-			this.ws = null;
+		this.clients.delete(ws);
+	}
+
+	_broadcast(data) {
+		for (const client of this.clients) {
+			if (client.readyState === 1) {
+				try {
+					client.send(data);
+				} catch {}
+			}
 		}
 	}
 
@@ -173,22 +171,23 @@ class TerminalSession {
 			sessions.delete(this.id);
 		}
 		this.terminal = null;
-		const socket = this.ws;
-		this.ws = null;
-		if (socket && socket.readyState === 1) {
-			try {
-				socket.send(JSON.stringify({ type: "exit" }));
-			} catch {}
-			try {
-				socket.close();
-			} catch {}
+		for (const socket of this.clients) {
+			if (socket.readyState === 1) {
+				try {
+					socket.send(JSON.stringify({ type: "exit" }));
+				} catch {}
+				try {
+					socket.close();
+				} catch {}
+			}
 		}
+		this.clients.clear();
 	}
 }
 
 function evictDetachedSession() {
 	for (const session of sessions.values()) {
-		if (!session.ws) {
+		if (session.clients.size === 0) {
 			sessions.delete(session.id);
 			session.kill();
 			return true;
