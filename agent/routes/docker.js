@@ -63,25 +63,7 @@ router.post("/containers/:id/stop", async (req, res) => {
 	const container = docker.getContainer(req.params.id);
 
 	try {
-		const info = await container.inspect().catch(() => null);
 		await container.stop();
-
-		if (info && info.NetworkSettings && info.NetworkSettings.Ports) {
-			const ports = info.NetworkSettings.Ports;
-			let removedAny = false;
-			for (const key in ports) {
-				if (ports[key] && ports[key].length > 0) {
-					const hostPort = ports[key][0].HostPort;
-					if (hostPort && removeIngressByPort(hostPort)) {
-						removedAny = true;
-					}
-				}
-			}
-			if (removedAny) {
-				reloadCloudflared();
-			}
-		}
-
 		res.json({ success: true });
 	} catch (err) {
 		if (err.statusCode === 304)
