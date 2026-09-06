@@ -30,13 +30,12 @@ This feature protects self-hosted application data against power loss, disk fail
 
 ---
 
-### Phase 3: Persistent Sessions & State Resumption ("Resume Session") 🖥️
+### Phase 3: Persistent Sessions & State Resumption ("Resume Session") 🖥️ ✅ *COMPLETED*
 
 This feature decouples the user's interactive sessions from transient network connections, ensuring long-running tasks survive laptop sleep, device switching, or browser restarts.
 
-* [ ] **Decoupled Backend PTY Daemon:** Refactor `agent/sockets/terminal.js` so that closing a browser tab or experiencing a Wi-Fi drop does not immediately kill the underlying `bash`/`zsh` process. Keep the PTY alive in the background with an output ring buffer.
-* [ ] **Seamless Terminal Re-attachment:** When reconnecting from the same or another device, automatically re-attach to the existing running PTY session, replay recent terminal buffer lines, and preserve running processes.
-* [ ] **Desktop Window Layout Persistence:** Persist active window states, coordinates, and open applications so logging back into the dashboard restores the workspace exactly where the user left off.
+* [x] **Decoupled Backend PTY Daemon:** Refactored `agent/sockets/terminal.js` with `TerminalSession` and `TerminalBuffer` (5MB ring buffer) so that closing a browser tab, reloading the page, or experiencing a network drop keeps the underlying `bash`/`zsh` process alive in the background.
+* [x] **Seamless Terminal Re-attachment & Auto-Reconnect:** In `TerminalApp.tsx`, terminal sessions auto-reconnect with exponential backoff on disconnects, re-attach to the running backend PTY session by `sessionId`, replay recent terminal output buffer, and synchronize terminal geometry (`SIGWINCH`).
 
 ---
 
@@ -64,5 +63,5 @@ This feature monitors service health and alerts the server owner immediately if 
 | **Multi-Container Stacks (`docker-compose`)** | ✅ *(V2: Native compose CLI + 2-way sync)* | ✅ | ❌ | ✅ *(Partial)* | ✅ |
 | **Smart Split-Horizon DNS (LAN vs Remote)** | ✅ *(V3: `<2ms` LAN vs Remote fallback)* | ❌ | ❌ | ❌ | ❌ *(Requires custom DNS server)* |
 | **Simple Automated Volume & DB Backups** | ⏳ *(V3: `.tar.gz` + DB dumps + Cron)* | ❌ *(Requires extension)* | ❌ | ❌ *(Requires third-party app)* | ✅ |
-| **Persistent Sessions ("Resume Session")** | ⏳ *(V3: Headless PTY + Workspace resume)* | ❌ | ❌ | ❌ | ❌ |
+| **Persistent Sessions ("Resume Session")** | ✅ *(V3: Headless PTY + Replay Buffer)* | ❌ | ❌ | ❌ | ❌ |
 | **Crash Watchdog & Webhook Alerts** | ⏳ *(V3: Discord / Telegram notifications)* | ✅ *(Paid EE only)* | ❌ | ❌ | ✅ |

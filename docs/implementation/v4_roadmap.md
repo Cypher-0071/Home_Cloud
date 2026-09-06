@@ -28,3 +28,5 @@ curl -fsSL https://get.homecloud.live | sh
 * [ ] **First-Boot Onboarding Wizard:**
   * On initial startup, guide the user via a clean setup terminal prompt or local web page at `http://<server-ip>:3000`.
   * Configure server admin passcode, storage directories, and optional Cloudflare Tunnel credentials.
+* [ ] **Desktop Window Layout State Persistence:**
+  * Persist active window states, coordinates, dimensions, and open applications across browser restarts or device switching so logging back into the dashboard restores the workspace exactly where the user left off.
