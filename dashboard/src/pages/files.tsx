@@ -57,6 +57,8 @@ interface FileItem {
   mimeType?: string | null;
   path?: string; // absolute path for search results
   isNewPlaceholder?: boolean; // temporary placeholder for inline creation
+  isSymlink?: boolean;
+  isBroken?: boolean;
 }
 
 export type SortField = 'name' | 'size' | 'modified';
@@ -149,6 +151,8 @@ const fetchFiles = async (dirPath: string): Promise<FileItem[]> => {
     modified: formatDate(f.modified),
     ext: f.isDirectory ? undefined : getExt(f.name),
     mimeType: f.mimeType ?? null,
+    isSymlink: f.isSymlink ?? false,
+    isBroken: f.isBroken ?? false,
   }));
 };
 
@@ -858,6 +862,10 @@ export default function FileExplorer() {
 
   // ─── Double-click handler ───
   const handleItemDoubleClick = (item: FileItem) => {
+    if (item.isBroken) {
+      alert('Cannot open: target file or directory does not exist (broken symlink).');
+      return;
+    }
     if (item.type === 'folder') {
       navigateToPath(`${currentPath}/${item.name}`);
     } else {
@@ -871,6 +879,9 @@ export default function FileExplorer() {
 
   // ─── Icons ───
   const getFileIcon = (item: FileItem) => {
+    if (item.isBroken) {
+      return <AlertTriangle size={16} color="#f87171" />;
+    }
     if (item.type === 'folder') {
       return <Folder className={styles.iconFolder} size={16} fill="#fbbf24" color="#fbbf24" />;
     }

@@ -51,19 +51,47 @@ router.get("/", async (req, res) => {
 			const metadata = await Promise.all(
 				files.map(async (file) => {
 					const filepath = path.join(requestedPath, file);
-					const stat = await fs.stat(filepath);
-					return {
-						name: file,
-						isDirectory: stat.isDirectory(),
-						size: stat.size,
-						modified: stat.mtime,
-						mimeType: stat.isDirectory()
-							? null
-							: mime.lookup(file) || "application/octet-stream",
-					};
+					try {
+						let stat;
+						let isDirectory = false;
+						let isSymlink = false;
+						let isBroken = false;
+
+						try {
+							stat = await fs.stat(filepath);
+							isDirectory = stat.isDirectory();
+						} catch {
+							// fs.stat follows symlinks and throws ENOENT if the target is missing.
+							// Fallback to fs.lstat to inspect the symlink itself without failing.
+							try {
+								stat = await fs.lstat(filepath);
+								isSymlink = stat.isSymbolicLink();
+								isBroken = true;
+								isDirectory = false;
+							} catch {
+								return null;
+							}
+						}
+
+						return {
+							name: file,
+							isDirectory,
+							isSymlink,
+							isBroken,
+							size: stat.size,
+							modified: stat.mtime,
+							mimeType: isDirectory
+								? null
+								: isBroken
+									? "inode/symlink"
+									: mime.lookup(file) || "application/octet-stream",
+						};
+					} catch {
+						return null;
+					}
 				}),
 			);
-			res.json({ path: requestedPath, files: metadata });
+			res.json({ path: requestedPath, files: metadata.filter(Boolean) });
 		} catch (err) {
 			console.log(err);
 			return res.status(403).json({ error: "Error reading directory" });
