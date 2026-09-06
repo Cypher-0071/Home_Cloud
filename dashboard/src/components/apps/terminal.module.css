@@ -93,7 +93,7 @@
   box-shadow: none;
 }
 
-/* ─── Action Buttons (Clear, Reconnect) ─── */
+/* ─── Action Buttons (Clear, Kill, Reconnect) ─── */
 .actionsGroup {
   display: flex;
   align-items: center;
@@ -139,6 +139,12 @@
 .actionBtn:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
+}
+
+.actionBtnDanger:hover:not(:disabled) {
+  background: #1a0a0a;
+  border-color: #7f1d1d;
+  color: #fca5a5;
 }
 
 /* ─── Terminal Canvas Area ─── */

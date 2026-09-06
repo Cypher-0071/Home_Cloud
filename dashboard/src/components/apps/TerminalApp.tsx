@@ -1,16 +1,58 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
-import { RefreshCw, Trash2 } from 'lucide-react';
+import { Power, RefreshCw, Trash2 } from 'lucide-react';
 import '@xterm/xterm/css/xterm.css';
 import styles from './terminal.module.css';
 
 type ConnectionStatus = 'connecting' | 'connected' | 'disconnected';
 
+type ControlMessage = {
+  type: string;
+  restored?: boolean;
+};
+
 type InitialStreamState = {
   hasSeenVisible: boolean;
   pending: string;
 };
+
+const SESSION_STORAGE_KEY = 'home_cloud.terminal.sessionId';
+const SESSION_ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
+const BASE_RECONNECT_MS = 500;
+const MAX_RECONNECT_MS = 15000;
+
+function getOrCreateSessionId(): string {
+  try {
+    const existing = window.localStorage.getItem(SESSION_STORAGE_KEY);
+    if (existing && SESSION_ID_RE.test(existing)) return existing;
+  } catch {
+    /* private mode / blocked storage */
+  }
+
+  const id =
+    typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+      ? `term_${crypto.randomUUID()}`
+      : `term_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+
+  try {
+    window.localStorage.setItem(SESSION_STORAGE_KEY, id);
+  } catch {
+    /* ignore */
+  }
+  return id;
+}
+
+function parseControlMessage(data: unknown): ControlMessage | null {
+  if (typeof data !== 'string' || !data.startsWith('{"type":')) return null;
+  try {
+    const msg = JSON.parse(data) as ControlMessage;
+    if (msg && typeof msg.type === 'string') return msg;
+  } catch {
+    /* raw PTY output */
+  }
+  return null;
+}
 
 function isLeadingWhitespace(char: string): boolean {
   const code = char.charCodeAt(0);
@@ -27,6 +69,7 @@ function isLeadingWhitespace(char: string): boolean {
 
 // Drop zsh PROMPT_SP fill, Starship add_newline, and cursor/erase setup so the
 // first glyph (~) lands at row 0. Keep SGR colors and mode CSI (h/l).
+// Only used for brand-new shells — restored scrollback is written as-is.
 function cleanInitialStream(raw: string, state: InitialStreamState): string {
   const data = state.pending + raw;
   state.pending = '';
@@ -112,7 +155,25 @@ export default function TerminalApp() {
   const socketRef = useRef<WebSocket | null>(null);
   const xtermRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
+  const sessionIdRef = useRef<string | null>(null);
+  const unmountedRef = useRef(false);
+  const suppressReconnectRef = useRef(false);
+  const pendingKillRef = useRef(false);
+  const reconnectAttemptRef = useRef(0);
+  const reconnectTimerRef = useRef<number | null>(null);
+  const connectSocketRef = useRef<(term: Terminal) => void>(() => {});
   const [status, setStatus] = useState<ConnectionStatus>('connecting');
+
+  if (sessionIdRef.current === null) {
+    sessionIdRef.current = getOrCreateSessionId();
+  }
+
+  const clearReconnectTimer = useCallback(() => {
+    if (reconnectTimerRef.current !== null) {
+      window.clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+    }
+  }, []);
 
   const syncDimensions = useCallback(() => {
     if (fitAddonRef.current && xtermRef.current) {
@@ -133,7 +194,25 @@ export default function TerminalApp() {
     }
   }, []);
 
+  const scheduleReconnect = useCallback(() => {
+    if (unmountedRef.current || suppressReconnectRef.current) return;
+    if (reconnectTimerRef.current !== null) return;
+    const delay = Math.min(
+      BASE_RECONNECT_MS * 2 ** reconnectAttemptRef.current,
+      MAX_RECONNECT_MS
+    );
+    reconnectAttemptRef.current += 1;
+    setStatus('connecting');
+    reconnectTimerRef.current = window.setTimeout(() => {
+      reconnectTimerRef.current = null;
+      if (unmountedRef.current || suppressReconnectRef.current) return;
+      if (xtermRef.current) connectSocketRef.current(xtermRef.current);
+    }, delay);
+  }, []);
+
   const connectSocket = useCallback((term: Terminal) => {
+    clearReconnectTimer();
+
     if (socketRef.current) {
       socketRef.current.onopen = null;
       socketRef.current.onmessage = null;
@@ -148,45 +227,92 @@ export default function TerminalApp() {
       socketRef.current = null;
     }
 
-    setStatus('connecting');
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/terminal`;
+    const sessionId = sessionIdRef.current ?? getOrCreateSessionId();
+    sessionIdRef.current = sessionId;
+    const wsUrl = `${protocol}//${window.location.host}/terminal?sessionId=${encodeURIComponent(sessionId)}`;
     const socket = new WebSocket(wsUrl);
     socketRef.current = socket;
 
     const streamState: InitialStreamState = { hasSeenVisible: false, pending: '' };
+    let sawHello = false;
 
     socket.onopen = () => {
-      setStatus('connected');
-      syncDimensions();
+      reconnectAttemptRef.current = 0;
     };
 
     socket.onmessage = (event) => {
+      const control = parseControlMessage(event.data);
+
+      if (pendingKillRef.current) {
+        if (control?.type === 'session' && socket.readyState === WebSocket.OPEN) {
+          socket.send(JSON.stringify({ type: 'kill' }));
+        }
+        return;
+      }
+
+      if (control?.type === 'session') {
+        sawHello = true;
+        const restored = Boolean(control.restored);
+        streamState.hasSeenVisible = restored;
+        streamState.pending = '';
+        term.reset();
+        setStatus('connected');
+        syncDimensions();
+        return;
+      }
+      if (control?.type === 'exit') {
+        suppressReconnectRef.current = true;
+        clearReconnectTimer();
+        setStatus('disconnected');
+        return;
+      }
+
       if (typeof event.data === 'string') {
-        const cleaned = cleanInitialStream(event.data, streamState);
-        term.write(cleaned);
+        const payload =
+          sawHello && !streamState.hasSeenVisible
+            ? cleanInitialStream(event.data, streamState)
+            : event.data;
+        term.write(payload);
       } else {
         term.write(event.data);
       }
     };
 
     socket.onclose = () => {
-      setStatus('disconnected');
+      if (socketRef.current === socket) {
+        socketRef.current = null;
+      }
+      if (unmountedRef.current) return;
+      if (suppressReconnectRef.current) {
+        setStatus('disconnected');
+        return;
+      }
+      scheduleReconnect();
     };
 
     socket.onerror = () => {
-      setStatus('disconnected');
+      /* onclose handles retry */
     };
-  }, [syncDimensions]);
+  }, [clearReconnectTimer, scheduleReconnect, syncDimensions]);
 
   useEffect(() => {
-    // 1. Initialize Terminal with Vercel pitch-black dark theme
+    connectSocketRef.current = connectSocket;
+  }, [connectSocket]);
+
+  useEffect(() => {
+    unmountedRef.current = false;
+    suppressReconnectRef.current = false;
+    pendingKillRef.current = false;
+    reconnectAttemptRef.current = 0;
+
     const term = new Terminal({
       cursorBlink: true,
       cursorStyle: 'block',
       fontSize: 13,
       lineHeight: 1.25,
       letterSpacing: 0,
+      scrollback: 10000,
       fontFamily: "'JetBrains Mono', Menlo, Monaco, 'Courier New', monospace",
       customGlyphs: true,
       theme: {
@@ -231,21 +357,18 @@ export default function TerminalApp() {
 
     if (typeof document !== 'undefined' && 'fonts' in document) {
       document.fonts.ready.then(() => {
-        syncDimensions();
+        if (!unmountedRef.current) syncDimensions();
       });
     }
 
-    // 2. Setup WebSocket connection
     connectSocket(term);
 
-    // 3. User keystroke handling
     const dataDisposable = term.onData((data) => {
       if (socketRef.current?.readyState === WebSocket.OPEN) {
         socketRef.current.send(data);
       }
     });
 
-    // 4. Container resize observer
     const resizeObserver = new ResizeObserver(() => {
       syncDimensions();
     });
@@ -254,8 +377,19 @@ export default function TerminalApp() {
       resizeObserver.observe(terminalRef.current);
     }
 
-    // 5. Cleanup on unmount
+    const onOnline = () => {
+      if (unmountedRef.current || suppressReconnectRef.current) return;
+      if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) return;
+      reconnectAttemptRef.current = 0;
+      setStatus('connecting');
+      connectSocketRef.current(term);
+    };
+    window.addEventListener('online', onOnline);
+
     return () => {
+      unmountedRef.current = true;
+      window.removeEventListener('online', onOnline);
+      clearReconnectTimer();
       resizeObserver.disconnect();
       dataDisposable.dispose();
       if (socketRef.current) {
@@ -275,7 +409,7 @@ export default function TerminalApp() {
       xtermRef.current = null;
       fitAddonRef.current = null;
     };
-  }, [connectSocket, syncDimensions]);
+  }, [clearReconnectTimer, connectSocket, syncDimensions]);
 
   const handleClear = () => {
     if (socketRef.current?.readyState === WebSocket.OPEN) {
@@ -291,11 +425,28 @@ export default function TerminalApp() {
   };
 
   const handleReconnect = () => {
+    suppressReconnectRef.current = false;
+    pendingKillRef.current = false;
+    reconnectAttemptRef.current = 0;
+    setStatus('connecting');
     if (xtermRef.current) {
-      xtermRef.current.clear();
       connectSocket(xtermRef.current);
       xtermRef.current.focus();
     }
+  };
+
+  const handleKill = () => {
+    suppressReconnectRef.current = true;
+    pendingKillRef.current = true;
+    clearReconnectTimer();
+    if (socketRef.current?.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify({ type: 'kill' }));
+    }
+    if (xtermRef.current) {
+      xtermRef.current.reset();
+      xtermRef.current.focus();
+    }
+    setStatus('disconnected');
   };
 
   return (
@@ -325,6 +476,16 @@ export default function TerminalApp() {
           >
             <Trash2 size={12} />
             <span>Clear</span>
+          </button>
+          <button
+            type="button"
+            className={`${styles.actionBtn} ${styles.actionBtnDanger}`}
+            onClick={handleKill}
+            title="Kill session"
+            disabled={status === 'disconnected'}
+          >
+            <Power size={12} />
+            <span>Kill</span>
           </button>
           <button
             type="button"
