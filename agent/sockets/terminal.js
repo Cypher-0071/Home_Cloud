@@ -76,6 +76,10 @@ class TerminalSession {
 		this.clients = new Set();
 		this.terminal = null;
 		this.buffer = new TerminalBuffer();
+		this.cols = 100;
+		this.rows = 30;
+		this.lastRespawnTime = 0;
+		this.respawnCount = 0;
 		this.shell =
 			os.platform() === "win32"
 				? "powershell.exe"
@@ -83,6 +87,11 @@ class TerminalSession {
 	}
 
 	ensurePTY(cols = 100, rows = 30) {
+		if (cols > 0 && rows > 0) {
+			this.cols = cols;
+			this.rows = rows;
+		}
+
 		if (this.terminal) {
 			this.resize(cols, rows);
 			return;
@@ -90,25 +99,36 @@ class TerminalSession {
 
 		const isZsh = /zsh$/i.test(this.shell);
 		const args = isZsh ? ["-o", "NO_PROMPT_SP", "-o", "NO_PROMPT_CR"] : [];
-		this.terminal = pty.spawn(this.shell, args, {
-			name: "xterm-256color",
-			cols: cols || 100,
-			rows: rows || 30,
-			cwd: process.env.HOME || process.cwd(),
-			env: {
-				...process.env,
-				LANG: "C.UTF-8",
-				LC_ALL: "C.UTF-8",
-				PROMPT_EOL_MARK: "",
-			},
-		});
+		let ptyInstance;
+		try {
+			ptyInstance = pty.spawn(this.shell, args, {
+				name: "xterm-256color",
+				cols: this.cols || 100,
+				rows: this.rows || 30,
+				cwd: process.env.HOME || process.cwd(),
+				env: {
+					...process.env,
+					LANG: "C.UTF-8",
+					LC_ALL: "C.UTF-8",
+					PROMPT_EOL_MARK: "",
+				},
+			});
+		} catch (err) {
+			console.error(`[Terminal] Failed to spawn PTY for session ${this.id}:`, err);
+			return;
+		}
 
-		this.terminal.onData((data) => {
+		this.terminal = ptyInstance;
+
+		ptyInstance.onData((data) => {
+			if (this.terminal !== ptyInstance) return;
 			this.buffer.write(data);
 			this._broadcast(data);
 		});
 
-		this.terminal.onExit(() => {
+		ptyInstance.onExit(() => {
+			if (this.terminal !== ptyInstance) return;
+			this.terminal = null;
 			this._onProcessExit();
 		});
 	}
@@ -130,6 +150,15 @@ class TerminalSession {
 		this.clients.delete(ws);
 	}
 
+	_pruneClients() {
+		for (const client of this.clients) {
+			if (client.readyState !== 1) {
+				this.clients.delete(client);
+			}
+		}
+		return this.clients.size;
+	}
+
 	_broadcast(data) {
 		for (const client of this.clients) {
 			if (client.readyState === 1) {
@@ -141,47 +170,86 @@ class TerminalSession {
 	}
 
 	resize(cols, rows) {
-		if (this.terminal && cols > 0 && rows > 0) {
-			try {
-				this.terminal.resize(cols, rows);
-			} catch {}
+		if (cols > 0 && rows > 0) {
+			this.cols = cols;
+			this.rows = rows;
+			if (this.terminal) {
+				try {
+					this.terminal.resize(cols, rows);
+				} catch {}
+			}
 		}
 	}
 
 	write(data) {
 		if (this.terminal) {
-			this.terminal.write(data);
+			try {
+				this.terminal.write(data);
+			} catch {}
 		}
 	}
 
 	kill() {
-		if (!this.terminal) {
-			this._onProcessExit();
-			return;
+		const term = this.terminal;
+		this.terminal = null;
+		if (term) {
+			try {
+				term.kill();
+			} catch {}
 		}
-		try {
-			this.terminal.kill();
-		} catch {
-			this._onProcessExit();
-		}
+		this._onProcessExit();
 	}
 
 	_onProcessExit() {
-		if (sessions.get(this.id) === this) {
-			sessions.delete(this.id);
-		}
 		this.terminal = null;
-		for (const socket of this.clients) {
-			if (socket.readyState === 1) {
-				try {
-					socket.send(JSON.stringify({ type: "exit" }));
-				} catch {}
-				try {
-					socket.close();
-				} catch {}
+		const activeClients = this._pruneClients();
+
+		if (activeClients > 0) {
+			const now = Date.now();
+			if (now - this.lastRespawnTime < 1000) {
+				this.respawnCount = (this.respawnCount || 0) + 1;
+			} else {
+				this.respawnCount = 0;
 			}
+			this.lastRespawnTime = now;
+
+			if (this.respawnCount > 5) {
+				console.error(`[Terminal] Session ${this.id} exited repeatedly, halting auto-restart.`);
+				if (sessions.get(this.id) === this) {
+					sessions.delete(this.id);
+				}
+				for (const socket of this.clients) {
+					if (socket.readyState === 1) {
+						try {
+							socket.send(JSON.stringify({ type: "exit" }));
+						} catch {}
+						try {
+							socket.close();
+						} catch {}
+					}
+				}
+				this.clients.clear();
+				return;
+			}
+
+			// Clear scrollback buffer for fresh clean session
+			this.buffer = new TerminalBuffer();
+			this.ensurePTY(this.cols, this.rows);
+
+			const payload = JSON.stringify({ type: "session", restored: false });
+			for (const client of this.clients) {
+				if (client.readyState === 1) {
+					try {
+						client.send(payload);
+					} catch {}
+				}
+			}
+		} else {
+			if (sessions.get(this.id) === this) {
+				sessions.delete(this.id);
+			}
+			this.clients.clear();
 		}
-		this.clients.clear();
 	}
 }
 
@@ -189,7 +257,13 @@ function evictDetachedSession() {
 	for (const session of sessions.values()) {
 		if (session.clients.size === 0) {
 			sessions.delete(session.id);
-			session.kill();
+			const term = session.terminal;
+			session.terminal = null;
+			if (term) {
+				try {
+					term.kill();
+				} catch {}
+			}
 			return true;
 		}
 	}

@@ -137,7 +137,6 @@ export default function TerminalApp() {
   const fitAddonRef = useRef<FitAddon | null>(null);
   const unmountedRef = useRef(false);
   const suppressReconnectRef = useRef(false);
-  const pendingKillRef = useRef(false);
   const reconnectAttemptRef = useRef(0);
   const reconnectTimerRef = useRef<number | null>(null);
   const connectSocketRef = useRef<(term: Terminal) => void>(() => {});
@@ -217,13 +216,6 @@ export default function TerminalApp() {
     socket.onmessage = (event) => {
       const control = parseControlMessage(event.data);
 
-      if (pendingKillRef.current) {
-        if (control?.type === 'session' && socket.readyState === WebSocket.OPEN) {
-          socket.send(JSON.stringify({ type: 'kill' }));
-        }
-        return;
-      }
-
       if (control?.type === 'session') {
         sawHello = true;
         const restored = Boolean(control.restored);
@@ -276,7 +268,6 @@ export default function TerminalApp() {
   useEffect(() => {
     unmountedRef.current = false;
     suppressReconnectRef.current = false;
-    pendingKillRef.current = false;
     reconnectAttemptRef.current = 0;
 
     const term = new Terminal({
@@ -399,7 +390,6 @@ export default function TerminalApp() {
 
   const handleReconnect = () => {
     suppressReconnectRef.current = false;
-    pendingKillRef.current = false;
     reconnectAttemptRef.current = 0;
     setStatus('connecting');
     if (xtermRef.current) {
@@ -409,17 +399,19 @@ export default function TerminalApp() {
   };
 
   const handleKill = () => {
-    suppressReconnectRef.current = true;
-    pendingKillRef.current = true;
+    suppressReconnectRef.current = false;
     clearReconnectTimer();
     if (socketRef.current?.readyState === WebSocket.OPEN) {
       socketRef.current.send(JSON.stringify({ type: 'kill' }));
+    } else if (xtermRef.current) {
+      reconnectAttemptRef.current = 0;
+      setStatus('connecting');
+      connectSocket(xtermRef.current);
     }
     if (xtermRef.current) {
       xtermRef.current.reset();
       xtermRef.current.focus();
     }
-    setStatus('disconnected');
   };
 
   return (
@@ -454,8 +446,7 @@ export default function TerminalApp() {
             type="button"
             className={`${styles.actionBtn} ${styles.actionBtnDanger}`}
             onClick={handleKill}
-            title="Kill session"
-            disabled={status === 'disconnected'}
+            title="Kill & restart session"
           >
             <Power size={12} />
             <span>Kill</span>
