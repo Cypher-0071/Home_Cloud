@@ -17,16 +17,16 @@ This feature automates DNS routing and HTTPS subdomain generation for any runnin
 
 ---
 
-### Phase 2: Stacks API & UI (docker-compose Deployments) ✅ *COMPLETED — 2026-08-11*
+### Phase 2: Compose API & UI (docker-compose Deployments) ✅ *COMPLETED — 2026-08-11*
 
 This feature enables deploying complex, multi-container applications (e.g. Nextcloud + Postgres + Redis) using standard `docker-compose.yml` templates.
 
-* [x] **Research & Runtime Integration:** Spawning `docker compose -p <name> up -d` inside `~/.home-cloud/stacks/<name>/` and integrating `dockerode-compose` + Docker socket label filtering.
-* [x] **Deploy stack endpoint:** `POST /api/docker/stacks/deploy` — accepts `{ name, yaml }`. Writes the YAML to disk and spawns `docker compose up -d`, streaming output line-by-line via SSE.
-* [x] **List stacks endpoint:** `GET /api/docker/stacks` — scans `~/.home-cloud/stacks/` and cross-references containers by label `com.docker.compose.project` for instant state detection.
-* [x] **Start, Stop & Delete stack endpoints:** `POST /api/docker/stacks/:name/start`, `POST /api/docker/stacks/:name/stop`, and `DELETE /api/docker/stacks/:name` (`docker compose down -v` + dir cleanup).
-* [x] **Multi-container log streaming endpoint:** `GET /api/docker/stacks/:name/logs` — streams live stack logs via SSE.
-* [x] **Stacks Tab UI:** Workspace tab featuring stack cards grid, running service counters, service state pills, quick templates dropdown (*WordPress*, *Nextcloud*, *PostgreSQL*, *Nginx*), YAML code editor, SSE deployment console, and multi-service log viewer modal.
+* [x] **Research & Runtime Integration:** Spawning `docker compose -p <name> up -d` inside `~/.home-cloud/compose/<name>/` and integrating `dockerode-compose` + Docker socket label filtering.
+* [x] **Deploy compose endpoint:** `POST /api/docker/compose/deploy` — accepts `{ name, yaml }`. Writes the YAML to disk and spawns `docker compose up -d`, streaming output line-by-line via SSE.
+* [x] **List compose endpoint:** `GET /api/docker/compose` — scans `~/.home-cloud/compose/` and cross-references containers by label `com.docker.compose.project` for instant state detection.
+* [x] **Start, Stop & Delete compose endpoints:** `POST /api/docker/compose/:name/start`, `POST /api/docker/compose/:name/stop`, and `DELETE /api/docker/compose/:name` (`docker compose down -v` + dir cleanup).
+* [x] **Multi-container log streaming endpoint:** `GET /api/docker/compose/:name/logs` — streams live compose logs via SSE.
+* [x] **Compose Tab UI:** Workspace tab featuring compose project cards grid, running service counters, service state pills, quick templates dropdown (*WordPress*, *Nextcloud*, *PostgreSQL*, *Nginx*), YAML code editor, SSE deployment console, and multi-service log viewer modal.
 
 ---
 
@@ -59,5 +59,5 @@ Complete visual redesign of the entire desktop shell and all app surfaces.
 | Windows-style OS shell (taskbar + window chrome) | ❌ | ❌ | ✅ V2 Completed |
 | Sparkline CPU history chart | ❌ | ❌ | ✅ V2 Completed |
 | Cloudflare Ingress Auto-wiring | ❌ | ❌ | ✅ V2 Completed |
-| Stacks (docker-compose API & UI) | ❌ | ✅ partial | ✅ V2 Completed |
+| Compose (docker-compose API & UI) | ❌ | ✅ partial | ✅ V2 Completed |
 | No iframe / no extra port | ❌ | ❌ | ✅ |

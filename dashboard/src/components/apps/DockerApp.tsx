@@ -85,7 +85,7 @@ interface PullLayer {
 
 type ActionKind = 'start' | 'stop' | 'restart' | 'delete';
 
-interface StackContainer {
+export interface ComposeContainer {
   id: string;
   name: string;
   service: string;
@@ -94,14 +94,18 @@ interface StackContainer {
   status: string;
 }
 
-interface Stack {
+export type StackContainer = ComposeContainer;
+
+export interface ComposeProject {
   name: string;
   status: 'running' | 'partial' | 'stopped' | 'uncreated';
   servicesCount: number;
   runningServicesCount: number;
-  containers: StackContainer[];
+  containers: ComposeContainer[];
   yamlExists: boolean;
 }
+
+export type Stack = ComposeProject;
 
 interface LogLine {
   timestamp: string | null;
@@ -1170,13 +1174,13 @@ export default function DockerApp() {
   const net = useNetworkDetector();
 
   // Top Level Window Navigation
-  const [activeWindowTab, setActiveWindowTab] = useState<'containers' | 'images' | 'stacks'>('containers');
+  const [activeWindowTab, setActiveWindowTab] = useState<'containers' | 'images' | 'compose'>('containers');
 
   // Search & Filter State
   const [containerSearchQuery, setContainerSearchQuery] = useState('');
   const [containerStatusFilter, setContainerStatusFilter] = useState<'all' | 'running' | 'stopped'>('all');
   const [imageSearchQuery, setImageSearchQuery]         = useState('');
-  const [stackSearchQuery, setStackSearchQuery]         = useState('');
+  const [composeSearchQuery, setComposeSearchQuery]     = useState('');
 
   // Containers state
   const [containers, setContainers]           = useState<Container[]>([]);
@@ -1188,15 +1192,15 @@ export default function DockerApp() {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [lastSynced, setLastSynced]           = useState('');
 
-  // Stacks state
-  const [stacks, setStacks]                   = useState<Stack[]>([]);
-  const [stacksLoading, setStacksLoading]     = useState(false);
-  const [stacksError, setStacksError]         = useState<string | null>(null);
+  // Compose state
+  const [composeProjects, setComposeProjects]         = useState<ComposeProject[]>([]);
+  const [composeLoading, setComposeLoading]           = useState(false);
+  const [composeError, setComposeError]               = useState<string | null>(null);
 
-  // Deploy Stack Modal state
+  // Deploy Compose Project Modal state
   const [showDeployModal, setShowDeployModal]         = useState(false);
   const [deployMode, setDeployMode]                   = useState<'form' | 'yaml'>('form');
-  const [deployStackName, setDeployStackName]         = useState('');
+  const [deployProjectName, setDeployProjectName]     = useState('');
   const [formServices, setFormServices]               = useState<FormService[]>([createDefaultService(1)]);
   const [showEnvPasswords, setShowEnvPasswords]       = useState<Record<string, boolean>>({});
   const [deployYaml, setDeployYaml]                   = useState(() => generateComposeYamlFromServices([createDefaultService(1)]));
@@ -1205,13 +1209,13 @@ export default function DockerApp() {
   const [deployError, setDeployError]                 = useState<string | null>(null);
   const fileInputRef                                  = useRef<HTMLInputElement>(null);
 
-  // In-App Stack Delete Confirmation Dialog state
-  const [stackToDelete, setStackToDelete]             = useState<string | null>(null);
+  // In-App Compose Delete Confirmation Dialog state
+  const [projectToDelete, setProjectToDelete]         = useState<string | null>(null);
 
-  // Stack Logs Modal state
-  const [selectedStackLogsName, setSelectedStackLogsName] = useState<string | null>(null);
-  const [stackLogLines, setStackLogLines]     = useState<string[]>([]);
-  const [stackLogsLoading, setStackLogsLoading] = useState(false);
+  // Compose Logs Modal state
+  const [selectedComposeLogsName, setSelectedComposeLogsName] = useState<string | null>(null);
+  const [composeLogLines, setComposeLogLines]         = useState<string[]>([]);
+  const [composeLogsLoading, setComposeLogsLoading]   = useState(false);
 
   // Selected container details pane
   const [selectedId, setSelectedId]           = useState<string | null>(null);
@@ -1434,34 +1438,34 @@ export default function DockerApp() {
     }
   }, []);
 
-  const fetchStacks = useCallback(async (silent = false) => {
-    if (!silent) setStacksLoading(true);
+  const fetchCompose = useCallback(async (silent = false) => {
+    if (!silent) setComposeLoading(true);
     try {
-      const res = await fetch('/api/docker/stacks');
+      const res = await fetch('/api/docker/compose');
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      setStacks(data.stacks ?? []);
-      setStacksError(null);
+      setComposeProjects(data.compose ?? data.projects ?? data.stacks ?? []);
+      setComposeError(null);
     } catch (e: any) {
-      setStacksError(e.message || 'Failed to load stacks');
+      setComposeError(e.message || 'Failed to load compose projects');
     } finally {
-      if (!silent) setStacksLoading(false);
+      if (!silent) setComposeLoading(false);
     }
   }, []);
 
-  const handleOpenStackLogs = (name: string) => {
-    setSelectedStackLogsName(name);
+  const handleOpenComposeLogs = (name: string) => {
+    setSelectedComposeLogsName(name);
   };
 
-  const handleStartStack = async (name: string) => {
+  const handleStartCompose = async (name: string) => {
     setActionLoading(`start-${name}`);
     try {
-      const res = await fetch(`/api/docker/stacks/${name}/start`, { method: 'POST' });
+      const res = await fetch(`/api/docker/compose/${name}/start`, { method: 'POST' });
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || 'Failed to start stack');
+        throw new Error(data.error || 'Failed to start compose project');
       }
-      fetchStacks(true);
+      fetchCompose(true);
       fetchContainers(true);
     } catch (err: any) {
       alert(err.message);
@@ -1470,15 +1474,15 @@ export default function DockerApp() {
     }
   };
 
-  const handleStopStack = async (name: string) => {
+  const handleStopCompose = async (name: string) => {
     setActionLoading(`stop-${name}`);
     try {
-      const res = await fetch(`/api/docker/stacks/${name}/stop`, { method: 'POST' });
+      const res = await fetch(`/api/docker/compose/${name}/stop`, { method: 'POST' });
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || 'Failed to stop stack');
+        throw new Error(data.error || 'Failed to stop compose project');
       }
-      fetchStacks(true);
+      fetchCompose(true);
       fetchContainers(true);
     } catch (err: any) {
       alert(err.message);
@@ -1487,31 +1491,31 @@ export default function DockerApp() {
     }
   };
 
-  const handleDeleteStack = (name: string) => {
-    setStackToDelete(name);
+  const handleDeleteCompose = (name: string) => {
+    setProjectToDelete(name);
   };
 
-  const confirmAndExecuteDeleteStack = async (name: string) => {
+  const confirmAndExecuteDeleteCompose = async (name: string) => {
     setActionLoading(`delete-${name}`);
     try {
-      const res = await fetch(`/api/docker/stacks/${name}`, { method: 'DELETE' });
+      const res = await fetch(`/api/docker/compose/${name}`, { method: 'DELETE' });
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || 'Failed to delete stack');
+        throw new Error(data.error || 'Failed to delete compose project');
       }
-      fetchStacks(true);
+      fetchCompose(true);
       fetchContainers(true);
     } catch (err: any) {
       alert(err.message);
     } finally {
       setActionLoading(null);
-      setStackToDelete(null);
+      setProjectToDelete(null);
     }
   };
 
   const openDeployModal = () => {
     const initialServices = [createDefaultService(1)];
-    setDeployStackName('');
+    setDeployProjectName('');
     setFormServices(initialServices);
     setDeployMode('form');
     setDeployYaml(generateComposeYamlFromServices(initialServices));
@@ -1689,8 +1693,8 @@ export default function DockerApp() {
           setFormServices(parsed.services);
         }
         const baseName = file.name.replace(/\.(ya?ml)$/i, '').toLowerCase().replace(/[^a-z0-9-]/g, '');
-        if (baseName && !deployStackName.trim()) {
-          setDeployStackName(baseName === 'docker-compose' ? 'custom-stack' : baseName);
+        if (baseName && !deployProjectName.trim()) {
+          setDeployProjectName(baseName === 'docker-compose' ? 'custom-compose' : baseName);
         }
         setDeployMode('yaml');
         setDeployError(null);
@@ -1700,13 +1704,13 @@ export default function DockerApp() {
     e.target.value = '';
   };
 
-  const handleEditStack = async (name: string) => {
+  const handleEditCompose = async (name: string) => {
     try {
-      const res = await fetch(`/api/docker/stacks/${name}`);
+      const res = await fetch(`/api/docker/compose/${name}`);
       if (res.ok) {
         const data = await res.json();
         const yamlContent = data.yaml || '';
-        setDeployStackName(name);
+        setDeployProjectName(name);
         setDeployYaml(yamlContent);
         const parsed = parseComposeYamlToServices(yamlContent);
         if (parsed.success && parsed.services) {
@@ -1716,6 +1720,9 @@ export default function DockerApp() {
         setDeployConsoleLogs([]);
         setDeployError(null);
         setShowDeployModal(true);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || `Failed to load Compose project '${name}'`);
       }
     } catch (err: any) {
       alert(err.message);
@@ -1771,8 +1778,8 @@ export default function DockerApp() {
       ? generateComposeYamlFromServices(formServices)
       : deployYaml;
 
-    if (!deployStackName.trim() || !yamlToDeploy.trim()) {
-      setDeployError('Stack name and YAML content are required.');
+    if (!deployProjectName.trim() || !yamlToDeploy.trim()) {
+      setDeployError('Project name and YAML content are required.');
       return;
     }
 
@@ -1782,13 +1789,13 @@ export default function DockerApp() {
 
     setDeploying(true);
     setDeployError(null);
-    setDeployConsoleLogs(['Deploying stack…']);
+    setDeployConsoleLogs(['Deploying compose project…']);
 
     try {
-      const res = await fetch('/api/docker/stacks/deploy', {
+      const res = await fetch('/api/docker/compose/deploy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: deployStackName.trim(), yaml: yamlToDeploy }),
+        body: JSON.stringify({ name: deployProjectName.trim(), yaml: yamlToDeploy }),
       });
 
       if (!res.ok) {
@@ -1817,7 +1824,7 @@ export default function DockerApp() {
               }
               if (payload.status === 'success') {
                 setDeployConsoleLogs((prev) => [...prev, '✓ Deployment finished successfully!']);
-                fetchStacks(true);
+                fetchCompose(true);
                 fetchContainers(true);
               } else if (payload.status === 'failed') {
                 const reason = payload.error
@@ -1841,50 +1848,50 @@ export default function DockerApp() {
     }
   };
 
-  // Stack Logs SSE effect
+  // Compose Logs SSE effect
   useEffect(() => {
-    if (!selectedStackLogsName) {
-      setStackLogLines([]);
-      setStackLogsLoading(false);
+    if (!selectedComposeLogsName) {
+      setComposeLogLines([]);
+      setComposeLogsLoading(false);
       return;
     }
-    setStackLogsLoading(true);
-    setStackLogLines([]);
-    const es = new EventSource(`/api/docker/stacks/${selectedStackLogsName}/logs`);
+    setComposeLogsLoading(true);
+    setComposeLogLines([]);
+    const es = new EventSource(`/api/docker/compose/${selectedComposeLogsName}/logs`);
 
     es.onmessage = (event) => {
-      setStackLogsLoading(false);
+      setComposeLogsLoading(false);
       try {
         const data = JSON.parse(event.data);
         if (data.text) {
-          setStackLogLines((prev) => [...prev, data.text]);
+          setComposeLogLines((prev) => [...prev, data.text]);
         }
       } catch {
-        setStackLogLines((prev) => [...prev, event.data]);
+        setComposeLogLines((prev) => [...prev, event.data]);
       }
     };
 
     es.onerror = () => {
-      setStackLogsLoading(false);
+      setComposeLogsLoading(false);
     };
 
     return () => {
       es.close();
     };
-  }, [selectedStackLogsName]);
+  }, [selectedComposeLogsName]);
 
   // Polling loop
   useEffect(() => {
     fetchContainers();
     fetchImages();
-    fetchStacks();
+    fetchCompose();
     const id = setInterval(() => {
       fetchContainers(true);
       fetchImages(true);
-      fetchStacks(true);
+      fetchCompose(true);
     }, 5000);
     return () => clearInterval(id);
-  }, [fetchContainers, fetchImages, fetchStacks]);
+  }, [fetchContainers, fetchImages, fetchCompose]);
 
   // Tab auto-switch on selection
   useEffect(() => {
@@ -2292,11 +2299,11 @@ export default function DockerApp() {
     });
   }, [images, imageSearchQuery]);
 
-  const filteredStacks = useMemo(() => {
-    if (!stackSearchQuery.trim()) return stacks;
-    const q = stackSearchQuery.toLowerCase();
-    return stacks.filter((s) => s.name.toLowerCase().includes(q));
-  }, [stacks, stackSearchQuery]);
+  const filteredComposeProjects = useMemo(() => {
+    if (!composeSearchQuery.trim()) return composeProjects;
+    const q = composeSearchQuery.toLowerCase();
+    return composeProjects.filter((p) => p.name.toLowerCase().includes(q));
+  }, [composeProjects, composeSearchQuery]);
 
   const selectedContainer = containers.find((c) => c.Id === selectedId);
 
@@ -2735,15 +2742,15 @@ export default function DockerApp() {
             <span className={styles.tabCountBadge}>{images.length}</span>
           </button>
           <button
-            className={`${styles.tabBtn} ${activeWindowTab === 'stacks' ? styles.tabBtnActive : ''}`}
+            className={`${styles.tabBtn} ${activeWindowTab === 'compose' ? styles.tabBtnActive : ''}`}
             onClick={() => {
-              setActiveWindowTab('stacks');
-              fetchStacks(true);
+              setActiveWindowTab('compose');
+              fetchCompose(true);
             }}
           >
             <Layers size={13} />
-            <span>Stacks</span>
-            <span className={styles.tabCountBadge}>{stacks.length}</span>
+            <span>Compose</span>
+            <span className={styles.tabCountBadge}>{composeProjects.length}</span>
           </button>
         </div>
 
@@ -2754,9 +2761,9 @@ export default function DockerApp() {
             onClick={() => {
               if (activeWindowTab === 'containers') fetchContainers(true);
               else if (activeWindowTab === 'images') fetchImages(true);
-              else if (activeWindowTab === 'stacks') fetchStacks(true);
+              else if (activeWindowTab === 'compose') fetchCompose(true);
             }}
-            disabled={refreshing || imagesLoading || stacksLoading}
+            disabled={refreshing || imagesLoading || composeLoading}
             title="Refresh current view"
           >
             <RefreshCw size={11} className={refreshing ? styles.spinning : ''} />
@@ -3454,8 +3461,8 @@ export default function DockerApp() {
         </>
       )}
 
-      {/* ───── STACKS VIEW ───── */}
-      {activeWindowTab === 'stacks' && (
+      {/* ───── COMPOSE VIEW ───── */}
+      {activeWindowTab === 'compose' && (
         <>
           {/* Action Bar */}
           <div className={styles.actionBar}>
@@ -3465,12 +3472,12 @@ export default function DockerApp() {
                 <input
                   className={styles.searchInput}
                   type="text"
-                  placeholder="Search stacks by name…"
-                  value={stackSearchQuery}
-                  onChange={(e) => setStackSearchQuery(e.target.value)}
+                  placeholder="Search compose projects by name…"
+                  value={composeSearchQuery}
+                  onChange={(e) => setComposeSearchQuery(e.target.value)}
                 />
-                {stackSearchQuery && (
-                  <button className={styles.searchClearBtn} onClick={() => setStackSearchQuery('')}>
+                {composeSearchQuery && (
+                  <button className={styles.searchClearBtn} onClick={() => setComposeSearchQuery('')}>
                     <X size={12} />
                   </button>
                 )}
@@ -3480,36 +3487,36 @@ export default function DockerApp() {
             <div className={styles.actionRight}>
               <div className={styles.healthSummary}>
                 <span className={styles.liveDot} />
-                <span>{stacks.filter((s) => s.status === 'running').length} active stacks</span>
+                <span>{composeProjects.filter((p) => p.status === 'running').length} active compose projects</span>
               </div>
               <button
                 className={styles.btnPrimary}
                 onClick={openDeployModal}
-                title="Deploy a new multi-container compose stack"
+                title="Deploy a new multi-container compose project"
               >
-                <Plus size={12} /> Deploy Stack
+                <Plus size={12} /> Deploy Compose
               </button>
             </div>
           </div>
 
-          <div className={styles.stacksContainer}>
-            {stacksError && (
+          <div className={styles.composeContainer}>
+            {composeError && (
               <div className={styles.alertError} style={{ marginBottom: '12px' }}>
                 <AlertCircle size={14} />
-                <span>{stacksError}</span>
+                <span>{composeError}</span>
               </div>
             )}
 
-            {stacksLoading && stacks.length === 0 ? (
+            {composeLoading && composeProjects.length === 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px', gap: '10px' }}>
                 <div className={styles.spinner} />
-                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Loading Docker stacks…</span>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Loading Docker compose projects…</span>
               </div>
-            ) : filteredStacks.length === 0 ? (
+            ) : filteredComposeProjects.length === 0 ? (
               <div className={styles.emptyState}>
                 <Layers size={32} style={{ opacity: 0.15 }} />
                 <p className={styles.emptyTitle}>
-                  {stackSearchQuery ? 'No stacks match your query' : 'No Docker compose stacks deployed'}
+                  {composeSearchQuery ? 'No compose projects match your query' : 'No Docker compose projects deployed'}
                 </p>
                 <p className={styles.emptySubtext}>
                   Deploy multi-container applications easily with guided templates or custom Compose YAML
@@ -3519,31 +3526,31 @@ export default function DockerApp() {
                   style={{ marginTop: '12px' }}
                   onClick={openDeployModal}
                 >
-                  <Plus size={13} /> Deploy First Stack
+                  <Plus size={13} /> Deploy Compose Project
                 </button>
               </div>
             ) : (
-              <div className={styles.stacksGrid}>
-                {filteredStacks.map((s) => {
-                  const isRunning = s.status === 'running';
-                  const isPartial = s.status === 'partial';
+              <div className={styles.composeGrid}>
+                {filteredComposeProjects.map((p) => {
+                  const isRunning = p.status === 'running';
+                  const isPartial = p.status === 'partial';
                   const isActioning =
-                    actionLoading === `start-${s.name}` ||
-                    actionLoading === `stop-${s.name}` ||
-                    actionLoading === `delete-${s.name}`;
+                    actionLoading === `start-${p.name}` ||
+                    actionLoading === `stop-${p.name}` ||
+                    actionLoading === `delete-${p.name}`;
 
                   return (
-                    <div key={s.name} className={styles.stackCard}>
-                      <div className={styles.stackCardHeader}>
-                        <div className={styles.stackNameGroup}>
-                          <p className={styles.stackTitle}>{s.name}</p>
+                    <div key={p.name} className={styles.composeCard}>
+                      <div className={styles.composeCardHeader}>
+                        <div className={styles.composeNameGroup}>
+                          <p className={styles.composeTitle}>{p.name}</p>
                           <span
-                            className={`${styles.stackStatusBadge} ${
+                            className={`${styles.composeStatusBadge} ${
                               isRunning
-                                ? styles.stackStatusRunning
+                                ? styles.composeStatusRunning
                                 : isPartial
-                                ? styles.stackStatusPartial
-                                : styles.stackStatusStopped
+                                ? styles.composeStatusPartial
+                                : styles.composeStatusStopped
                             }`}
                           >
                             <span
@@ -3552,52 +3559,52 @@ export default function DockerApp() {
                                 background: isRunning ? '#22c55e' : isPartial ? '#facc15' : '#737373',
                               }}
                             />
-                            {s.status} ({s.runningServicesCount}/{s.servicesCount})
+                            {p.status} ({p.runningServicesCount}/{p.servicesCount})
                           </span>
                         </div>
 
-                        <div className={styles.stackActions}>
+                        <div className={styles.composeActions}>
                           {isRunning || isPartial ? (
                             <button
-                              className={styles.stackActionBtn}
-                              title="Stop Stack"
+                              className={styles.composeActionBtn}
+                              title="Stop Compose Project"
                               disabled={isActioning}
-                              onClick={() => handleStopStack(s.name)}
+                              onClick={() => handleStopCompose(p.name)}
                             >
                               <Square size={12} />
                             </button>
                           ) : (
                             <button
-                              className={styles.stackActionBtn}
-                              title="Start Stack"
+                              className={styles.composeActionBtn}
+                              title="Start Compose Project"
                               disabled={isActioning}
-                              onClick={() => handleStartStack(s.name)}
+                              onClick={() => handleStartCompose(p.name)}
                             >
                               <Play size={12} fill="currentColor" />
                             </button>
                           )}
 
                           <button
-                            className={styles.stackActionBtn}
-                            title="Stack Logs"
-                            onClick={() => handleOpenStackLogs(s.name)}
+                            className={styles.composeActionBtn}
+                            title="Compose Logs"
+                            onClick={() => handleOpenComposeLogs(p.name)}
                           >
                             <FileText size={12} />
                           </button>
 
                           <button
-                            className={styles.stackActionBtn}
-                            title="Edit & Redeploy Stack"
-                            onClick={() => handleEditStack(s.name)}
+                            className={styles.composeActionBtn}
+                            title="Edit & Redeploy Compose Project"
+                            onClick={() => handleEditCompose(p.name)}
                           >
                             <RefreshCw size={12} />
                           </button>
 
                           <button
-                            className={`${styles.stackActionBtn} ${styles.stackActionDelete}`}
-                            title="Delete Stack"
+                            className={`${styles.composeActionBtn} ${styles.composeActionDelete}`}
+                            title="Delete Compose Project"
                             disabled={isActioning}
-                            onClick={() => handleDeleteStack(s.name)}
+                            onClick={() => handleDeleteCompose(p.name)}
                           >
                             <Trash2 size={12} />
                           </button>
@@ -3605,9 +3612,9 @@ export default function DockerApp() {
                       </div>
 
                       {/* Services list pills */}
-                      <div className={styles.stackServicesList}>
-                        {s.containers.length > 0 ? (
-                          s.containers.map((sc) => (
+                      <div className={styles.composeServicesList}>
+                        {p.containers.length > 0 ? (
+                          p.containers.map((sc) => (
                             <span key={sc.id} className={styles.servicePill} title={`${sc.image} (${sc.status})`}>
                               <span
                                 className={`${styles.serviceDot} ${
@@ -3619,7 +3626,7 @@ export default function DockerApp() {
                           ))
                         ) : (
                           <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                            No active containers associated with stack
+                            No active containers associated with compose project
                           </span>
                         )}
                       </div>
@@ -3632,20 +3639,20 @@ export default function DockerApp() {
 
           {/* Status Bar */}
           <div className={styles.statusBar}>
-            <span>{stacks.length} stack{stacks.length !== 1 ? 's' : ''}</span>
-            <span>{stacks.filter((s) => s.status === 'running').length} running</span>
+            <span>{composeProjects.length} compose project{composeProjects.length !== 1 ? 's' : ''}</span>
+            <span>{composeProjects.filter((p) => p.status === 'running').length} running</span>
           </div>
         </>
       )}
 
-      {/* ───── Deploy Compose Stack Modal ───── */}
+      {/* ───── Deploy Compose Project Modal ───── */}
       {showDeployModal && (
         <div className={styles.modalOverlay} onClick={() => !deploying && setShowDeployModal(false)}>
           <div className={styles.modalCard} style={{ maxWidth: '680px' }} onClick={(e) => e.stopPropagation()}>
             <div className={styles.modalHeader}>
               <div className={styles.modalTitle}>
                 <Layers size={15} style={{ color: '#ededed' }} />
-                <span>Deploy Docker Compose Stack</span>
+                <span>Deploy Docker Compose Project</span>
               </div>
               <button
                 className={styles.modalCloseBtn}
@@ -3665,19 +3672,19 @@ export default function DockerApp() {
                   </div>
                 )}
 
-                {/* Stack Name & Controls Bar */}
+                {/* Project Name & Controls Bar */}
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
                   <div className={styles.fieldGroup} style={{ flex: 1, marginBottom: 0 }}>
-                    <label className={styles.fieldLabel}>Stack Name</label>
+                    <label className={styles.fieldLabel}>Project Name</label>
                     <input
                       className={styles.fieldInput}
                       type="text"
-                      value={deployStackName}
+                      value={deployProjectName}
                       onChange={(e) => {
                         const name = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
-                        setDeployStackName(name);
+                        setDeployProjectName(name);
                       }}
-                      placeholder="e.g. my-app, production-stack, backend"
+                      placeholder="e.g. my-app, production-compose, backend"
                       required
                       disabled={deploying}
                     />
@@ -3710,7 +3717,7 @@ export default function DockerApp() {
                           className={`${styles.filterPill} ${deployMode === 'form' ? styles.filterPillActive : ''}`}
                           onClick={switchToFormView}
                           disabled={deploying}
-                          title="Configure any stack using simple visual form fields"
+                          title="Configure any compose project using simple visual form fields"
                         >
                           <Sliders size={11} /> Form View
                         </button>
@@ -4069,9 +4076,9 @@ export default function DockerApp() {
                 <button
                   type="submit"
                   className={styles.btnPrimary}
-                  disabled={deploying || !yamlValidation.valid || !deployStackName.trim()}
+                  disabled={deploying || !yamlValidation.valid || !deployProjectName.trim()}
                 >
-                  {deploying ? 'Deploying Stack…' : 'Deploy Stack'}
+                  {deploying ? 'Deploying Project…' : 'Deploy Compose Project'}
                 </button>
               </div>
             </form>
@@ -4079,9 +4086,9 @@ export default function DockerApp() {
         </div>
       )}
 
-      {/* ───── In-App Remove Stack Confirmation Modal ───── */}
-      {stackToDelete && (
-        <div className={styles.modalOverlay} onClick={() => !actionLoading && setStackToDelete(null)}>
+      {/* ───── In-App Remove Compose Project Confirmation Modal ───── */}
+      {projectToDelete && (
+        <div className={styles.modalOverlay} onClick={() => !actionLoading && setProjectToDelete(null)}>
           <div
             className={styles.modalCard}
             style={{ maxWidth: '440px', border: '1px solid #ef4444' }}
@@ -4090,11 +4097,11 @@ export default function DockerApp() {
             <div className={styles.modalHeader}>
               <div className={styles.modalTitle} style={{ color: '#ef4444' }}>
                 <AlertTriangle size={15} />
-                <span>Remove Docker Stack</span>
+                <span>Remove Compose Project</span>
               </div>
               <button
                 className={styles.modalCloseBtn}
-                onClick={() => !actionLoading && setStackToDelete(null)}
+                onClick={() => !actionLoading && setProjectToDelete(null)}
                 disabled={Boolean(actionLoading)}
               >
                 <X size={14} />
@@ -4103,8 +4110,8 @@ export default function DockerApp() {
 
             <div className={styles.modalBody} style={{ padding: '16px', gap: '12px' }}>
               <p style={{ margin: 0, fontSize: '13px', color: '#ededed', lineHeight: '1.5' }}>
-                Are you sure you want to remove stack{' '}
-                <strong style={{ color: '#ffffff', fontFamily: 'var(--mono)' }}>{stackToDelete}</strong>?
+                Are you sure you want to remove compose project{' '}
+                <strong style={{ color: '#ffffff', fontFamily: 'var(--mono)' }}>{projectToDelete}</strong>?
               </p>
               <div
                 style={{
@@ -4117,7 +4124,7 @@ export default function DockerApp() {
                   lineHeight: '1.4',
                 }}
               >
-                ⚠ This will permanently stop and remove all associated containers, networks, and volumes managed by this stack.
+                ⚠ This will permanently stop and remove all associated containers, networks, and volumes managed by this compose project.
               </div>
             </div>
 
@@ -4125,7 +4132,7 @@ export default function DockerApp() {
               <button
                 type="button"
                 className={styles.btnSecondary}
-                onClick={() => setStackToDelete(null)}
+                onClick={() => setProjectToDelete(null)}
                 disabled={Boolean(actionLoading)}
               >
                 Cancel
@@ -4147,38 +4154,38 @@ export default function DockerApp() {
                   gap: '6px',
                 }}
                 disabled={Boolean(actionLoading)}
-                onClick={() => confirmAndExecuteDeleteStack(stackToDelete)}
+                onClick={() => confirmAndExecuteDeleteCompose(projectToDelete)}
               >
                 <Trash2 size={13} />
-                {actionLoading === `delete-${stackToDelete}` ? 'Removing…' : 'Remove Stack'}
+                {actionLoading === `delete-${projectToDelete}` ? 'Removing…' : 'Remove Project'}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ───── Stack Logs Modal ───── */}
-      {selectedStackLogsName && (
-        <div className={styles.modalOverlay} onClick={() => setSelectedStackLogsName(null)}>
+      {/* ───── Compose Logs Modal ───── */}
+      {selectedComposeLogsName && (
+        <div className={styles.modalOverlay} onClick={() => setSelectedComposeLogsName(null)}>
           <div className={styles.modalCard} style={{ maxWidth: '720px' }} onClick={(e) => e.stopPropagation()}>
             <div className={styles.modalHeader}>
               <div className={styles.modalTitle}>
                 <FileText size={15} style={{ color: '#ededed' }} />
-                <span>Stack Logs — {selectedStackLogsName}</span>
+                <span>Compose Logs — {selectedComposeLogsName}</span>
               </div>
-              <button className={styles.modalCloseBtn} onClick={() => setSelectedStackLogsName(null)}>
+              <button className={styles.modalCloseBtn} onClick={() => setSelectedComposeLogsName(null)}>
                 <X size={14} />
               </button>
             </div>
 
             <div className={styles.modalBody} style={{ padding: '12px' }}>
               <div className={styles.deployConsole} style={{ height: '320px' }}>
-                {stackLogsLoading && stackLogLines.length === 0 ? (
-                  <span style={{ color: 'var(--text-muted)' }}>Connecting to stack compose logs stream…</span>
-                ) : stackLogLines.length === 0 ? (
+                {composeLogsLoading && composeLogLines.length === 0 ? (
+                  <span style={{ color: 'var(--text-muted)' }}>Connecting to Docker Compose logs stream…</span>
+                ) : composeLogLines.length === 0 ? (
                   <span style={{ color: 'var(--text-muted)' }}>No logs emitted yet</span>
                 ) : (
-                  stackLogLines.map((l, i) => <div key={i}>{l}</div>)
+                  composeLogLines.map((l, i) => <div key={i}>{l}</div>)
                 )}
               </div>
             </div>
@@ -4187,7 +4194,7 @@ export default function DockerApp() {
               <button
                 type="button"
                 className={styles.btnSecondary}
-                onClick={() => setSelectedStackLogsName(null)}
+                onClick={() => setSelectedComposeLogsName(null)}
               >
                 Close Logs
               </button>

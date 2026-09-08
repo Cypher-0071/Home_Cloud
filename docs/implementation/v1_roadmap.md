@@ -17,7 +17,7 @@ Docker Manager Window
 │
 ├── Containers tab  — main workhorse (table, controls, stats, inspect, logs, interactive exec console)
 ├── Images tab      — pull with layer progress, list, prune, and run container modal
-└── Stacks tab      — docker-compose.yml deployment (V2 Roadmap)
+└── Compose tab     — docker-compose.yml deployment (V2 Roadmap, formerly Stacks)
 ```
 
 ---

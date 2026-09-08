@@ -69,7 +69,7 @@ This phase focuses on the low-level system engineering and daemonization require
 | **Image Management (Layer SSE Pull/Prune)** | ✅ *(Layer-by-layer progress bar)* | ✅ | ❌ | ✅ | ✅ |
 | **Custom Container Creation Modal** | ✅ *(Ports, Envs, Mounts, Restart policy)* | ✅ | ❌ | ✅ | ✅ |
 | **Zero-Downtime Cloudflare Ingress Auto-Wiring** | ✅ *(V2: CNAME API + `SIGHUP` reload)* | ❌ *(Manual proxy)* | ❌ *(Manual proxy)* | ❌ *(Manual proxy)* | ❌ *(Manual proxy)* |
-| **Multi-Container Stacks (`docker-compose`)** | ✅ *(V2: Native compose CLI + 2-way sync)* | ✅ | ❌ | ✅ *(Partial)* | ✅ |
+| **Multi-Container Compose Projects (`docker-compose`)** | ✅ *(V2: Native compose CLI + 2-way sync)* | ✅ | ❌ | ✅ *(Partial)* | ✅ |
 | **Smart Split-Horizon DNS (LAN vs Remote)** | ✅ *(V3: `<2ms` LAN vs Remote fallback)* | ❌ | ❌ | ❌ | ❌ *(Requires custom DNS server)* |
 | **Persistent Sessions ("Resume Session")** | ✅ *(V3: Headless PTY + Replay Buffer)* | ❌ | ❌ | ❌ | ❌ |
 | **Host Daemonization & Boot Hardening** | ⏳ *(V3: Systemd unit + resilient boot loop)* | ❌ *(Docker only)* | ✅ | ✅ | ✅ |

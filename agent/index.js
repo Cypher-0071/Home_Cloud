@@ -59,7 +59,9 @@ app.use("/api/network", require("./routes/network"));
 app.use("/api", authMiddleware);
 app.use("/api/metrics", require("./routes/metrics"));
 app.use("/api/files", require("./routes/file"));
-app.use("/api/docker/stacks", require("./routes/stacks"));
+const composeRoutes = require("./routes/compose");
+app.use("/api/docker/compose", composeRoutes);
+app.use("/api/docker/stacks", composeRoutes);
 app.use("/api/docker", require("./routes/docker"));
 app.use(express.static(path.join(__dirname, "../dashboard/dist")));
 

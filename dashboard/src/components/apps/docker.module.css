@@ -1669,6 +1669,7 @@
 
 /* ─── Stacks Grid & Compose Cards ─── */
 
+.composeContainer,
 .stacksContainer {
   flex: 1;
   padding: 16px;
@@ -1676,12 +1677,14 @@
   background: #000000;
 }
 
+.composeGrid,
 .stacksGrid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
   gap: 12px;
 }
 
+.composeCard,
 .stackCard {
   background: #0a0a0a;
   border: 1px solid #262626;
@@ -1693,10 +1696,12 @@
   transition: border-color 0.15s ease;
 }
 
+.composeCard:hover,
 .stackCard:hover {
   border-color: #404040;
 }
 
+.composeCardHeader,
 .stackCardHeader {
   display: flex;
   align-items: center;
@@ -1704,12 +1709,14 @@
   gap: 10px;
 }
 
+.composeNameGroup,
 .stackNameGroup {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
+.composeTitle,
 .stackTitle {
   font-size: 13.5px;
   font-weight: 600;
@@ -1717,6 +1724,7 @@
   margin: 0;
 }
 
+.composeStatusBadge,
 .stackStatusBadge {
   display: inline-flex;
   align-items: center;
@@ -1728,30 +1736,35 @@
   text-transform: capitalize;
 }
 
+.composeStatusRunning,
 .stackStatusRunning {
   background: rgba(34, 197, 94, 0.12);
   color: #22c55e;
   border: 1px solid rgba(34, 197, 94, 0.25);
 }
 
+.composeStatusPartial,
 .stackStatusPartial {
   background: rgba(250, 204, 21, 0.12);
   color: #facc15;
   border: 1px solid rgba(250, 204, 21, 0.25);
 }
 
+.composeStatusStopped,
 .stackStatusStopped {
   background: rgba(255, 255, 255, 0.05);
   color: #737373;
   border: 1px solid #262626;
 }
 
+.composeActions,
 .stackActions {
   display: flex;
   align-items: center;
   gap: 4px;
 }
 
+.composeActionBtn,
 .stackActionBtn {
   background: #000000;
   border: 1px solid #262626;
@@ -1766,27 +1779,32 @@
   transition: all 0.12s ease;
 }
 
+.composeActionBtn:hover:not(:disabled),
 .stackActionBtn:hover:not(:disabled) {
   background: #171717;
   color: #ffffff;
   border-color: #333333;
 }
 
+.composeActionBtn:disabled,
 .stackActionBtn:disabled {
   opacity: 0.3;
   cursor: not-allowed;
 }
 
+.composeActionDelete,
 .stackActionDelete {
   color: #ef4444;
 }
 
+.composeActionDelete:hover:not(:disabled),
 .stackActionDelete:hover:not(:disabled) {
   color: #f87171;
   background: rgba(239, 68, 68, 0.15);
   border-color: rgba(239, 68, 68, 0.35);
 }
 
+.composeServicesList,
 .stackServicesList {
   display: flex;
   flex-wrap: wrap;

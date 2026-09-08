@@ -82,12 +82,12 @@ flowchart TB
     subgraph AGENT["Node.js Agent  ·  Express v5 + ws  ·  :3000  ·  CommonJS"]
       HTTP["http.createServer(app)"]
       WSS["ws.WebSocketServer({ server })<br/>same port, upgrade event"]
-      PIPE["1. express.json + cookie-parser<br/>2. /api/auth, /api/health, /api/network  PUBLIC<br/>3. /api/*      JWT middleware (/api/auth/me)<br/>4. metrics · files · stacks · docker<br/>5. express.static ../dashboard/dist<br/>6. GET /{*path} → index.html"]
+      PIPE["1. express.json + cookie-parser<br/>2. /api/auth, /api/health, /api/network  PUBLIC<br/>3. /api/*      JWT middleware (/api/auth/me)<br/>4. metrics · files · compose · docker<br/>5. express.static ../dashboard/dist<br/>6. GET /{*path} → index.html"]
       AUTH["routes/auth.js + middleware/auth.js<br/>jwt.sign 7d  ·  httpOnly + secure cookie"]
       MET["routes/metrics.js<br/>SSE every 2s + :heartbeat 15s"]
       FILES["routes/file.js<br/>BASE_DIR=/home/rudra-unix"]
       DOCK["routes/docker.js<br/>dockerode → Docker Engine"]
-      STK["routes/stacks.js<br/>~/.home-cloud/stacks/&lt;name&gt;"]
+      CMP["routes/compose.js<br/>~/.home-cloud/compose/&lt;name&gt; (legacy stacks aliased)"]
       NETR["routes/network.js<br/>os.networkInterfaces() LAN IP"]
       INGS["services/ingress.js<br/>js-yaml edit config.yml"]
       PTYH["sockets/terminal.js<br/>node-pty bash"]
@@ -179,7 +179,7 @@ home_cloud/
 │   │   ├── metrics.js           GET /           SSE
 │   │   ├── file.js              CRUD + search + drives
 │   │   ├── docker.js            containers, images, expose
-│   │   ├── stacks.js            compose deploy / start / stop / logs
+│   │   ├── compose.js           compose deploy / start / stop / logs (aliased to /stacks)
 │   │   └── network.js           GET /info  LAN IP
 │   └── sockets/
 │       ├── terminal.js          host bash via node-pty
@@ -260,7 +260,7 @@ flowchart TB
   CK --> MW["/api/*   authMiddleware"]
   MW --> R2["/api/metrics"]
   MW --> R3["/api/files"]
-  MW --> R4["/api/docker/stacks   mounted first"]
+  MW --> R4["/api/docker/compose   mounted first (with /stacks alias)"]
   MW --> R5["/api/docker"]
   CK --> ST["express.static ../dashboard/dist"]
   ST --> SPA["GET /{*path} → index.html"]
@@ -281,7 +281,7 @@ Mount order is load-bearing:
 | 3 | `GET /api/health` | Public liveness probe with CORS `*` & Private Network Access (PNA) |
 | 4 | `/api/network` | Public local IP discovery for split-horizon LAN switching |
 | 5 | `/api` + `authMiddleware` | Everything else under `/api` requires valid JWT |
-| 6 | `/api/docker/stacks` **before** `/api/docker` | Otherwise `:id` on docker would swallow `stacks` |
+| 6 | `/api/docker/compose` **before** `/api/docker` | Otherwise `:id` on docker would swallow `compose` (legacy `/api/docker/stacks` aliased) |
 | 7 | `/api/docker`, `/api/files`, `/api/metrics` | Authenticated feature routers |
 | 8 | `express.static(dashboard/dist)` | Built SPA assets |
 | 9 | `GET /{*path}` → `index.html` | React Router deep links (`/docker`, `/files`, …) |
@@ -389,17 +389,17 @@ Guard is `path.resolve` then `startsWith(BASE_DIR)` (no trailing-slash variant).
 | DELETE | `/api/docker/images/:id` | 409 if in use |
 | POST | `/api/docker/images/prune` | |
 
-**Stacks** (`routes/stacks.js`) — disk + native Docker Compose CLI
+**Compose Projects** (`routes/compose.js`) — disk + native Docker Compose CLI
 
 | Method | Path | Notes |
 |--------|------|-------|
-| GET | `/api/docker/stacks` | folders in `~/.home-cloud/stacks` ∪ compose-project labels |
-| GET | `/api/docker/stacks/:name` | YAML + member containers |
-| POST | `/api/docker/stacks/deploy` | write YAML, `docker compose -p <name> up -d --remove-orphans`, SSE lines |
-| POST | `/api/docker/stacks/:name/start` | `docker compose -p <name> start` (with `up -d` fallback) |
-| POST | `/api/docker/stacks/:name/stop` | `docker compose -p <name> stop` (non-destructive) |
-| DELETE | `/api/docker/stacks/:name` | `docker compose -p <name> down -v --remove-orphans` + `rm -rf` stack dir |
-| GET | `/api/docker/stacks/:name/logs` | SSE `docker compose logs -f --tail=200` |
+| GET | `/api/docker/compose` | folders in `~/.home-cloud/compose` ∪ compose-project labels (legacy `/api/docker/stacks` aliased) |
+| GET | `/api/docker/compose/:name` | YAML + member containers |
+| POST | `/api/docker/compose/deploy` | write YAML, `docker compose -p <name> up -d --remove-orphans`, SSE lines |
+| POST | `/api/docker/compose/:name/start` | `docker compose -p <name> start` (with `up -d` fallback) |
+| POST | `/api/docker/compose/:name/stop` | `docker compose -p <name> stop` (non-destructive) |
+| DELETE | `/api/docker/compose/:name` | `docker compose -p <name> down -v --remove-orphans` + `rm -rf` compose dir |
+| GET | `/api/docker/compose/:name/logs` | SSE `docker compose logs -f --tail=200` |
 
 ---
 
@@ -429,7 +429,7 @@ flowchart TB
 
   A4 --> T1["Containers tab"]
   A4 --> T2["Images tab"]
-  A4 --> T3["Stacks tab"]
+  A4 --> T3["Compose tab"]
   T1 --> S1["Logs SSE"]
   T1 --> S2["Stats SSE"]
   T1 --> S3["Inspect REST"]
@@ -533,11 +533,11 @@ ingress:
 
 `getIngressRules()` skips `dash.${CF_DOMAIN}` so the dashboard hostname is never treated as an "exposed app".
 
-### 6.4 Stack deploy
+### 6.4 Compose project deploy
 
 ```
-POST /api/docker/stacks/deploy { name, yaml }
-    → mkdir ~/.home-cloud/stacks/<name>/
+POST /api/docker/compose/deploy { name, yaml }
+    → mkdir ~/.home-cloud/compose/<name>/
     → write docker-compose.yml
     → spawn: docker compose -f … -p <name> up -d --remove-orphans
     → each stdout/stderr chunk  →  SSE  data: {"text":"…"}
