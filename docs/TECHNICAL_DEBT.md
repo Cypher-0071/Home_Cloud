@@ -6,9 +6,9 @@ This document outlines the current technical limitations, security tradeoffs, op
 
 ## ⚡ Performance & Architecture Gaps
 
-### 1. Tunnel Process Recycling Race Condition
-* **Debt**: In `agent/tunnel.js` (`startTunnel()`), recycling an existing tunnel process sends `activeChild.kill("SIGTERM")` and immediately calls `spawn("cloudflared")` on the next line without awaiting the previous process's `close` event.
-* **Tradeoff / Risk**: If the outgoing `cloudflared` process takes 100–300ms to clean up socket bindings and release credentials, the newly spawned instance can collide, causing transient restart failures or warnings.
+### 1. Tunnel Process Recycling Race Condition (Resolved ✅)
+* **Status**: Resolved in V3 Phase 4, Step 1.
+* **Resolution**: Implemented clean, asynchronous process termination and recycling in `agent/tunnel.js`. When starting, restarting, or stopping the tunnel, existing `activeChild` processes are sent `SIGTERM` and awaited on `'close'` with a 3000ms `SIGKILL` escalation fallback before spawning any new process. Added graceful shutdown signal handling (`SIGTERM`/`SIGINT`), HTTP connection draining, WebSocket and PTY cleanup (`closeAllSessions()`), and an exponential backoff tunnel retry loop (2s to 30s) for boot-time network resilience.
 
 ### 2. Uncached Filesystem Drive Metrics
 * **Debt**: In `agent/routes/file.js` (`router.get("/drives")`), `si.fsSize()` executes a system shell call (`df`) every time File Explorer opens or navigates to a folder.

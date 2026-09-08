@@ -49,10 +49,10 @@ This phase focuses on the low-level system engineering and daemonization require
   * Production-grade systemd service unit managing both the backend Node.js Agent and the built Dashboard.
   * Auto-start on system boot (`WantedBy=multi-user.target`) with process supervisor self-recovery (`Restart=always`, `RestartSec=5s`).
   * Non-root security sandboxing with appropriate supplementary groups (`docker`, `sudo`) and resource boundaries.
-* [ ] **Boot-Time Network & Tunnel Resilience:**
-  * Network-online gating (`After=network-online.target`, `Wants=network-online.target`).
-  * Exponential backoff retry loop in `agent/index.js` for early-boot dependencies: Docker daemon socket availability (`/var/run/docker.sock`) and Cloudflare Tunnel connection (`cloudflared`).
-  * Graceful shutdown and signal trapping (`SIGTERM`, `SIGINT`) ensuring active PTY terminal sessions and child processes are cleaned up without zombie processes.
+* [x] **Boot-Time Network & Tunnel Resilience: ✅**
+  * Asynchronous, non-blocking tunnel startup with exponential backoff retry loop (`startTunnelWithRetry`) ensuring local LAN HTTP access (`:3000`) is instantly available on boot.
+  * Resolved Tunnel recycling race condition in `agent/tunnel.js` by awaiting process exit with a 3000ms `SIGKILL` escalation fallback.
+  * Graceful shutdown signal trapping (`SIGTERM`, `SIGINT`) in `agent/index.js` cleanly draining HTTP connections, closing WebSockets, terminating active node-pty terminal sessions (`closeAllSessions()`), and stopping `cloudflared`.
 * [ ] **Spare PC Setup Script (`setup.sh`):**
   * Automated host configuration script preparing the spare PC: checking Docker, Node, Cloudflared prerequisites, generating environment files, configuring permissions, and enabling the systemd daemon.
 

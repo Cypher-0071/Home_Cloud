@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const os = require("os");
 const { PORT, BASE_DIR, CF_DOMAIN } = require("../config");
+const { getTunnelStatus } = require("../tunnel");
 
 router.get("/info", (req, res) => {
 	try {
@@ -27,6 +28,18 @@ router.get("/info", (req, res) => {
 			serverLocalPort: PORT,
 			baseDir: BASE_DIR,
 			cfDomain: CF_DOMAIN,
+			tunnel: getTunnelStatus(),
+		});
+	} catch (err) {
+		res.status(500).json({ error: err.message });
+	}
+});
+
+router.get("/tunnel", (req, res) => {
+	try {
+		res.json({
+			status: "ok",
+			tunnel: getTunnelStatus(),
 		});
 	} catch (err) {
 		res.status(500).json({ error: err.message });

@@ -71,9 +71,19 @@ class TerminalBuffer {
 }
 
 class TerminalSession {
-	constructor(id) {
-		this.id = id;
-		this.clients = new Set();
+	constructor(idOrWs) {
+		if (typeof idOrWs === "string") {
+			this.id = idOrWs;
+			this.clients = new Set();
+		} else if (idOrWs && typeof idOrWs === "object") {
+			this.id = `sess_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+			this.clients = new Set([idOrWs]);
+			this.ws = idOrWs;
+		} else {
+			this.id = `sess_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+			this.clients = new Set();
+		}
+
 		this.terminal = null;
 		this.buffer = new TerminalBuffer();
 		this.cols = 100;
@@ -84,6 +94,8 @@ class TerminalSession {
 			os.platform() === "win32"
 				? "powershell.exe"
 				: process.env.SHELL || "bash";
+
+		sessions.set(this.id, this);
 	}
 
 	ensurePTY(cols = 100, rows = 30) {
@@ -131,6 +143,10 @@ class TerminalSession {
 			this.terminal = null;
 			this._onProcessExit();
 		});
+	}
+
+	createPTY(cols = 100, rows = 30) {
+		this.ensurePTY(cols, rows);
 	}
 
 	attach(ws) {
@@ -189,6 +205,10 @@ class TerminalSession {
 		}
 	}
 
+	writeTerminal(data) {
+		this.write(data);
+	}
+
 	kill() {
 		const term = this.terminal;
 		this.terminal = null;
@@ -198,6 +218,25 @@ class TerminalSession {
 			} catch {}
 		}
 		this._onProcessExit();
+	}
+
+	destroy() {
+		if (sessions.get(this.id) === this) {
+			sessions.delete(this.id);
+		}
+		const term = this.terminal;
+		this.terminal = null;
+		if (term) {
+			try {
+				term.kill();
+			} catch {}
+		}
+		for (const client of this.clients) {
+			try {
+				client.close();
+			} catch {}
+		}
+		this.clients.clear();
 	}
 
 	_onProcessExit() {
@@ -299,7 +338,6 @@ function handleSystemTerminal(ws, request) {
 			return;
 		}
 		session = new TerminalSession(sessionId);
-		sessions.set(sessionId, session);
 	}
 
 	session.attach(ws);
@@ -333,8 +371,34 @@ function handleSystemTerminal(ws, request) {
 	});
 }
 
+/**
+ * Clean up all active host terminal PTY sessions.
+ * Called during graceful shutdown so no orphaned node-pty processes survive.
+ *
+ * @returns {number} Number of sessions terminated
+ */
+function closeAllSessions() {
+	const count = sessions.size;
+	const activeList = Array.from(sessions.values());
+	for (const session of activeList) {
+		try {
+			session.destroy();
+		} catch (err) {
+			console.error("[terminal] Error destroying PTY session:", err.message);
+		}
+	}
+	sessions.clear();
+	return count;
+}
+
 module.exports = {
 	handleSystemTerminal,
 	TerminalBuffer,
 	BUFFER_BYTES,
+	TerminalSession,
+	PTY: TerminalSession, // alias for backwards/test compatibility
+	activeSessions: sessions,
+	getActiveSessionsCount: () => sessions.size,
+	closeAllSessions,
+	sessions,
 };
