@@ -1,6 +1,6 @@
-# Home Cloud — V3 Advanced Roadmap
+# Home Cloud — V3 Hardware Deployment & Standalone Server Roadmap
 
-This document outlines upcoming architectural enhancements, data protection tools, and reliability automation planned for **V3** of the Home Cloud platform.
+This document outlines the architectural enhancements, performance optimizations, and deployment hardening completed and planned for **V3** to transform Home Cloud into a production-ready, standalone personal server running 24/7 on a spare PC.
 
 ---
 
@@ -12,21 +12,23 @@ This feature intelligently routes user traffic based on client location to maxim
 
 * [x] **Local Network Detection Engine:** Implemented a client-side network detector in the dashboard (`useNetworkDetector.ts`) that performs a micro-ping check to `/api/health` with Private Network Access headers to verify whether the client device is on the same Local Area Network (LAN/Wi-Fi) as the server.
 * [x] **Automatic Route Selection:**
-  * **On Local Network (LAN):** Automatically offers direct routing to the host's local IP and port (`http://192.168.x.x:8080`) for instant `< 2ms` latency and 1Gbps local Wi-Fi speeds (crucial for 4K streaming and large file transfers).
+  * **On Local Network (LAN):** Automatically offers direct routing to the host's local IP and port (`http://192.168.x.x:3000`) for instant `< 2ms` latency and 1Gbps local Wi-Fi speeds (crucial for 4K streaming and large file transfers).
   * **On Remote Network (External):** Transparently routes traffic through the Cloudflare HTTPS Tunnel subdomain (`https://dash.home-cloud.live`).
 * [x] **Dual-Link UI Action Toggle:** Added dual-action triggers in the container list displaying both the fast **Direct Local LAN Link** (`:port`) and the secure **Remote Tunnel Link** (`.home-cloud.live`).
 * [x] **Taskbar Status & Upgrade Badge:** Integrated a real-time network indicator in the desktop system tray showing connection mode (Direct LAN vs. Tunnel) with one-click instant LAN redirection.
 
 ---
 
-### Phase 2: Simple Automated Volume & Database Backups 💾
+### Phase 2: Dashboard Performance & On-Demand Code-Splitting ⚡ ✅ *COMPLETED*
 
-This feature protects self-hosted application data against power loss, disk failure, or accidental container deletion without unnecessary enterprise complexity.
+This feature eliminates monolithic bundle bloat, ensuring instantaneous initial loads on mobile devices and slower remote network connections.
 
-* [ ] **Volume Tarball Backups:** Build lightweight backend worker logic to generate compressed `.tar.gz` archives of container volume mount directories (`~/apps/...` or named volumes) to a designated `~/backups/` directory or external drive.
-* [ ] **Database Dump Integration:** Implement automated database export routines (`pg_dump` for PostgreSQL, `mariadb-dump` / `mysqldump` for MySQL) triggered directly via container exec before snapshotting.
-* [ ] **Scheduled Cron Backups:** Provide simple configurable backup schedules (daily/weekly) with automatic retention rotation (e.g., keep the last 7 daily archives).
-* [ ] **One-Click Restore Flow:** Build a straightforward UI restore flow to unpack backup archives back into host volume directories and restart affected containers.
+* [x] **Route-Level Code Splitting:** Implemented `React.lazy()` for `/login` and `/` (`Desktop`) with `<PageLoader>` fallback, ensuring unauthenticated visitors never download desktop or window application code.
+* [x] **Window-Level Dynamic Imports:** Centralized dynamic loaders in `windowAppRegistry.ts` for all desktop applications (`DockerApp`, `FileExplorer`, `TerminalApp`, `SystemMonitorApp`), cutting the initial desktop entry chunk from 950 kB down to 49 kB (-95% reduction).
+* [x] **Docker Console Isolation:** Lazily isolated `ContainerConsoleTab` inside `DockerApp` so that `@xterm/xterm` (341 kB) only loads when the container console tab is actively clicked.
+* [x] **Zero-Layout-Shift Shimmer Skeletons:** Created dark-theme shimmer loading skeletons (`WindowSkeleton.tsx`) matching exact window body dimensions for instant window opening.
+* [x] **Network Resilience & Retry Cache-Busting:** Implemented `WindowErrorBoundary.tsx` and `retryDynamicImport` with exponential backoff and cache-key busting (`${id}@${retryVersion}`) to recover from transient network drops without full page reloads.
+* [x] **Rolldown Chunk Grouping:** Configured native `output.codeSplitting.groups` in `vite.config.ts` for vendor libraries (`vendor-react`, `vendor-lucide`, `vendor-xterm`, `vendor-yaml`, `vendor-prism`, `vendor-axios`).
 
 ---
 
@@ -39,13 +41,20 @@ This feature decouples the user's interactive sessions from transient network co
 
 ---
 
-### Phase 4: Container Crash Watchdog & Webhook Notifications 🔔
+### Phase 4: Host Daemonization, Boot Hardening & Spare PC Setup 🚀
 
-This feature monitors service health and alerts the server owner immediately if a container crashes, without needing heavy monitoring infrastructure.
+This phase focuses on the low-level system engineering and daemonization required to run Home Cloud autonomously 24/7 on a physical spare PC, behaving like an always-on personal VM / server.
 
-* [ ] **Crash Watchdog Worker:** Lightweight background polling worker that detects containers entering `exited` (non-zero exit code), `unhealthy`, or rapid restart loops.
-* [ ] **Webhook Alert Dispatcher:** Simple outbound webhook integration supporting **Telegram Bots** and **Discord Webhooks** with clean Markdown alert cards.
-* [ ] **Notification Settings UI:** Minimal settings panel in the dashboard to configure webhook URLs, test alerts, and toggle notification events.
+* [ ] **Systemd Service Architecture (`home-cloud.service`):**
+  * Production-grade systemd service unit managing both the backend Node.js Agent and the built Dashboard.
+  * Auto-start on system boot (`WantedBy=multi-user.target`) with process supervisor self-recovery (`Restart=always`, `RestartSec=5s`).
+  * Non-root security sandboxing with appropriate supplementary groups (`docker`, `sudo`) and resource boundaries.
+* [ ] **Boot-Time Network & Tunnel Resilience:**
+  * Network-online gating (`After=network-online.target`, `Wants=network-online.target`).
+  * Exponential backoff retry loop in `agent/index.js` for early-boot dependencies: Docker daemon socket availability (`/var/run/docker.sock`) and Cloudflare Tunnel connection (`cloudflared`).
+  * Graceful shutdown and signal trapping (`SIGTERM`, `SIGINT`) ensuring active PTY terminal sessions and child processes are cleaned up without zombie processes.
+* [ ] **Spare PC Setup Script (`setup.sh`):**
+  * Automated host configuration script preparing the spare PC: checking Docker, Node, Cloudflared prerequisites, generating environment files, configuring permissions, and enabling the systemd daemon.
 
 ---
 
@@ -62,6 +71,8 @@ This feature monitors service health and alerts the server owner immediately if 
 | **Zero-Downtime Cloudflare Ingress Auto-Wiring** | ✅ *(V2: CNAME API + `SIGHUP` reload)* | ❌ *(Manual proxy)* | ❌ *(Manual proxy)* | ❌ *(Manual proxy)* | ❌ *(Manual proxy)* |
 | **Multi-Container Stacks (`docker-compose`)** | ✅ *(V2: Native compose CLI + 2-way sync)* | ✅ | ❌ | ✅ *(Partial)* | ✅ |
 | **Smart Split-Horizon DNS (LAN vs Remote)** | ✅ *(V3: `<2ms` LAN vs Remote fallback)* | ❌ | ❌ | ❌ | ❌ *(Requires custom DNS server)* |
-| **Simple Automated Volume & DB Backups** | ⏳ *(V3: `.tar.gz` + DB dumps + Cron)* | ❌ *(Requires extension)* | ❌ | ❌ *(Requires third-party app)* | ✅ |
 | **Persistent Sessions ("Resume Session")** | ✅ *(V3: Headless PTY + Replay Buffer)* | ❌ | ❌ | ❌ | ❌ |
-| **Crash Watchdog & Webhook Alerts** | ⏳ *(V3: Discord / Telegram notifications)* | ✅ *(Paid EE only)* | ❌ | ❌ | ✅ |
+| **Host Daemonization & Boot Hardening** | ⏳ *(V3: Systemd unit + resilient boot loop)* | ❌ *(Docker only)* | ✅ | ✅ | ✅ |
+| **Crash Watchdog & Webhook Alerts** | ⏳ *(V4: Discord / Telegram notifications)* | ✅ *(Paid EE only)* | ❌ | ❌ | ✅ |
+| **Simple Automated Volume & DB Backups** | ⏳ *(V4: `.tar.gz` + DB dumps + Cron)* | ❌ *(Requires extension)* | ❌ | ❌ *(Requires third-party app)* | ✅ |
+| **Desktop Window Layout State Persistence** | ⏳ *(V4: Window coordinates & active apps)* | ❌ | ❌ | ❌ | ❌ |
