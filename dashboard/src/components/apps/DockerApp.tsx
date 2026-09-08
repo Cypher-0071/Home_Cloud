@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo, Suspense, createElement } from 'react';
 import {
   Play,
   Square,
@@ -33,7 +33,10 @@ import {
   Sparkles,
   Upload,
 } from 'lucide-react';
-import ContainerConsoleTab from './ContainerConsoleTab';
+import { getLazyWindowApp } from '../../utils/windowAppRegistry';
+import WindowSkeleton from '../skeletons/WindowSkeleton';
+import WindowErrorBoundary from '../WindowErrorBoundary';
+
 import styles from './docker.module.css';
 import { useNetworkDetector } from '../../hooks/useNetworkDetector';
 import * as yaml from 'js-yaml';
@@ -1213,6 +1216,8 @@ export default function DockerApp() {
   // Selected container details pane
   const [selectedId, setSelectedId]           = useState<string | null>(null);
   const [activeTab, setActiveTab]             = useState<'stats' | 'inspect' | 'logs' | 'console'>('stats');
+  const [consoleVisitedContainers, setConsoleVisitedContainers] = useState<Record<string, boolean>>({});
+  const [consoleRetryVersions, setConsoleRetryVersions]         = useState<Record<string, number>>({});
 
   // Live stats telemetry state & rolling history
   const [statsData, setStatsData]             = useState<any | null>(null);
@@ -3138,7 +3143,12 @@ export default function DockerApp() {
                   </button>
                   <button
                     className={`${styles.detailTab} ${activeTab === 'console' ? styles.detailTabActive : ''}`}
-                    onClick={() => setActiveTab('console')}
+                    onClick={() => {
+                      setActiveTab('console');
+                      if (selectedContainer) {
+                        setConsoleVisitedContainers(prev => ({ ...prev, [selectedContainer.Id]: true }));
+                      }
+                    }}
                   >
                     Console
                   </button>
@@ -3150,15 +3160,36 @@ export default function DockerApp() {
                   {activeTab === 'inspect' && renderInspectContent()}
                   {activeTab === 'logs' && renderLogsContent()}
 
-                  {/* Console Tab: Persistent Mount to Maintain WebSocket Connection */}
-                  <div style={{ display: activeTab === 'console' ? 'flex' : 'none', height: '100%', width: '100%' }}>
-                    <ContainerConsoleTab
-                      key={selectedContainer.Id}
-                      containerId={selectedContainer.Id}
-                      containerName={selectedContainer.Names[0]?.replace(/^\//, '') ?? selectedContainer.Id}
-                      isRunning={selectedContainer.State === 'running'}
-                    />
-                  </div>
+                  {/* Console Tab: Persistent Mount once opened to Maintain WebSocket Connection */}
+                  {(activeTab === 'console' || !!consoleVisitedContainers[selectedContainer.Id]) && (
+                    <div style={{ display: activeTab === 'console' ? 'flex' : 'none', height: '100%', width: '100%' }}>
+                      <WindowErrorBoundary
+                        key={`${selectedContainer.Id}@${consoleRetryVersions[selectedContainer.Id] ?? 0}`}
+                        label={`${selectedContainer.Names[0]?.replace(/^\//, '') ?? 'Container'} Console`}
+                        onRetry={() =>
+                          setConsoleRetryVersions(prev => ({
+                            ...prev,
+                            [selectedContainer.Id]: (prev[selectedContainer.Id] ?? 0) + 1,
+                          }))
+                        }
+                      >
+                        <Suspense fallback={<WindowSkeleton type="terminal" />}>
+                          {createElement(
+                            getLazyWindowApp(
+                              'docker-console',
+                              consoleRetryVersions[selectedContainer.Id] ?? 0
+                            ),
+                            {
+                              key: selectedContainer.Id,
+                              containerId: selectedContainer.Id,
+                              containerName: selectedContainer.Names[0]?.replace(/^\//, '') ?? selectedContainer.Id,
+                              isRunning: selectedContainer.State === 'running',
+                            }
+                          )}
+                        </Suspense>
+                      </WindowErrorBoundary>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

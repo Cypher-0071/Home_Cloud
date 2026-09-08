@@ -1,4 +1,4 @@
-import { useState, useEffect, Component } from 'react';
+import { useState, useEffect, createElement, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Activity,
@@ -10,69 +10,16 @@ import {
 } from 'lucide-react';
 
 import OSWindow from '../components/OSWindow';
-import SystemMonitorApp from '../components/apps/SystemMonitorApp';
-import TerminalApp from '../components/apps/TerminalApp';
-import FileExplorer from './files';
-import DockerApp from '../components/apps/DockerApp';
+import WindowErrorBoundary from '../components/WindowErrorBoundary';
+import WindowSkeleton from '../components/skeletons/WindowSkeleton';
 import DesktopMetricWidget from '../components/DesktopMetricWidget';
 import { useNetworkDetector } from '../hooks/useNetworkDetector';
-
-// Error boundary prevents a crashing child from blacking out the whole shell
-class ErrorBoundary extends Component<
-  { children: React.ReactNode; label?: string },
-  { hasError: boolean; error?: string }
-> {
-  constructor(props: { children: React.ReactNode; label?: string }) {
-    super(props);
-    this.state = { hasError: false };
-  }
-
-  static getDerivedStateFromError(error: Error) {
-    return { hasError: true, error: error.message };
-  }
-
-  componentDidCatch(error: Error, info: React.ErrorInfo) {
-    console.error(`[ErrorBoundary:${this.props.label}]`, error, info);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div style={{
-          display: 'flex', flexDirection: 'column', alignItems: 'center',
-          justifyContent: 'center', height: '100%', gap: '12px',
-          color: 'var(--text-secondary)', padding: '24px', textAlign: 'center',
-        }}>
-          <span style={{ fontSize: '24px' }}>⚠</span>
-          <p style={{ margin: 0, fontWeight: 600, color: 'var(--text-primary)', fontSize: '13px' }}>
-            {this.props.label ?? 'App'} crashed
-          </p>
-          <p style={{ margin: 0, fontSize: '11px', fontFamily: 'var(--mono)', color: 'var(--text-muted)' }}>
-            {this.state.error}
-          </p>
-          <button
-            onClick={() => this.setState({ hasError: false })}
-            style={{
-              marginTop: '8px', padding: '6px 14px', borderRadius: '6px',
-              background: 'var(--accent-dim)', border: '1px solid var(--accent-border)',
-              color: 'var(--accent)', cursor: 'pointer', fontSize: '12px',
-              fontFamily: 'var(--sans)',
-            }}
-          >
-            Retry
-          </button>
-        </div>
-      );
-    }
-    return this.props.children;
-  }
-}
+import { getLazyWindowApp, preloadWindowApp, type WindowAppId } from '../utils/windowAppRegistry';
 
 interface WindowState {
-  id: string;
+  id: WindowAppId;
   title: string;
   icon: React.ReactNode;
-  component: React.ReactNode;
   isOpen: boolean;
   isMinimized: boolean;
   isMaximized: boolean;
@@ -83,12 +30,102 @@ interface WindowState {
   zIndex: number;
 }
 
+interface WindowHostProps {
+  appId: WindowAppId;
+  title: string;
+  retryVersion: number;
+  onRetry: () => void;
+}
+
+function WindowHost({ appId, title, retryVersion, onRetry }: WindowHostProps) {
+  const LazyApp = getLazyWindowApp(appId, retryVersion);
+  return (
+    <WindowErrorBoundary key={`${appId}@${retryVersion}`} label={title} onRetry={onRetry}>
+      <Suspense fallback={<WindowSkeleton type={appId} />}>
+        {createElement(LazyApp)}
+      </Suspense>
+    </WindowErrorBoundary>
+  );
+}
+
+function getInitialDeepLink(): WindowAppId | null {
+  const path = window.location.pathname.replace(/^\//, '') as WindowAppId;
+  const validPaths: WindowAppId[] = ['terminal', 'metrics', 'files', 'docker'];
+  return validPaths.includes(path) ? path : null;
+}
+
 export default function Desktop() {
   const navigate = useNavigate();
   const net = useNetworkDetector();
   const [time, setTime] = useState('');
-  const [maxZIndex, setMaxZIndex] = useState(10);
-  const [activeWindowId, setActiveWindowId] = useState<string | null>(null);
+  const [activeWindowId, setActiveWindowId] = useState<string | null>(() => getInitialDeepLink());
+  const [maxZIndex, setMaxZIndex] = useState(() => (getInitialDeepLink() ? 11 : 10));
+  const [retryVersions, setRetryVersions] = useState<Record<string, number>>({});
+
+  const [windows, setWindows] = useState<WindowState[]>(() => {
+    const deepLink = getInitialDeepLink();
+    return [
+      {
+        id: 'metrics',
+        title: 'Activity Monitor',
+        icon: <Activity size={18} />,
+        isOpen: deepLink === 'metrics',
+        isMinimized: false,
+        isMaximized: false,
+        x: 60,
+        y: 60,
+        width: 760,
+        height: 520,
+        zIndex: deepLink === 'metrics' ? 11 : 1,
+      },
+      {
+        id: 'files',
+        title: 'File Explorer',
+        icon: <Folder size={18} />,
+        isOpen: deepLink === 'files',
+        isMinimized: false,
+        isMaximized: false,
+        x: 90,
+        y: 75,
+        width: 820,
+        height: 500,
+        zIndex: deepLink === 'files' ? 11 : 2,
+      },
+      {
+        id: 'terminal',
+        title: 'Terminal',
+        icon: <TerminalIcon size={18} />,
+        isOpen: deepLink === 'terminal',
+        isMinimized: false,
+        isMaximized: false,
+        x: 120,
+        y: 90,
+        width: 680,
+        height: 440,
+        zIndex: deepLink === 'terminal' ? 11 : 1,
+      },
+      {
+        id: 'docker',
+        title: 'Docker Manager',
+        icon: <Box size={18} />,
+        isOpen: deepLink === 'docker',
+        isMinimized: false,
+        isMaximized: false,
+        x: 110,
+        y: 70,
+        width: 860,
+        height: 520,
+        zIndex: deepLink === 'docker' ? 11 : 3,
+      },
+    ];
+  });
+
+  const handleRetry = (id: string) => {
+    setRetryVersions(prev => ({
+      ...prev,
+      [id]: (prev[id] ?? 0) + 1,
+    }));
+  };
 
   // Live clock
   useEffect(() => {
@@ -104,82 +141,6 @@ export default function Desktop() {
     const id = setInterval(updateTime, 1000);
     return () => clearInterval(id);
   }, []);
-
-  // Deep-link: open window from router path
-  useEffect(() => {
-    const path = window.location.pathname.replace(/^\//, '');
-    const validPaths = ['terminal', 'metrics', 'files', 'docker'];
-    if (path && validPaths.includes(path)) {
-      const targetId = path;
-      const newZ = maxZIndex + 1;
-      setMaxZIndex(newZ);
-      setWindows(prev =>
-        prev.map(w =>
-          w.id === targetId ? { ...w, isOpen: true, isMinimized: false, zIndex: newZ } : w,
-        ),
-      );
-      setActiveWindowId(targetId);
-    }
-  }, []);
-
-  const [windows, setWindows] = useState<WindowState[]>([
-    {
-      id: 'metrics',
-      title: 'Activity Monitor',
-      icon: <Activity size={18} />,
-      component: <ErrorBoundary label="Activity Monitor"><SystemMonitorApp /></ErrorBoundary>,
-      isOpen: false,
-      isMinimized: false,
-      isMaximized: false,
-      x: 60,
-      y: 60,
-      width: 760,
-      height: 520,
-      zIndex: 1,
-    },
-    {
-      id: 'files',
-      title: 'File Explorer',
-      icon: <Folder size={18} />,
-      component: <ErrorBoundary label="File Explorer"><FileExplorer /></ErrorBoundary>,
-      isOpen: false,
-      isMinimized: false,
-      isMaximized: false,
-      x: 90,
-      y: 75,
-      width: 820,
-      height: 500,
-      zIndex: 2,
-    },
-    {
-      id: 'terminal',
-      title: 'Terminal',
-      icon: <TerminalIcon size={18} />,
-      component: <ErrorBoundary label="Terminal"><TerminalApp /></ErrorBoundary>,
-      isOpen: false,
-      isMinimized: false,
-      isMaximized: false,
-      x: 120,
-      y: 90,
-      width: 680,
-      height: 440,
-      zIndex: 1,
-    },
-    {
-      id: 'docker',
-      title: 'Docker Manager',
-      icon: <Box size={18} />,
-      component: <ErrorBoundary label="Docker Manager"><DockerApp /></ErrorBoundary>,
-      isOpen: false,
-      isMinimized: false,
-      isMaximized: false,
-      x: 110,
-      y: 70,
-      width: 860,
-      height: 520,
-      zIndex: 3,
-    },
-  ]);
 
   // Bring window to front
   const focusWindow = (id: string) => {
@@ -269,7 +230,12 @@ export default function Desktop() {
             onMove={(x, y) => moveWindow(win.id, x, y)}
             onResize={(w, h) => resizeWindow(win.id, w, h)}
           >
-            {win.component}
+            <WindowHost
+              appId={win.id}
+              title={win.title}
+              retryVersion={retryVersions[win.id] ?? 0}
+              onRetry={() => handleRetry(win.id)}
+            />
           </OSWindow>
         ))}
       </div>
@@ -285,6 +251,7 @@ export default function Desktop() {
             }
             isOpen={windows.find(w => w.id === 'metrics')?.isOpen}
             onClick={() => handleDockClick('metrics')}
+            onMouseEnter={() => preloadWindowApp('metrics')}
           />
         </div>
 
@@ -299,6 +266,7 @@ export default function Desktop() {
                   key={win.id}
                   className={`dock-item${isActive ? ' active' : ''}`}
                   onClick={() => handleDockClick(win.id)}
+                  onMouseEnter={() => preloadWindowApp(win.id)}
                   aria-label={win.title}
                 >
                   {win.icon}

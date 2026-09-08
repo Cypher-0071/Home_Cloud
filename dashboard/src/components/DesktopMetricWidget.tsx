@@ -5,6 +5,7 @@ interface DesktopMetricWidgetProps {
   active?: boolean;
   isOpen?: boolean;
   onClick: () => void;
+  onMouseEnter?: () => void;
 }
 
 function formatSpeed(bytesPerSec?: number | null): string {
@@ -18,6 +19,7 @@ function formatSpeed(bytesPerSec?: number | null): string {
 export default function DesktopMetricWidget({
   active = false,
   onClick,
+  onMouseEnter,
 }: DesktopMetricWidgetProps) {
   const { connected, cpuLoad, memUsedPct, rxSec } = useSystemMetrics();
 
@@ -40,6 +42,7 @@ export default function DesktopMetricWidget({
     <button
       className={`desktop-metric-widget${active ? ' active' : ''}`}
       onClick={onClick}
+      onMouseEnter={onMouseEnter}
       aria-label="Activity Monitor"
       title="Activity Monitor · Click to toggle"
     >
