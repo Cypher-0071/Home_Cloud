@@ -1,0 +1,38 @@
+[Unit]
+Description=Home Cloud Autonomous Server Agent & Dashboard
+Documentation=https://github.com/Cypher-0071/Home_Cloud
+After=network.target docker.service
+Wants=network-online.target docker.service
+
+[Service]
+Type=simple
+User={{USER}}
+Group={{GROUP}}
+SupplementaryGroups=docker
+
+WorkingDirectory={{WORKING_DIR}}/agent
+EnvironmentFile=-{{WORKING_DIR}}/agent/.env
+Environment=NODE_ENV=production
+Environment=PATH={{NODE_DIR}}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+ExecStart={{NODE_PATH}} index.js
+
+# Process Supervision & Auto-Restart
+Restart=always
+RestartSec=5s
+
+# Graceful Shutdown Handling
+KillSignal=SIGTERM
+TimeoutStopSec=15s
+KillMode=mixed
+
+# System Safety Limits
+LimitNOFILE=65535
+
+# Logging to systemd journal
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=home-cloud
+
+[Install]
+WantedBy=multi-user.target

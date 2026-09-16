@@ -45,16 +45,16 @@ This feature decouples the user's interactive sessions from transient network co
 
 This phase focuses on the low-level system engineering and daemonization required to run Home Cloud autonomously 24/7 on a physical spare PC, behaving like an always-on personal VM / server.
 
-* [ ] **Systemd Service Architecture (`home-cloud.service`):**
-  * Production-grade systemd service unit managing both the backend Node.js Agent and the built Dashboard.
-  * Auto-start on system boot (`WantedBy=multi-user.target`) with process supervisor self-recovery (`Restart=always`, `RestartSec=5s`).
-  * Non-root security sandboxing with appropriate supplementary groups (`docker`, `sudo`) and resource boundaries.
+* [x] **Systemd Service Architecture (`home-cloud.service`):**
+  * Production-grade systemd service unit template (`home-cloud.service.template`) managing both the backend Node.js Agent and the built Dashboard.
+  * Auto-start on system boot (`WantedBy=multi-user.target`) with process supervisor self-recovery (`Restart=always`, `RestartSec=5s`) and `KillMode=mixed`.
+  * Non-root security sandboxing with supplementary `docker` group and resource boundaries.
 * [x] **Boot-Time Network & Tunnel Resilience: ✅**
   * Asynchronous, non-blocking tunnel startup with exponential backoff retry loop (`startTunnelWithRetry`) ensuring local LAN HTTP access (`:3000`) is instantly available on boot.
   * Resolved Tunnel recycling race condition in `agent/tunnel.js` by awaiting process exit with a 3000ms `SIGKILL` escalation fallback.
   * Graceful shutdown signal trapping (`SIGTERM`, `SIGINT`) in `agent/index.js` cleanly draining HTTP connections, closing WebSockets, terminating active node-pty terminal sessions (`closeAllSessions()`), and stopping `cloudflared`.
-* [ ] **Spare PC Setup Script (`setup.sh`):**
-  * Automated host configuration script preparing the spare PC: checking Docker, Node, Cloudflared prerequisites, generating environment files, configuring permissions, and enabling the systemd daemon.
+* [x] **Spare PC Setup Script (`setup.sh`):**
+  * Automated host configuration script preparing the spare PC: checking/installing Node.js 24 LTS and Docker prerequisites, generating secure `.env` secrets with interactive password prompt, configuring permissions, and enabling the systemd daemon.
 
 ---
 
@@ -72,7 +72,7 @@ This phase focuses on the low-level system engineering and daemonization require
 | **Multi-Container Compose Projects (`docker-compose`)** | ✅ *(V2: Native compose CLI + 2-way sync)* | ✅ | ❌ | ✅ *(Partial)* | ✅ |
 | **Smart Split-Horizon DNS (LAN vs Remote)** | ✅ *(V3: `<2ms` LAN vs Remote fallback)* | ❌ | ❌ | ❌ | ❌ *(Requires custom DNS server)* |
 | **Persistent Sessions ("Resume Session")** | ✅ *(V3: Headless PTY + Replay Buffer)* | ❌ | ❌ | ❌ | ❌ |
-| **Host Daemonization & Boot Hardening** | ⏳ *(V3: Systemd unit + resilient boot loop)* | ❌ *(Docker only)* | ✅ | ✅ | ✅ |
+| **Host Daemonization & Boot Hardening** | ✅ *(V3: Systemd unit + resilient boot loop)* | ❌ *(Docker only)* | ✅ | ✅ | ✅ |
 | **Crash Watchdog & Webhook Alerts** | ⏳ *(V4: Discord / Telegram notifications)* | ✅ *(Paid EE only)* | ❌ | ❌ | ✅ |
 | **Simple Automated Volume & DB Backups** | ⏳ *(V4: `.tar.gz` + DB dumps + Cron)* | ❌ *(Requires extension)* | ❌ | ❌ *(Requires third-party app)* | ✅ |
 | **Desktop Window Layout State Persistence** | ⏳ *(V4: Window coordinates & active apps)* | ❌ | ❌ | ❌ | ❌ |
