@@ -10,9 +10,9 @@ This document outlines the current technical limitations, security tradeoffs, op
 * **Status**: Resolved in V3 Phase 4, Step 1.
 * **Resolution**: Implemented clean, asynchronous process termination and recycling in `agent/tunnel.js`. When starting, restarting, or stopping the tunnel, existing `activeChild` processes are sent `SIGTERM` and awaited on `'close'` with a 3000ms `SIGKILL` escalation fallback before spawning any new process. Added graceful shutdown signal handling (`SIGTERM`/`SIGINT`), HTTP connection draining, WebSocket and PTY cleanup (`closeAllSessions()`), and an exponential backoff tunnel retry loop (2s to 30s) for boot-time network resilience.
 
-### 2. Uncached Filesystem Drive Metrics
-* **Debt**: In `agent/routes/file.js` (`router.get("/drives")`), `si.fsSize()` executes a system shell call (`df`) every time File Explorer opens or navigates to a folder.
-* **Tradeoff / Risk**: Rapid directory browsing repeatedly shells out to disk inspection utilities, adding unnecessary latency and CPU overhead. A 5–10 second in-memory cache would eliminate this overhead.
+### 2. Uncached Filesystem Drive Metrics (Resolved ✅)
+* **Status**: Resolved.
+* **Resolution**: Implemented in-memory TTL caching (10s) and in-flight promise request coalescing in `agent/routes/file.js` via `getFilteredDrives()`. Rapid folder navigation in File Explorer now returns cached filesystem drive metadata instantaneously with zero repeated `df` system shell calls or disk I/O overhead. Verified with automated test suite in `agent/tests/verify_drives_cache.mjs`.
 
 ---
 

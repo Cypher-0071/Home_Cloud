@@ -129,40 +129,99 @@ router.delete("/delete", async (req, res) => {
 	}
 });
 
+// Filesystem types that represent real, user-relevant storage
+const REAL_FS_TYPES = new Set([
+	"ext4",
+	"ext3",
+	"ext2", // Standard Linux
+	"btrfs",
+	"xfs",
+	"zfs",
+	"f2fs",
+	"jfs", // Advanced Linux
+	"drvfs", // WSL Windows drive mounts (/mnt/c, /mnt/e, etc.)
+	"ntfs",
+	"exfat",
+	"vfat",
+	"fat32",
+	"fat16", // Windows/USB filesystems
+	"apfs",
+	"hfs+", // macOS
+]);
+
+const DRIVES_CACHE_TTL_MS = 10000; // 10 seconds TTL
+let cachedDrives = null;
+let drivesCacheTimestamp = 0;
+let drivesInFlightPromise = null;
+
+/**
+ * Retrieves and filters filesystem drives with in-memory caching and request coalescing.
+ * Avoids repeated expensive system shell calls (`df`) during rapid folder navigation.
+ *
+ * @param {object} [options]
+ * @param {boolean} [options.forceRefresh=false] Force bypass of cache
+ * @param {number} [options.ttlMs=DRIVES_CACHE_TTL_MS] Custom TTL for cache
+ * @param {Function} [options.fsSizeFn] Optional mock provider for testing
+ * @returns {Promise<Array>}
+ */
+async function getFilteredDrives(options = {}) {
+	const { forceRefresh = false, ttlMs = DRIVES_CACHE_TTL_MS, fsSizeFn = si.fsSize } = options;
+	const now = Date.now();
+
+	if (!forceRefresh && cachedDrives !== null && now - drivesCacheTimestamp < ttlMs) {
+		return cachedDrives;
+	}
+
+	if (drivesInFlightPromise) {
+		return drivesInFlightPromise;
+	}
+
+	drivesInFlightPromise = (async () => {
+		try {
+			const drives = await fsSizeFn();
+			const filtered = (Array.isArray(drives) ? drives : []).filter((d) => {
+				// Must be a recognised real filesystem type
+				if (!REAL_FS_TYPES.has((d.type || "").toLowerCase())) return false;
+				// Drop WSLg paths (GUI subsystem internals)
+				if (d.mount && d.mount.includes("wslg")) return false;
+				// Drop paths that look like files rather than directories (e.g. /mnt/wslg/versions.txt)
+				if (d.mount && /\.\w+$/.test(d.mount)) return false;
+				return true;
+			});
+
+			cachedDrives = filtered;
+			drivesCacheTimestamp = Date.now();
+			return filtered;
+		} finally {
+			drivesInFlightPromise = null;
+		}
+	})();
+
+	return drivesInFlightPromise;
+}
+
+function _resetDrivesCacheForTesting() {
+	cachedDrives = null;
+	drivesCacheTimestamp = 0;
+	drivesInFlightPromise = null;
+}
+
+function _getCachedDrivesStateForTesting() {
+	return {
+		hasCache: cachedDrives !== null,
+		cacheTimestamp: drivesCacheTimestamp,
+		cachedCount: cachedDrives ? cachedDrives.length : 0,
+	};
+}
+
 router.get("/drives", async (req, res) => {
-	const drives = await si.fsSize();
-
-	// Filesystem types that represent real, user-relevant storage
-	const REAL_FS_TYPES = new Set([
-		"ext4",
-		"ext3",
-		"ext2", // Standard Linux
-		"btrfs",
-		"xfs",
-		"zfs",
-		"f2fs",
-		"jfs", // Advanced Linux
-		"drvfs", // WSL Windows drive mounts (/mnt/c, /mnt/e, etc.)
-		"ntfs",
-		"exfat",
-		"vfat",
-		"fat32",
-		"fat16", // Windows/USB filesystems
-		"apfs",
-		"hfs+", // macOS
-	]);
-
-	const filtered = drives.filter((d) => {
-		// Must be a recognised real filesystem type
-		if (!REAL_FS_TYPES.has((d.type || "").toLowerCase())) return false;
-		// Drop WSLg paths (GUI subsystem internals)
-		if (d.mount && d.mount.includes("wslg")) return false;
-		// Drop paths that look like files rather than directories (e.g. /mnt/wslg/versions.txt)
-		if (d.mount && /\.\w+$/.test(d.mount)) return false;
-		return true;
-	});
-
-	res.json(filtered);
+	try {
+		const drives = await getFilteredDrives();
+		res.json(drives);
+	} catch (err) {
+		console.error("[files] Error retrieving filesystem drives:", err.message);
+		res.status(500).json({ error: "Failed to retrieve filesystem drives" });
+	}
 });
 
 router.get("/view", async (req, res) => {
@@ -479,5 +538,10 @@ router.patch("/move", async (req, res) => {
 		res.status(500).json({ error: err.message });
 	}
 });
+
+router.getFilteredDrives = getFilteredDrives;
+router._resetDrivesCacheForTesting = _resetDrivesCacheForTesting;
+router._getCachedDrivesStateForTesting = _getCachedDrivesStateForTesting;
+router.DRIVES_CACHE_TTL_MS = DRIVES_CACHE_TTL_MS;
 
 module.exports = router;
