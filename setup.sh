@@ -79,7 +79,7 @@ if command -v apt-get >/dev/null 2>&1; then
     sudo apt-get install -y -qq \
         curl ca-certificates gnupg \
         build-essential python3 \
-        fd-find fzf git >/dev/null 2>&1 || true
+        fd-find fzf git psmisc >/dev/null 2>&1 || true
 fi
 
 # 3. Node.js Runtime Check & Auto-Installation
@@ -118,7 +118,7 @@ fi
 
 if [ "$NEED_NODE_INSTALL" = true ]; then
     if [ -t 0 ]; then
-        read -rp "Would you like setup.sh to install Node.js 24 LTS automatically via NodeSource? [Y/n] " PROMPT_NODE
+        read -rp "Would you like setup.sh to install Node.js 24 LTS automatically via NodeSource? [Y/n] " PROMPT_NODE || PROMPT_NODE="Y"
         PROMPT_NODE="${PROMPT_NODE:-Y}"
     else
         PROMPT_NODE="Y"
@@ -163,7 +163,7 @@ if ! command -v docker >/dev/null 2>&1; then
     echo ""
     echo "⚠ Docker Engine is required to run containers, but was not found on this system."
     if [ -t 0 ]; then
-        read -rp "Would you like setup.sh to install Docker Engine automatically via get.docker.com? [Y/n] " INSTALL_DOCKER
+        read -rp "Would you like setup.sh to install Docker Engine automatically via get.docker.com? [Y/n] " INSTALL_DOCKER || INSTALL_DOCKER="Y"
         INSTALL_DOCKER="${INSTALL_DOCKER:-Y}"
     else
         INSTALL_DOCKER="Y"
@@ -208,7 +208,7 @@ if ! command -v cloudflared >/dev/null 2>&1; then
     echo ""
     echo "ℹ cloudflared is not installed. (Required for free remote HTTPS access via *.home-cloud.live)"
     if [ -t 0 ]; then
-        read -rp "Would you like setup.sh to download and install cloudflared now? [Y/n] " INSTALL_CF
+        read -rp "Would you like setup.sh to download and install cloudflared now? [Y/n] " INSTALL_CF || INSTALL_CF="Y"
         INSTALL_CF="${INSTALL_CF:-Y}"
     else
         INSTALL_CF="N"

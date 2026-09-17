@@ -5,8 +5,44 @@ const path = require("path");
 const os = require("os");
 const { spawn } = require("child_process");
 const Docker = require("dockerode");
-const DockerCompose = require("dockerode-compose");
 const docker = new Docker();
+
+function runCompose(args, cwd) {
+	return new Promise((resolve, reject) => {
+		const child = spawn("docker", ["compose", ...args], {
+			cwd: cwd || undefined,
+		});
+		let stderr = "";
+		let stdout = "";
+		let settled = false;
+		if (child.stdout) {
+			child.stdout.on("data", (chunk) => {
+				stdout += chunk.toString("utf8");
+			});
+		}
+		if (child.stderr) {
+			child.stderr.on("data", (chunk) => {
+				stderr += chunk.toString("utf8");
+			});
+		}
+		child.on("error", (err) => {
+			if (!settled) {
+				settled = true;
+				reject(err);
+			}
+		});
+		child.on("close", (code) => {
+			if (!settled) {
+				settled = true;
+				if (code === 0) {
+					resolve({ stdout, stderr });
+				} else {
+					reject(new Error(stderr.trim() || stdout.trim() || `docker compose exited with code ${code}`));
+				}
+			}
+		});
+	});
+}
 
 const COMPOSE_DIR = path.resolve(path.join(os.homedir(), ".home-cloud", "compose"));
 const LEGACY_STACKS_DIR = path.resolve(path.join(os.homedir(), ".home-cloud", "stacks"));
@@ -292,13 +328,18 @@ router.post("/:name/start", async (req, res) => {
 
 	try {
 		if (composePath && fs.existsSync(composePath)) {
-			const compose = new DockerCompose(docker, composePath, name);
-			await compose.up();
+			await runCompose(["start"], projectFolder).catch(async (err) => {
+				if (err.message && err.message.includes("no container to start")) {
+					return runCompose(["up", "-d"], projectFolder);
+				}
+				throw err;
+			});
 		} else {
-			const child = spawn("docker", ["compose", "-p", name, "start"]);
-			await new Promise((resolve, reject) => {
-				child.on("error", reject);
-				child.on("close", (code) => (code === 0 ? resolve() : reject(new Error(`Exit code ${code}`))));
+			await runCompose(["-p", name, "start"]).catch(async (err) => {
+				if (err.message && err.message.includes("no container to start")) {
+					return runCompose(["-p", name, "up", "-d"]);
+				}
+				throw err;
 			});
 		}
 		res.json({ success: true });
@@ -319,14 +360,9 @@ router.post("/:name/stop", async (req, res) => {
 
 	try {
 		if (composePath && fs.existsSync(composePath)) {
-			const compose = new DockerCompose(docker, composePath, name);
-			await compose.down();
+			await runCompose(["stop"], projectFolder);
 		} else {
-			const child = spawn("docker", ["compose", "-p", name, "stop"]);
-			await new Promise((resolve, reject) => {
-				child.on("error", reject);
-				child.on("close", (code) => (code === 0 ? resolve() : reject(new Error(`Exit code ${code}`))));
-			});
+			await runCompose(["-p", name, "stop"]);
 		}
 		res.json({ success: true });
 	} catch (err) {
@@ -347,21 +383,12 @@ router.delete("/:name", async (req, res) => {
 	try {
 		if (composePath && fs.existsSync(composePath)) {
 			try {
-				const compose = new DockerCompose(docker, composePath, name);
-				await compose.down({ volumes: true });
+				await runCompose(["down", "-v"], projectFolder);
 			} catch {
-				const child = spawn("docker", ["compose", "-p", name, "down", "-v"]);
-				await new Promise((resolve) => {
-					child.on("error", resolve);
-					child.on("close", resolve);
-				});
+				await runCompose(["-p", name, "down", "-v"]).catch(() => {});
 			}
 		} else {
-			const child = spawn("docker", ["compose", "-p", name, "down", "-v"]);
-			await new Promise((resolve) => {
-				child.on("error", resolve);
-				child.on("close", resolve);
-			});
+			await runCompose(["-p", name, "down", "-v"]).catch(() => {});
 		}
 
 		if (fs.existsSync(projectFolder)) {
@@ -428,5 +455,6 @@ router.findComposeFile = findComposeFile;
 router.getComposeFilePath = getComposeFilePath;
 router.COMPOSE_DIR = COMPOSE_DIR;
 router.LEGACY_STACKS_DIR = LEGACY_STACKS_DIR;
+router.runCompose = runCompose;
 
 module.exports = router;

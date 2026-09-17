@@ -222,9 +222,6 @@ importers:
       dockerode:
         specifier: ^5.0.0
         version: 5.0.0
-      dockerode-compose:
-        specifier: ^1.4.0
-        version: 1.4.0
       dotenv:
         specifier: ^17.4.2
         version: 17.4.2
@@ -1040,8 +1037,6 @@ packages:
     resolution: {integrity: sha512-XJgGhoR/CLpqshm4d3L7rzH6t8NgDFUIIpztYlLHIApeJjMZKYJMz2zxPsYxnejq5h3ELYSw/RBsi3t5h7gNTA==}
     engines: {node: '>= 8.0'}
 
-  dockerode-compose@1.4.0:
-    resolution: {integrity: sha512-6x5ZlK06H+cgoTR4ffucqN5kWVvxNvxwTLcHQUZcegCJBEDGrdzXMOEGDMsxbHwiLtLo2dNwG0eZK7B2RfEWSw==}
 
   dockerode@4.0.12:
     resolution: {integrity: sha512-/bCZd6KlGcjZO8Buqmi/vXuqEGVEZ0PNjx/biBNqJD3MhK9DmdiAuKxqfNhflgDESDIiBz3qF+0e55+CpnrUcw==}
@@ -2788,13 +2783,6 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  dockerode-compose@1.4.0:
-    dependencies:
-      dockerode: 4.0.12
-      js-yaml: 4.3.1
-      tar-fs: 2.1.4
-    transitivePeerDependencies:
-      - supports-color
 
   dockerode@4.0.12:
     dependencies:
