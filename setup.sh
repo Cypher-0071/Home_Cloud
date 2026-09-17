@@ -82,6 +82,41 @@ if command -v apt-get >/dev/null 2>&1; then
         fd-find fzf git psmisc >/dev/null 2>&1 || true
 fi
 
+# Ensure git is verified and available
+if ! command -v git >/dev/null 2>&1; then
+    echo "📦 git is required but not installed. Installing git..."
+    if command -v apt-get >/dev/null 2>&1; then
+        wait_for_apt_lock
+        sudo apt-get install -y -qq git
+    elif command -v dnf >/dev/null 2>&1; then
+        sudo dnf install -y git
+    elif command -v pacman >/dev/null 2>&1; then
+        sudo pacman -Sy --noconfirm git
+    fi
+fi
+
+if command -v git >/dev/null 2>&1; then
+    echo "✔ git is available:   $(git --version | head -n 1)"
+else
+    echo "❌ git could not be found or installed. Please install git manually." >&2
+    exit 1
+fi
+
+# Ensure repository tree is present (in case setup.sh was executed standalone)
+if [ ! -f "$SCRIPT_DIR/home-cloud.service.template" ] || [ ! -f "$SCRIPT_DIR/agent/package.json" ]; then
+    echo "⚠ Home Cloud repository files not found in $SCRIPT_DIR."
+    echo "⬇ Cloning full repository from https://github.com/Cypher-0071/Home_Cloud.git..."
+    CLONE_TARGET="$SCRIPT_DIR/Home_Cloud"
+    if [ -d "$CLONE_TARGET" ]; then
+        echo "Found existing $CLONE_TARGET directory. Using it."
+    else
+        run_as_current_user git clone https://github.com/Cypher-0071/Home_Cloud.git "$CLONE_TARGET"
+    fi
+    SCRIPT_DIR="$CLONE_TARGET"
+    TEMPLATE_FILE="$SCRIPT_DIR/home-cloud.service.template"
+    echo "✔ Switched working directory to: $SCRIPT_DIR"
+fi
+
 # 3. Node.js Runtime Check & Auto-Installation
 install_nodejs() {
     echo "⬇ Installing Node.js 24 LTS & build essentials..."
