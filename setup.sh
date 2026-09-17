@@ -42,6 +42,20 @@ else
     CURRENT_HOME="${HOME:-/home/$CURRENT_USER}"
 fi
 
+run_as_current_user() {
+    if [ "$EUID" -eq 0 ] && [ "$CURRENT_USER" != "root" ]; then
+        sudo -u "$CURRENT_USER" -H "$@"
+    else
+        "$@"
+    fi
+}
+
+# Resolve active outbound network gateway IP early for status messages
+ACTIVE_IP="$(ip route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="src") print $(i+1)}' || true)"
+if [ -z "$ACTIVE_IP" ]; then
+    ACTIVE_IP="$(hostname -I 2>/dev/null | awk '{print $1}' || echo "localhost")"
+fi
+
 ARCH="$(uname -m)"
 case "$ARCH" in
     x86_64)        CF_ARCH="amd64" ;;
@@ -53,6 +67,7 @@ esac
 echo "✔ Resolved User:      $CURRENT_USER ($CURRENT_GROUP)"
 echo "✔ User Home:          $CURRENT_HOME"
 echo "✔ Detected Arch:      $ARCH (CF: $CF_ARCH)"
+echo "✔ Primary Host IP:    $ACTIVE_IP"
 echo "✔ Working Directory:  $SCRIPT_DIR"
 
 # 2. Install essential system tools for bare-bones Ubuntu Server
@@ -220,8 +235,8 @@ fi
 # Create skeleton ~/.cloudflared directory if cloudflared is installed
 if command -v cloudflared >/dev/null 2>&1; then
     CF_DIR="$CURRENT_HOME/.cloudflared"
-    if [ ! -d "$CF_DIR" ]; then
-        mkdir -p "$CF_DIR"
+    mkdir -p "$CF_DIR"
+    if [ "$EUID" -eq 0 ]; then
         chown -R "$CURRENT_USER:$CURRENT_GROUP" "$CF_DIR"
     fi
 fi
@@ -311,14 +326,292 @@ else
     echo "✔ Admin password is already configured in agent/.env"
 fi
 
-# 8. Monorepo Dependencies & Production Dashboard Build
+# 8. Automated Cloudflare Tunnel Setup (Optional Remote HTTPS Access)
+setup_cloudflare_tunnel() {
+    echo ""
+    echo "⚙ Checking Cloudflare Tunnel & remote access configuration..."
+
+    clean_domain() {
+        local d="$1"
+        d="$(echo "$d" | tr -d '[:space:]')"
+        d="${d#https://}"
+        d="${d#http://}"
+        d="${d%%/*}"
+        d="${d%%:*}"
+        d="$(echo "$d" | tr '[:upper:]' '[:lower:]')"
+        d="${d#dash.}"
+        echo "$d"
+    }
+
+    if command -v cloudflared >/dev/null 2>&1; then
+        CF_DIR="$CURRENT_HOME/.cloudflared"
+        CF_CONFIG_FILE="$CF_DIR/config.yml"
+        CF_CERT_FILE="$CF_DIR/cert.pem"
+
+        # Ensure directory exists and has proper user ownership before running any commands
+        if [ ! -d "$CF_DIR" ]; then
+            mkdir -p "$CF_DIR"
+        fi
+        if [ "$EUID" -eq 0 ]; then
+            chown -R "$CURRENT_USER:$CURRENT_GROUP" "$CF_DIR"
+        else
+            chown -R "$CURRENT_USER:$CURRENT_GROUP" "$CF_DIR" 2>/dev/null || sudo -n chown -R "$CURRENT_USER:$CURRENT_GROUP" "$CF_DIR" 2>/dev/null || true
+        fi
+        chmod 700 "$CF_DIR" 2>/dev/null || true
+
+        if [ -f "$CF_CONFIG_FILE" ]; then
+            echo "✔ Existing Cloudflare Tunnel configuration detected: $CF_CONFIG_FILE"
+            EXISTING_DASH_HOST="$(awk '/hostname:.*dash\./ {print $NF}' "$CF_CONFIG_FILE" 2>/dev/null | head -n1 || true)"
+            if [ -n "$EXISTING_DASH_HOST" ]; then
+                EXISTING_CF_DOMAIN="$(clean_domain "$EXISTING_DASH_HOST")"
+                "$NODE_PATH" -e '
+                    const fs = require("fs");
+                    const envPath = process.argv[1];
+                    const cfDomain = process.argv[2];
+                    let content = fs.existsSync(envPath) ? fs.readFileSync(envPath, "utf8") : "";
+
+                    function updateOrAppend(key, val) {
+                        const regex = new RegExp("^" + key + "=.*", "m");
+                        if (regex.test(content)) {
+                            content = content.replace(regex, key + "=" + val);
+                        } else {
+                            const trimmed = content.trimEnd();
+                            content = (trimmed ? trimmed + "\n" : "") + key + "=" + val + "\n";
+                        }
+                    }
+
+                    updateOrAppend("CF_DOMAIN", cfDomain);
+                    updateOrAppend("TUNNEL_NAME", "home-cloud");
+                    fs.writeFileSync(envPath, content, { mode: 0o600 });
+                ' "$SCRIPT_DIR/agent/.env" "$EXISTING_CF_DOMAIN"
+                echo "✔ Synced CF_DOMAIN=$EXISTING_CF_DOMAIN from config.yml to agent/.env"
+            fi
+        else
+            SETUP_CF=""
+            if [ -t 0 ] || [ "${SETUP_FORCE_INTERACTIVE:-false}" = "true" ]; then
+                echo ""
+                echo "┌──────────────────────────────────────────────────────────┐"
+                echo "│ 🌐 CLOUDFLARE TUNNEL SETUP (FREE REMOTE HTTPS)           │"
+                echo "│ Expose Home Cloud securely on your custom domain without  │"
+                echo "│ opening router ports or exposing your public home IP.    │"
+                echo "└──────────────────────────────────────────────────────────┘"
+                read -rp "Would you like to set up Cloudflare Tunnel now for free remote HTTPS access on a custom domain? [Y/n] " SETUP_CF || SETUP_CF="N"
+                SETUP_CF="${SETUP_CF:-Y}"
+            else
+                if [ -n "${CF_DOMAIN:-${CLOUDFLARE_DOMAIN:-}}" ]; then
+                    SETUP_CF="Y"
+                else
+                    SETUP_CF="N"
+                fi
+            fi
+
+            if [[ "$SETUP_CF" =~ ^[Yy]$ ]]; then
+                # a) Check if cert.pem exists; if not, invoke cloudflared tunnel login as target user
+                if [ ! -f "$CF_CERT_FILE" ] && [ -f "/etc/cloudflared/cert.pem" ]; then
+                    cp "/etc/cloudflared/cert.pem" "$CF_CERT_FILE"
+                    chown "$CURRENT_USER:$CURRENT_GROUP" "$CF_CERT_FILE" 2>/dev/null || true
+                    chmod 600 "$CF_CERT_FILE" 2>/dev/null || true
+                fi
+
+                if [ ! -f "$CF_CERT_FILE" ]; then
+                    if [ ! -t 0 ] && [ "${SETUP_FORCE_INTERACTIVE:-false}" != "true" ]; then
+                        echo "⚠ Non-interactive mode detected and $CF_CERT_FILE not found."
+                        echo "ℹ Cloudflare login requires interactive browser authorization."
+                    else
+                        echo ""
+                        echo "🔑 Cloudflare authentication certificate not found."
+                        echo "👉 cloudflared will now display an authorization URL below."
+                        echo "   Please open the URL in your browser and select your domain."
+                        echo ""
+                        run_as_current_user cloudflared tunnel login || true
+                        for _ in {1..3}; do
+                            if [ -f "$CF_CERT_FILE" ]; then break; fi
+                            sleep 1
+                        done
+                    fi
+                fi
+
+                if [ ! -f "$CF_CERT_FILE" ]; then
+                    echo "⚠ Cloudflare login was not completed ($CF_CERT_FILE not found)."
+                    echo "ℹ Home Cloud will run in LAN-only mode (http://$ACTIVE_IP:3000)."
+                    echo "  Remote access can be enabled later by running: cloudflared tunnel login && cloudflared tunnel create home-cloud"
+                else
+                    # b) Prompt user for root domain name
+                    CF_DOMAIN_VAL="${CF_DOMAIN:-${CLOUDFLARE_DOMAIN:-}}"
+                    CF_DOMAIN_VAL="$(clean_domain "$CF_DOMAIN_VAL")"
+
+                    if [ -t 0 ] || [ "${SETUP_FORCE_INTERACTIVE:-false}" = "true" ]; then
+                        while true; do
+                            if [ -n "$CF_DOMAIN_VAL" ]; then
+                                read -rp "Enter your root domain name [default: $CF_DOMAIN_VAL]: " INPUT_DOMAIN || true
+                                INPUT_CLEAN="$(clean_domain "${INPUT_DOMAIN:-}")"
+                                if [ -n "$INPUT_CLEAN" ]; then
+                                    CF_DOMAIN_VAL="$INPUT_CLEAN"
+                                fi
+                            else
+                                read -rp "Enter your root domain name (e.g. home-cloud.live): " INPUT_DOMAIN || true
+                                CF_DOMAIN_VAL="$(clean_domain "${INPUT_DOMAIN:-}")"
+                            fi
+                            if [ -n "$CF_DOMAIN_VAL" ]; then
+                                break
+                            fi
+                            echo "❌ Domain name cannot be empty. Please try again."
+                        done
+                    fi
+
+                    CF_DOMAIN_VAL="$(clean_domain "$CF_DOMAIN_VAL")"
+
+                    if [ -z "$CF_DOMAIN_VAL" ]; then
+                        echo "⚠ No domain provided."
+                        echo "ℹ Home Cloud will run in LAN-only mode (http://$ACTIVE_IP:3000)."
+                        echo "  Remote access can be enabled later by running: cloudflared tunnel login && cloudflared tunnel create home-cloud"
+                    else
+                        TUNNEL_NAME="home-cloud"
+                        echo "🔍 Checking for existing Cloudflare tunnel '$TUNNEL_NAME'..."
+                        TUNNEL_ID="$(run_as_current_user cloudflared tunnel list 2>/dev/null | awk -v name="$TUNNEL_NAME" '$2 == name {print $1; exit}' || true)"
+
+                        # If tunnel was found remotely in cloudflared tunnel list, verify local credentials exist
+                        if [ -n "$TUNNEL_ID" ]; then
+                            if [ ! -f "$CF_DIR/$TUNNEL_ID.json" ]; then
+                                # Check if credentials file exists under another name or in directory
+                                MATCHED_CRED=""
+                                for cred_file in "$CF_DIR"/*.json; do
+                                    if [ -f "$cred_file" ]; then
+                                        base_name="$(basename "$cred_file" .json)"
+                                        if [ "$base_name" = "$TUNNEL_ID" ]; then
+                                            MATCHED_CRED="$cred_file"
+                                            break
+                                        fi
+                                        if grep -q "\"TunnelID\":\"$TUNNEL_ID\"" "$cred_file" 2>/dev/null; then
+                                            MATCHED_CRED="$cred_file"
+                                            cp "$cred_file" "$CF_DIR/$TUNNEL_ID.json"
+                                            break
+                                        fi
+                                    fi
+                                done
+
+                                if [ -z "$MATCHED_CRED" ] && [ ! -f "$CF_DIR/$TUNNEL_ID.json" ]; then
+                                    echo "⚠ Tunnel '$TUNNEL_NAME' exists on Cloudflare, but local credentials file was not found."
+                                    echo "🔄 Removing orphaned remote tunnel and generating new credentials..."
+                                    run_as_current_user cloudflared tunnel delete -f "$TUNNEL_NAME" >/dev/null 2>&1 || true
+                                    TUNNEL_ID=""
+                                fi
+                            fi
+                        fi
+
+                        # c) Create tunnel if it does not exist (or was cleaned up due to missing local credentials)
+                        if [ -z "$TUNNEL_ID" ]; then
+                            echo "🔨 Creating tunnel '$TUNNEL_NAME'..."
+                            CREATE_OUTPUT="$(run_as_current_user cloudflared tunnel create "$TUNNEL_NAME" 2>&1 || true)"
+                            echo "$CREATE_OUTPUT"
+                            if [[ "$CREATE_OUTPUT" =~ ([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}) ]]; then
+                                TUNNEL_ID="${BASH_REMATCH[1]}"
+                            fi
+                            if [ -z "$TUNNEL_ID" ]; then
+                                TUNNEL_ID="$(run_as_current_user cloudflared tunnel list 2>/dev/null | awk -v name="$TUNNEL_NAME" '$2 == name {print $1; exit}' || true)"
+                            fi
+                        else
+                            echo "✔ Found existing tunnel '$TUNNEL_NAME' with ID: $TUNNEL_ID"
+                        fi
+
+                        # d) Extract Tunnel UUID from JSON credentials file or tunnel list
+                        if [ -z "$TUNNEL_ID" ] || [ ! -f "$CF_DIR/$TUNNEL_ID.json" ]; then
+                            for cred_file in "$CF_DIR"/*.json; do
+                                if [ -f "$cred_file" ]; then
+                                    base_name="$(basename "$cred_file" .json)"
+                                    if [[ "$base_name" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$ ]]; then
+                                        TUNNEL_ID="$base_name"
+                                        break
+                                    fi
+                                fi
+                            done
+                        fi
+
+                        if [ -z "$TUNNEL_ID" ] || [ ! -f "$CF_DIR/$TUNNEL_ID.json" ]; then
+                            echo "❌ Failed to determine Tunnel UUID or credentials file for '$TUNNEL_NAME'."
+                            echo "ℹ Home Cloud will run in LAN-only mode (http://$ACTIVE_IP:3000)."
+                            echo "  Remote access can be enabled later by running: cloudflared tunnel login && cloudflared tunnel create home-cloud"
+                        else
+                            # e) Automatically generate config.yml
+                            echo "📝 Generating $CF_CONFIG_FILE..."
+                            cat << EOF > "$CF_CONFIG_FILE"
+tunnel: $TUNNEL_ID
+credentials-file: $CF_DIR/$TUNNEL_ID.json
+
+ingress:
+  - hostname: dash.$CF_DOMAIN_VAL
+    service: http://localhost:3000
+  - service: http_status:404
+EOF
+                            echo "✔ Successfully generated $CF_CONFIG_FILE"
+
+                            # f) Automatically route DNS for the dashboard subdomain
+                            echo "🌐 Routing DNS for dash.$CF_DOMAIN_VAL..."
+                            DNS_OUT="$(run_as_current_user cloudflared tunnel route dns "$TUNNEL_NAME" "dash.$CF_DOMAIN_VAL" 2>&1 || true)"
+                            echo "$DNS_OUT"
+                            echo "✔ DNS routing configured for dash.$CF_DOMAIN_VAL"
+
+                            # g) Update agent/.env using Node-based environment updater
+                            echo "⚙ Updating agent/.env with CF_DOMAIN and TUNNEL_NAME..."
+                            "$NODE_PATH" -e '
+                                const fs = require("fs");
+                                const envPath = process.argv[1];
+                                const cfDomain = process.argv[2];
+                                const tunnelName = process.argv[3];
+                                let content = fs.existsSync(envPath) ? fs.readFileSync(envPath, "utf8") : "";
+
+                                function updateOrAppend(key, val) {
+                                    const regex = new RegExp("^" + key + "=.*", "m");
+                                    if (regex.test(content)) {
+                                        content = content.replace(regex, key + "=" + val);
+                                    } else {
+                                        const trimmed = content.trimEnd();
+                                        content = (trimmed ? trimmed + "\n" : "") + key + "=" + val + "\n";
+                                    }
+                                }
+
+                                updateOrAppend("CF_DOMAIN", cfDomain);
+                                updateOrAppend("TUNNEL_NAME", tunnelName);
+                                fs.writeFileSync(envPath, content, { mode: 0o600 });
+                            ' "$SCRIPT_DIR/agent/.env" "$CF_DOMAIN_VAL" "$TUNNEL_NAME"
+                            echo "✔ Updated agent/.env with CF_DOMAIN=$CF_DOMAIN_VAL and TUNNEL_NAME=$TUNNEL_NAME"
+
+                            # h) Ensure file permissions
+                            if [ -d "$CF_DIR" ]; then
+                                if [ "$EUID" -eq 0 ]; then
+                                    chown -R "$CURRENT_USER:$CURRENT_GROUP" "$CF_DIR"
+                                else
+                                    chown -R "$CURRENT_USER:$CURRENT_GROUP" "$CF_DIR" 2>/dev/null || sudo -n chown -R "$CURRENT_USER:$CURRENT_GROUP" "$CF_DIR" 2>/dev/null || true
+                                fi
+                                chmod 700 "$CF_DIR" 2>/dev/null || true
+                                chmod 600 "$CF_DIR"/*.json "$CF_DIR"/*.pem 2>/dev/null || true
+                                chmod 644 "$CF_CONFIG_FILE" 2>/dev/null || true
+                            fi
+                            echo "✔ Ensured permissions for $CF_DIR"
+                        fi
+                    fi
+                fi
+            else
+                echo "ℹ Cloudflare Tunnel setup skipped."
+                echo "ℹ Home Cloud will run in LAN-only mode (http://$ACTIVE_IP:3000)."
+                echo "  Remote access can be enabled later by running: cloudflared tunnel login && cloudflared tunnel create home-cloud"
+            fi
+        fi
+    else
+        echo "ℹ cloudflared is not installed. Home Cloud will run in LAN-only mode (http://$ACTIVE_IP:3000)."
+    fi
+}
+
+setup_cloudflare_tunnel
+
+# 9. Monorepo Dependencies & Production Dashboard Build
 echo ""
 echo "📦 Installing dependencies & building dashboard..."
 (cd "$SCRIPT_DIR" && pnpm install --frozen-lockfile 2>/dev/null || pnpm install)
 (cd "$SCRIPT_DIR" && pnpm --filter dashboard build)
 echo "✔ Dashboard bundle built successfully in dashboard/dist/"
 
-# 9. Configure UFW Firewall for LAN port 3000 if UFW is active
+# 10. Configure UFW Firewall for LAN port 3000 if UFW is active
 if command -v ufw >/dev/null 2>&1; then
     if sudo ufw status | grep -qw "active"; then
         echo "🛡 UFW is active. Allowing incoming traffic on port 3000/tcp..."
@@ -326,7 +619,7 @@ if command -v ufw >/dev/null 2>&1; then
     fi
 fi
 
-# 10. Render & Inject Systemd Service File
+# 11. Render & Inject Systemd Service File
 if [ ! -f "$TEMPLATE_FILE" ]; then
     echo "❌ Error: Template file $TEMPLATE_FILE not found!" >&2
     exit 1
@@ -344,10 +637,10 @@ sed \
 
 echo "✔ Successfully generated $TARGET_SERVICE"
 
-# 11. Fix file permissions on the repository directory so non-root user owns build artifacts
+# 12. Fix file permissions on the repository directory so non-root user owns build artifacts
 sudo chown -R "$CURRENT_USER:$CURRENT_GROUP" "$SCRIPT_DIR"
 
-# 12. Register and Start Service with systemd
+# 13. Register and Start Service with systemd
 echo "🔄 Reloading systemd daemon..."
 sudo systemctl daemon-reload
 
@@ -360,13 +653,11 @@ echo "  🎉 Home Cloud successfully installed & running!     "
 echo "========================================================"
 echo ""
 
-# Extract active outbound gateway interface IP (prevents picking docker0 172.17.0.1)
-ACTIVE_IP="$(ip route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="src") print $(i+1)}' || true)"
-if [ -z "$ACTIVE_IP" ]; then
-    ACTIVE_IP="$(hostname -I 2>/dev/null | awk '{print $1}' || echo "localhost")"
-fi
-
 echo "  Access locally at:  http://$ACTIVE_IP:3000"
+ACTIVE_CF_DOMAIN="$(grep -E "^CF_DOMAIN=" "$SCRIPT_DIR/agent/.env" 2>/dev/null | cut -d'=' -f2- | tr -d ' "\r\n' || true)"
+if [ -n "$ACTIVE_CF_DOMAIN" ] && [ -f "$CURRENT_HOME/.cloudflared/config.yml" ]; then
+    echo "  Access remotely at: https://dash.$ACTIVE_CF_DOMAIN"
+fi
 echo ""
 echo "Service management commands:"
 echo "  Check status:       sudo systemctl status home-cloud"
