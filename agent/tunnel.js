@@ -1,4 +1,5 @@
 const { spawn } = require("node:child_process");
+const fs = require("node:fs");
 const { CF_CONFIG, TUNNEL_NAME, CF_DOMAIN } = require("./config");
 
 let currentSpawn = spawn;
@@ -237,6 +238,19 @@ async function startTunnelWithRetry(options = {}) {
 	if (supervisorRunning) {
 		return;
 	}
+
+	// Pre-flight check: If config.yml does not exist on disk, tunnel is unconfigured.
+	// Gracefully run in LAN-only mode without flooding journal with crash/exit logs every 30s.
+	if (!fs.existsSync(CF_CONFIG)) {
+		tunnelState.status = "unconfigured";
+		tunnelState.url = null;
+		tunnelState.error = null;
+		console.log(
+			`[tunnel] Notice: Config file not found at ${CF_CONFIG}. Remote Cloudflare tunnel is inactive; local LAN access is active.`
+		);
+		return;
+	}
+
 	supervisorRunning = true;
 	let currentDelay = initialDelayMs;
 
