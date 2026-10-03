@@ -173,13 +173,14 @@ NODE_VERSION="$("$NODE_PATH" -v)"
 echo "✔ Active Node.js:     $NODE_PATH ($NODE_VERSION)"
 
 # 4. Mandatory pnpm Installation
+export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 if ! command -v pnpm >/dev/null 2>&1; then
     echo "📦 Installing pnpm..."
-    if command -v corepack >/dev/null 2>&1; then
-        sudo corepack enable || true
+    if command -v npm >/dev/null 2>&1; then
+        sudo npm install -g pnpm@latest || true
     fi
-    if ! command -v pnpm >/dev/null 2>&1 && command -v npm >/dev/null 2>&1; then
-        sudo npm install -g pnpm || true
+    if ! command -v pnpm >/dev/null 2>&1 && command -v corepack >/dev/null 2>&1; then
+        sudo corepack enable || true
     fi
     if ! command -v pnpm >/dev/null 2>&1; then
         curl -fsSL https://get.pnpm.io/install.sh | env PNPM_VERSION=latest SHELL="$(which bash)" bash - || true
@@ -642,7 +643,8 @@ setup_cloudflare_tunnel
 # 9. Monorepo Dependencies & Production Dashboard Build
 echo ""
 echo "📦 Installing dependencies & building dashboard..."
-(cd "$SCRIPT_DIR" && pnpm install --frozen-lockfile 2>/dev/null || pnpm install)
+export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+(cd "$SCRIPT_DIR" && pnpm install)
 (cd "$SCRIPT_DIR" && pnpm --filter dashboard build)
 echo "✔ Dashboard bundle built successfully in dashboard/dist/"
 
