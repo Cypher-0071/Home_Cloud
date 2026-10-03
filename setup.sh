@@ -583,7 +583,7 @@ EOF
 
                             # f) Automatically route DNS for the dashboard subdomain
                             echo "🌐 Routing DNS for dash.$CF_DOMAIN_VAL..."
-                            DNS_OUT="$(run_as_current_user cloudflared tunnel route dns "$TUNNEL_NAME" "dash.$CF_DOMAIN_VAL" 2>&1 || true)"
+                            DNS_OUT="$(run_as_current_user cloudflared tunnel route dns --overwrite-dns "$TUNNEL_NAME" "dash.$CF_DOMAIN_VAL" 2>&1 || true)"
                             echo "$DNS_OUT"
                             echo "✔ DNS routing configured for dash.$CF_DOMAIN_VAL"
 
