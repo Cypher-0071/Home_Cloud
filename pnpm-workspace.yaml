@@ -1,6 +1,7 @@
 packages:
   - 'agent'
   - 'dashboard'
+  - 'landing'
 allowBuilds:
   cpu-features: true
   node-pty: true

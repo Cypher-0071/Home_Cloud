@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Home Cloud — Personal Linux Server Control Plane</title>
+  <meta name="description" content="Turn any spare Linux PC into a private, self-hosted cloud control plane behind CGNAT with Cloudflare Tunnel." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <!-- Header / Navigation -->
+  <header class="header">
+    <div class="container nav-container">
+      <a href="/" class="brand">
+        <span class="status-indicator"></span>
+        <span class="brand-text">Home Cloud</span>
+      </a>
+      <nav class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#quickstart">Quickstart</a>
+        <a href="https://github.com/Cypher-0071/Home_Cloud" target="_blank" rel="noreferrer">GitHub</a>
+        <a href="https://dash.home-cloud.live" class="btn btn-sm btn-primary">Dashboard &rarr;</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <main>
+    <section class="hero">
+      <div class="container hero-container">
+        <div class="badge">
+          <span class="badge-dot"></span>
+          <span>Personal Linux Control Plane</span>
+        </div>
+        <h1 class="hero-title">
+          Your home server.<br />
+          <span class="text-gradient">Accessible anywhere.</span>
+        </h1>
+        <p class="hero-subtitle">
+          Turn a spare Linux PC into a reliable, self-hosted control plane. Manage files, stream live metrics, run Docker containers, and access an in-browser host terminal—behind CGNAT with zero port forwarding.
+        </p>
+
+        <div class="hero-actions">
+          <a href="https://dash.home-cloud.live" class="btn btn-lg btn-primary">Open Dashboard</a>
+          <a href="https://github.com/Cypher-0071/Home_Cloud" target="_blank" rel="noreferrer" class="btn btn-lg btn-outline">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+            </svg>
+            GitHub
+          </a>
+        </div>
+
+        <!-- Terminal Quick Install Snippet -->
+        <div class="install-box" id="quickstart">
+          <div class="install-header">
+            <div class="window-dots">
+              <span></span><span></span><span></span>
+            </div>
+            <span class="install-title">Automated Host Install</span>
+            <button id="copy-btn" class="copy-btn" title="Copy command">
+              <svg id="copy-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+              <span id="copy-label">Copy</span>
+            </button>
+          </div>
+          <div class="install-body">
+            <code><span class="prompt">$</span> curl -fsSL https://raw.githubusercontent.com/Cypher-0071/Home_Cloud/main/setup.sh -o setup.sh && chmod +x setup.sh && ./setup.sh</code>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Core Features -->
+    <section class="features" id="features">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-tag">Capabilities</span>
+          <h2 class="section-title">Built for single-node sovereignty</h2>
+          <p class="section-desc">Designed with restraint. Fast, purposeful, and free of unnecessary abstractions.</p>
+        </div>
+
+        <div class="feature-grid">
+          <div class="feature-card">
+            <div class="feature-icon">⚡</div>
+            <h3>Cloudflare Tunnel</h3>
+            <p>Zero router configuration, port forwarding, or public IP exposure. Secure end-to-end HTTPS traversal through Cloudflare Edge.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">&gt;_</div>
+            <h3>Browser Host Terminal</h3>
+            <p>Full xterm.js powered PTY directly inside the dashboard. Seamlessly inspect containers or run bare-metal host commands.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">📊</div>
+            <h3>Real-Time Telemetry</h3>
+            <p>Live Server-Sent Events stream CPU load, RAM allocation, disk partitions, and active network throughput without polling delay.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">🐳</div>
+            <h3>Docker Management</h3>
+            <p>Inspect running containers, execute containerized shells, read logs, and manage Compose stacks with zero overhead.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">📁</div>
+            <h3>Jailed File Explorer</h3>
+            <p>Fast and safe file navigation jailed to your user directory. Edit config files, upload assets, and browse storage safely.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">🛡</div>
+            <h3>Autonomous Systemd</h3>
+            <p>Native background service supervision with auto-healing, restart resilience, and zero container runtime bloat for the control plane itself.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container footer-content">
+      <p class="copyright">&copy; <span id="year"></span> Home Cloud. Open source under ISC License.</p>
+      <div class="footer-links">
+        <a href="https://dash.home-cloud.live">Dashboard</a>
+        <a href="https://github.com/Cypher-0071/Home_Cloud" target="_blank" rel="noreferrer">GitHub</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    document.getElementById('year').textContent = new Date().getFullYear();
+    const copyBtn = document.getElementById('copy-btn');
+    const copyLabel = document.getElementById('copy-label');
+    const cmdText = 'curl -fsSL https://raw.githubusercontent.com/Cypher-0071/Home_Cloud/main/setup.sh -o setup.sh && chmod +x setup.sh && ./setup.sh';
+
+    copyBtn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(cmdText);
+        copyLabel.textContent = 'Copied!';
+        setTimeout(() => { copyLabel.textContent = 'Copy'; }, 2000);
+      } catch (err) {
+        copyLabel.textContent = 'Failed';
+      }
+    });
+  </script>
+</body>
+</html>
