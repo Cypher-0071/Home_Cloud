@@ -1,0 +1,569 @@
+---
+// landing/src/components/Nav.astro — §00 Nav
+// Sticky top bar over paper, scroll progress bar, logo mark + wordmark,
+// navigation links, GitHub ghost + Install primary CTAs, and accessible mobile sheet.
+---
+
+<header id="nav" class="nav-root">
+  <!-- 2px vermilion scroll progress bar at the very top -->
+  <div class="scroll-track" aria-hidden="true">
+    <div class="scroll-bar" id="scroll-progress-bar"></div>
+  </div>
+
+  <div class="container nav-container">
+    <!-- Left: Logo mark & Wordmark -->
+    <a href="#top" class="nav-brand" aria-label="Home Cloud — Back to top">
+      <svg
+        class="nav-logo"
+        viewBox="0 0 32 32"
+        width="24"
+        height="24"
+        aria-hidden="true"
+      >
+        <path
+          d="M9 21.5h14a4.5 4.5 0 0 0 .6-8.96A6.5 6.5 0 0 0 11.1 14 3.75 3.75 0 0 0 9 21.5Z"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.2"
+          stroke-linejoin="round"
+        ></path>
+        <circle cx="22.5" cy="9.5" r="2.5" fill="var(--signal)"></circle>
+      </svg>
+      <span class="nav-brand-text">Home Cloud</span>
+    </a>
+
+    <!-- Centre/Right links (Desktop) -->
+    <nav class="nav-links" aria-label="Primary navigation">
+      <a href="#desktop" class="nav-link">Desktop</a>
+      <a href="#features" class="nav-link">Features</a>
+      <a href="#how" class="nav-link">How it works</a>
+      <a href="#install" class="nav-link">Install</a>
+      <a href="#compare" class="nav-link">Compare</a>
+    </nav>
+
+    <!-- Right Actions -->
+    <div class="nav-actions">
+      <a
+        href="https://github.com/Cypher-0071/Home_Cloud"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="btn btn-ghost nav-btn-gh"
+        aria-label="GitHub repository"
+      >
+        <svg
+          class="gh-icon"
+          viewBox="0 0 16 16"
+          width="16"
+          height="16"
+          fill="currentColor"
+          aria-hidden="true"
+        >
+          <path
+            d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8Z"
+          ></path>
+        </svg>
+        <span class="gh-label">GitHub</span>
+      </a>
+
+      <a href="#install" class="btn btn-primary nav-btn-install">
+        <span>Install</span>
+      </a>
+
+      <!-- Mobile hamburger button -->
+      <button
+        type="button"
+        id="nav-hamburger"
+        class="nav-hamburger"
+        aria-label="Open menu"
+        aria-expanded="false"
+        aria-controls="nav-mobile-sheet"
+      >
+        <span class="hamburger-bar bar-top"></span>
+        <span class="hamburger-bar bar-bottom"></span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Mobile sheet (<820px) -->
+  <div id="nav-mobile-sheet" class="mobile-sheet" aria-hidden="true">
+    <div class="container mobile-sheet-container">
+      <div class="mobile-sheet-meta">
+        <span class="eyebrow">Index</span>
+        <span class="mobile-spec">DAEMON :3000 · CGNAT</span>
+      </div>
+
+      <nav class="mobile-nav-list" aria-label="Mobile links">
+        <a href="#desktop" class="mobile-nav-link">
+          <span class="mono-idx">01</span>
+          <span class="link-label">Desktop</span>
+        </a>
+        <a href="#features" class="mobile-nav-link">
+          <span class="mono-idx">02</span>
+          <span class="link-label">Features</span>
+        </a>
+        <a href="#how" class="mobile-nav-link">
+          <span class="mono-idx">03</span>
+          <span class="link-label">How it works</span>
+        </a>
+        <a href="#install" class="mobile-nav-link">
+          <span class="mono-idx">04</span>
+          <span class="link-label">Install</span>
+        </a>
+        <a href="#compare" class="mobile-nav-link">
+          <span class="mono-idx">05</span>
+          <span class="link-label">Compare</span>
+        </a>
+      </nav>
+
+      <div class="mobile-sheet-actions">
+        <a
+          href="https://github.com/Cypher-0071/Home_Cloud"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="btn btn-ghost mobile-btn"
+        >
+          <svg
+            class="gh-icon"
+            viewBox="0 0 16 16"
+            width="16"
+            height="16"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <path
+              d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8Z"
+            ></path>
+          </svg>
+          <span>GitHub</span>
+        </a>
+        <a href="#install" class="btn btn-primary mobile-btn">
+          Install Home Cloud
+        </a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<style>
+  .nav-root {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    width: 100%;
+    background: transparent;
+    border-bottom: 1px solid transparent;
+    transition:
+      background var(--dur-fast) var(--ease-out),
+      border-color var(--dur-fast) var(--ease-out),
+      backdrop-filter var(--dur-fast) var(--ease-out);
+  }
+
+  /* Scrolled appearance */
+  .nav-root.is-scrolled {
+    background: color-mix(in srgb, var(--paper) 92%, transparent);
+    border-bottom: 1px solid var(--rule);
+    backdrop-filter: saturate(1.4) blur(12px);
+    -webkit-backdrop-filter: saturate(1.4) blur(12px);
+  }
+
+  /* Scroll progress bar */
+  .scroll-track {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    pointer-events: none;
+    z-index: 110;
+  }
+
+  .scroll-bar {
+    height: 100%;
+    width: 100%;
+    background: var(--signal);
+    transform-origin: 0 50%;
+    transform: scaleX(0);
+    transition: transform 60ms linear;
+  }
+
+  .nav-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+    gap: var(--space-4);
+  }
+
+  /* Brand */
+  .nav-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3);
+    color: var(--ink);
+    text-decoration: none;
+    user-select: none;
+  }
+
+  .nav-logo {
+    display: block;
+    color: var(--ink);
+    flex-shrink: 0;
+    transition: transform var(--dur-fast) var(--ease-out);
+  }
+
+  .nav-brand:hover .nav-logo {
+    transform: translateY(-1px);
+  }
+
+  .nav-brand-text {
+    font-family: var(--font-sans);
+    font-size: 1.02rem;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    color: var(--ink);
+  }
+
+  /* Centre links */
+  .nav-links {
+    display: none;
+    align-items: center;
+    gap: var(--space-6);
+  }
+
+  @media (min-width: 821px) {
+    .nav-links {
+      display: flex;
+    }
+  }
+
+  .nav-link {
+    font-family: var(--font-sans);
+    font-size: 0.92rem;
+    font-weight: 500;
+    color: var(--ink-2);
+    text-decoration: none;
+    position: relative;
+    padding-block: var(--space-1);
+    transition: color var(--dur-fast) var(--ease-out);
+  }
+
+  .nav-link:hover {
+    color: var(--ink);
+  }
+
+  .nav-link::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 100%;
+    height: 1px;
+    background: var(--ink);
+    transform: scaleX(0);
+    transform-origin: right;
+    transition: transform var(--dur-fast) var(--ease-out);
+  }
+
+  .nav-link:hover::after {
+    transform: scaleX(1);
+    transform-origin: left;
+  }
+
+  /* Right actions */
+  .nav-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .nav-btn-gh {
+    height: 38px;
+    padding-inline: var(--space-4);
+    font-size: 0.88rem;
+    display: none;
+  }
+
+  @media (min-width: 600px) {
+    .nav-btn-gh {
+      display: inline-flex;
+    }
+  }
+
+  .nav-btn-install {
+    height: 38px;
+    padding-inline: var(--space-4);
+    font-size: 0.88rem;
+    display: none;
+  }
+
+  @media (min-width: 821px) {
+    .nav-btn-install {
+      display: inline-flex;
+    }
+  }
+
+  .gh-icon {
+    flex-shrink: 0;
+  }
+
+  /* Hamburger (<820px) */
+  .nav-hamburger {
+    display: inline-flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    border: 1px solid var(--rule);
+    color: var(--ink);
+    cursor: pointer;
+    padding: 0;
+    transition:
+      border-color var(--dur-fast) var(--ease-out),
+      background-color var(--dur-fast) var(--ease-out);
+  }
+
+  @media (min-width: 821px) {
+    .nav-hamburger {
+      display: none;
+    }
+  }
+
+  .nav-hamburger:hover {
+    border-color: var(--ink);
+    background: var(--paper-2);
+  }
+
+  .hamburger-bar {
+    width: 18px;
+    height: 1.5px;
+    background: currentColor;
+    transition:
+      transform var(--dur-fast) var(--ease-out),
+      opacity var(--dur-fast) var(--ease-out);
+  }
+
+  .bar-top {
+    transform: translateY(-3px);
+  }
+
+  .bar-bottom {
+    transform: translateY(3px);
+  }
+
+  .nav-hamburger.is-active .bar-top {
+    transform: translateY(0.75px) rotate(45deg);
+  }
+
+  .nav-hamburger.is-active .bar-bottom {
+    transform: translateY(-0.75px) rotate(-45deg);
+  }
+
+  /* Mobile sheet */
+  .mobile-sheet {
+    display: none;
+    position: absolute;
+    top: 64px;
+    left: 0;
+    right: 0;
+    background: var(--paper);
+    border-bottom: 1px solid var(--rule);
+    box-shadow: 0 16px 36px -16px rgb(21 19 15 / 0.15);
+    opacity: 0;
+    transform: translateY(-8px);
+    pointer-events: none;
+    transition:
+      opacity var(--dur-fast) var(--ease-out),
+      transform var(--dur-fast) var(--ease-out);
+  }
+
+  @media (max-width: 820px) {
+    .mobile-sheet {
+      display: block;
+    }
+  }
+
+  .mobile-sheet.is-open {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+
+  .mobile-sheet-container {
+    padding-block: var(--space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+  }
+
+  .mobile-sheet-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: var(--space-3);
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .mobile-spec {
+    font-family: var(--font-mono);
+    font-size: var(--step--1);
+    color: var(--ink-3);
+    letter-spacing: 0.08em;
+  }
+
+  .mobile-nav-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .mobile-nav-link {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-4);
+    padding-block: var(--space-3);
+    font-size: 1.25rem;
+    font-weight: 500;
+    color: var(--ink);
+    border-bottom: 1px dashed var(--rule);
+    text-decoration: none;
+    transition:
+      color var(--dur-fast) var(--ease-out),
+      padding-left var(--dur-fast) var(--ease-out);
+  }
+
+  .mobile-nav-link:hover,
+  .mobile-nav-link:focus-visible {
+    color: var(--signal-ink);
+    padding-left: var(--space-2);
+  }
+
+  .mono-idx {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--ink-3);
+    letter-spacing: 0.08em;
+  }
+
+  .mobile-sheet-actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding-top: var(--space-2);
+  }
+
+  .mobile-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .nav-root,
+    .scroll-bar,
+    .hamburger-bar,
+    .mobile-sheet,
+    .nav-logo,
+    .nav-link::after {
+      transition-duration: 0.01ms !important;
+    }
+  }
+</style>
+
+<script>
+  // Scroll progress & sticky border / backdrop state
+  const nav = document.getElementById('nav');
+  const scrollBar = document.getElementById('scroll-progress-bar');
+  const hamburger = document.getElementById('nav-hamburger');
+  const sheet = document.getElementById('nav-mobile-sheet');
+
+  let ticking = false;
+
+  function onScroll() {
+    const scrollY = window.scrollY;
+    const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+    const progress = docHeight > 0 ? Math.min(Math.max(scrollY / docHeight, 0), 1) : 0;
+
+    if (scrollBar) {
+      scrollBar.style.transform = `scaleX(${progress})`;
+    }
+
+    if (nav) {
+      if (scrollY > 12) {
+        nav.classList.add('is-scrolled');
+      } else {
+        nav.classList.remove('is-scrolled');
+      }
+    }
+    ticking = false;
+  }
+
+  window.addEventListener(
+    'scroll',
+    () => {
+      if (!ticking) {
+        requestAnimationFrame(onScroll);
+        ticking = true;
+      }
+    },
+    { passive: true },
+  );
+
+  // Initial trigger
+  onScroll();
+
+  // Mobile menu open / close
+  let isOpen = false;
+
+  function toggleSheet(open?: boolean) {
+    isOpen = typeof open === 'boolean' ? open : !isOpen;
+    if (!hamburger || !sheet) return;
+
+    hamburger.setAttribute('aria-expanded', String(isOpen));
+    hamburger.setAttribute(
+      'aria-label',
+      isOpen ? 'Close navigation menu' : 'Open navigation menu',
+    );
+    hamburger.classList.toggle('is-active', isOpen);
+
+    sheet.setAttribute('aria-hidden', String(!isOpen));
+    sheet.classList.toggle('is-open', isOpen);
+
+    if (isOpen) {
+      const firstLink = sheet.querySelector<HTMLElement>('a');
+      firstLink?.focus();
+    } else {
+      hamburger.focus();
+    }
+  }
+
+  hamburger?.addEventListener('click', () => toggleSheet());
+
+  // Close on Escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && isOpen) {
+      toggleSheet(false);
+    }
+  });
+
+  // Close when clicking mobile sheet links
+  sheet?.querySelectorAll('a').forEach((link) => {
+    link.addEventListener('click', () => {
+      toggleSheet(false);
+    });
+  });
+
+  // Close when clicking outside
+  document.addEventListener('click', (e) => {
+    if (
+      isOpen &&
+      sheet &&
+      hamburger &&
+      !sheet.contains(e.target as Node) &&
+      !hamburger.contains(e.target as Node)
+    ) {
+      toggleSheet(false);
+    }
+  });
+</script>

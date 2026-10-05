@@ -1,0 +1,77 @@
+/* ==========================================================================
+   Home Cloud — Landing design tokens
+   Direction: "Paper & Signal" — an engineering spec sheet printed on warm
+   paper, with a single vermilion signal colour and a dark "night shift"
+   surface for the live product demo.
+   ========================================================================== */
+
+:root {
+  /* ---- Paper (light, default surface) ---- */
+  --paper: #f1ede4;
+  --paper-2: #e8e3d7;       /* recessed panels, code wells */
+  --paper-3: #ddd7c8;       /* pressed / hover on recessed */
+  --ink: #15130f;           /* primary text, strong rules */
+  --ink-2: #4a463e;         /* body copy */
+  --ink-3: #6f6a5f;         /* captions, labels (AA on paper) */
+  --rule: rgb(21 19 15 / 0.14);
+  --rule-strong: rgb(21 19 15 / 0.32);
+
+  /* ---- Signal (the only accent) ---- */
+  --signal: #ff4d17;        /* fills, dots, graphics */
+  --signal-ink: #c2380b;    /* signal used as TEXT on paper (AA) */
+  --signal-soft: rgb(255 77 23 / 0.12);
+
+  /* ---- Status ---- */
+  --ok: #1f7a55;            /* running / healthy on paper */
+  --ok-night: #5bd68a;      /* running / healthy on night */
+  --warn: #b7791f;
+
+  /* ---- Night (dark surface for demo + footer) ---- */
+  --night: #0f100d;
+  --night-2: #171813;       /* window bodies */
+  --night-3: #22231d;       /* chrome, taskbar */
+  --night-rule: rgb(241 237 228 / 0.1);
+  --night-text: #ece8de;
+  --night-text-2: #a39e92;
+
+  /* ---- Type ---- */
+  --font-display: 'Instrument Serif', 'Iowan Old Style', Georgia, serif;
+  --font-sans: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, 'SFMono-Regular', monospace;
+
+  --step--1: clamp(0.8rem, 0.78rem + 0.1vw, 0.86rem);
+  --step-0: clamp(1rem, 0.96rem + 0.2vw, 1.125rem);
+  --step-1: clamp(1.2rem, 1.1rem + 0.5vw, 1.5rem);
+  --step-2: clamp(1.6rem, 1.3rem + 1.2vw, 2.4rem);
+  --step-3: clamp(2.2rem, 1.6rem + 2.8vw, 4rem);
+  --step-4: clamp(3rem, 1.8rem + 6vw, 7.5rem);   /* hero display */
+
+  /* ---- Space & layout ---- */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4.5rem;
+  --space-9: 7rem;
+  --section-pad: clamp(4.5rem, 3rem + 7vw, 9rem);
+
+  --container: 1240px;
+  --gutter: clamp(1.25rem, 0.8rem + 2vw, 2.5rem);
+  --radius-sm: 4px;
+  --radius: 8px;
+  --radius-lg: 14px;
+
+  /* ---- Motion ---- */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast: 160ms;
+  --dur: 320ms;
+  --dur-slow: 700ms;
+
+  --shadow-window: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 24px 60px -20px rgb(0 0 0 / 0.65),
+    0 8px 20px -8px rgb(0 0 0 / 0.5);
+  --shadow-paper: 0 1px 0 rgb(255 255 255 / 0.6) inset, 0 18px 40px -24px rgb(21 19 15 / 0.35);
+}

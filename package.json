@@ -5,7 +5,9 @@
 	"main": "index.js",
 	"scripts": {
 		"dev": "concurrently \"pnpm --filter agent dev\" \"pnpm --filter dashboard dev\"",
+		"dev:landing": "pnpm --filter landing dev",
 		"build": "pnpm --filter dashboard build",
+		"build:landing": "pnpm --filter landing build",
 		"start": "pnpm --filter agent start"
 	},
 	"keywords": [],

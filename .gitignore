@@ -71,3 +71,6 @@ cookies.txt
 /*.png
 .agents/
 TEST_READY.md
+
+# Astro
+.astro/

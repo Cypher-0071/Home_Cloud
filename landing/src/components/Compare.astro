@@ -1,0 +1,800 @@
+---
+// §05 Compare — Home Cloud Landing Page
+// Direction: Paper & Signal — Datasheet comparison table & honest audience boundaries
+---
+
+<section id="compare" class="section compare-section">
+  <div class="container">
+    <!-- Header -->
+    <header class="compare-header reveal">
+      <div class="header-eyebrow-row">
+        <span class="eyebrow">§ 05 — Honest comparison</span>
+        <span class="spec-id">SPEC. ID: HC-DS-05</span>
+      </div>
+      <h2 class="display compare-title">Built for the person <em>with root.</em></h2>
+      <p class="lede compare-lede">
+        Most home server operating systems either turn your machine into an appliance or hide the host OS behind container abstractions.
+        Here is how Home Cloud compares with other self-hosted solutions.
+      </p>
+    </header>
+
+    <!-- Datasheet Table Card -->
+    <div class="table-card reveal" style="--reveal-delay: 90ms">
+      <div class="table-card-topbar">
+        <div class="table-meta">
+          <span class="mono-tag">DATASHEET COMPARISON</span>
+          <span class="mono-subtag">HOST MANAGEMENT MATRIX // 2026</span>
+        </div>
+        <div class="table-mobile-tip">
+          <span class="tip-icon" aria-hidden="true">↔</span>
+          <span>Scroll horizontally on smaller viewports</span>
+        </div>
+      </div>
+
+      <div class="table-scroll-wrap" role="region" aria-label="Comparison Table" tabindex="0">
+        <table class="compare-table">
+          <thead>
+            <tr>
+              <th scope="col" class="th-spec">
+                <span class="th-label">CAPABILITY</span>
+              </th>
+              <th scope="col" class="th-col th-homecloud">
+                <div class="th-badge">SELECTED</div>
+                <div class="th-name">Home Cloud</div>
+                <div class="th-sub">One daemon · Web desktop</div>
+              </th>
+              <th scope="col" class="th-col">
+                <div class="th-name">Portainer</div>
+                <div class="th-sub">Docker admin UI</div>
+              </th>
+              <th scope="col" class="th-col">
+                <div class="th-name">CasaOS</div>
+                <div class="th-sub">App launcher grid</div>
+              </th>
+              <th scope="col" class="th-col">
+                <div class="th-name">Umbrel</div>
+                <div class="th-sub">Self-hosted OS</div>
+              </th>
+              <th scope="col" class="th-col">
+                <div class="th-name">Cosmos</div>
+                <div class="th-sub">Security &amp; proxy</div>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Row 1: Interface -->
+            <tr>
+              <th scope="row" class="td-spec">
+                <div class="spec-name">Interface</div>
+                <div class="spec-detail">Window model &amp; multitasking</div>
+              </th>
+              <td class="td-homecloud">
+                <div class="val-pill highlight">
+                  <span class="val-text font-bold">Multitasking web desktop</span>
+                  <span class="val-note">Draggable windows, taskbar, dock</span>
+                </div>
+              </td>
+              <td>
+                <span class="val-text">Admin dashboard</span>
+              </td>
+              <td>
+                <span class="val-text">App grid</span>
+              </td>
+              <td>
+                <span class="val-text">App grid</span>
+              </td>
+              <td>
+                <span class="val-text">Security panel</span>
+              </td>
+            </tr>
+
+            <!-- Row 2: Host Terminal -->
+            <tr>
+              <th scope="row" class="td-spec">
+                <div class="spec-name">Host terminal</div>
+                <div class="spec-detail">Raw shell on the host machine</div>
+              </th>
+              <td class="td-homecloud">
+                <div class="val-pill highlight">
+                  <span class="glyph-check" aria-hidden="true">
+                    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M3 8.5l3.5 3.5 6.5-7.5" />
+                    </svg>
+                  </span>
+                  <span class="val-text font-bold">Full host shell</span>
+                  <span class="val-note">node-pty + xterm.js / 256 color</span>
+                </div>
+              </td>
+              <td>
+                <span class="val-dim">Container exec only</span>
+              </td>
+              <td>
+                <span class="glyph-dash" aria-label="Not supported">—</span>
+              </td>
+              <td>
+                <span class="glyph-dash" aria-label="Not supported">—</span>
+              </td>
+              <td>
+                <span class="glyph-dash" aria-label="Not supported">—</span>
+              </td>
+            </tr>
+
+            <!-- Row 3: File Manager -->
+            <tr>
+              <th scope="row" class="td-spec">
+                <div class="spec-name">File manager</div>
+                <div class="spec-detail">Host directory navigation &amp; upload</div>
+              </th>
+              <td class="td-homecloud">
+                <div class="val-pill highlight">
+                  <span class="glyph-check" aria-hidden="true">
+                    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M3 8.5l3.5 3.5 6.5-7.5" />
+                    </svg>
+                  </span>
+                  <span class="val-text font-bold">Built-in Explorer</span>
+                  <span class="val-note">Jailed to $BASE_DIR</span>
+                </div>
+              </td>
+              <td>
+                <span class="glyph-dash" aria-label="Not supported">—</span>
+              </td>
+              <td>
+                <span class="val-inline">
+                  <span class="glyph-check-subtle" aria-hidden="true">
+                    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M3 8.5l3.5 3.5 6.5-7.5" />
+                    </svg>
+                  </span>
+                  <span>Web files app</span>
+                </span>
+              </td>
+              <td>
+                <span class="val-dim">Add-on app</span>
+              </td>
+              <td>
+                <span class="val-inline">
+                  <span class="glyph-check-subtle" aria-hidden="true">
+                    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M3 8.5l3.5 3.5 6.5-7.5" />
+                    </svg>
+                  </span>
+                  <span>Basic browser</span>
+                </span>
+              </td>
+            </tr>
+
+            <!-- Row 4: Docker Control -->
+            <tr>
+              <th scope="row" class="td-spec">
+                <div class="spec-name">Docker control</div>
+                <div class="spec-detail">Lifecycle, compose &amp; logs</div>
+              </th>
+              <td class="td-homecloud">
+                <div class="val-pill highlight">
+                  <span class="glyph-check" aria-hidden="true">
+                    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M3 8.5l3.5 3.5 6.5-7.5" />
+                    </svg>
+                  </span>
+                  <span class="val-text font-bold">Full + Compose</span>
+                  <span class="val-note">YAML editor + logs + stats</span>
+                </div>
+              </td>
+              <td>
+                <span class="val-text">Full</span>
+              </td>
+              <td>
+                <span class="val-dim">Basic</span>
+              </td>
+              <td>
+                <span class="val-dim">Hidden / managed</span>
+              </td>
+              <td>
+                <span class="val-text">Full</span>
+              </td>
+            </tr>
+
+            <!-- Row 5: Footprint -->
+            <tr>
+              <th scope="row" class="td-spec">
+                <div class="spec-name">Footprint</div>
+                <div class="spec-detail">Memory, daemons &amp; OS intrusion</div>
+              </th>
+              <td class="td-homecloud">
+                <div class="val-pill highlight">
+                  <span class="val-text font-bold">One Node.js daemon</span>
+                  <span class="val-note">systemd unit · ~90 MB RAM</span>
+                </div>
+              </td>
+              <td>
+                <span class="val-text">Light</span>
+              </td>
+              <td>
+                <span class="val-text">Light</span>
+              </td>
+              <td>
+                <span class="val-dim">Heavy</span>
+              </td>
+              <td>
+                <span class="val-text">Light</span>
+              </td>
+            </tr>
+
+            <!-- Row 6: App Store -->
+            <tr>
+              <th scope="row" class="td-spec">
+                <div class="spec-name">App store</div>
+                <div class="spec-detail">One-click software installation</div>
+              </th>
+              <td class="td-homecloud">
+                <div class="val-pill">
+                  <span class="val-text font-bold">On the roadmap</span>
+                  <span class="val-note">Standard Compose stacks today</span>
+                </div>
+              </td>
+              <td>
+                <span class="val-text">Templates</span>
+              </td>
+              <td>
+                <span class="glyph-check-subtle" aria-hidden="true">
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 8.5l3.5 3.5 6.5-7.5" />
+                  </svg>
+                </span>
+              </td>
+              <td>
+                <span class="glyph-check-subtle" aria-hidden="true">
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 8.5l3.5 3.5 6.5-7.5" />
+                  </svg>
+                </span>
+              </td>
+              <td>
+                <span class="glyph-check-subtle" aria-hidden="true">
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 8.5l3.5 3.5 6.5-7.5" />
+                  </svg>
+                </span>
+              </td>
+            </tr>
+
+            <!-- Row 7: Remote Access & Ingress -->
+            <tr>
+              <th scope="row" class="td-spec">
+                <div class="spec-name">Remote access</div>
+                <div class="spec-detail">Reachability behind CGNAT</div>
+              </th>
+              <td class="td-homecloud">
+                <div class="val-pill highlight">
+                  <span class="glyph-check" aria-hidden="true">
+                    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M3 8.5l3.5 3.5 6.5-7.5" />
+                    </svg>
+                  </span>
+                  <span class="val-text font-bold">Cloudflare Tunnel</span>
+                  <span class="val-note">0 open ports · Auto subdomains</span>
+                </div>
+              </td>
+              <td>
+                <span class="val-dim">Manual proxy / VPN</span>
+              </td>
+              <td>
+                <span class="val-dim">Port forward required</span>
+              </td>
+              <td>
+                <span class="val-dim">Tailscale / Tor</span>
+              </td>
+              <td>
+                <span class="val-dim">Reverse proxy (:80/:443)</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Who it's for / Who it's not for Block -->
+    <div class="fit-section reveal" style="--reveal-delay: 140ms">
+      <div class="fit-grid">
+        <!-- Who it's for -->
+        <div class="fit-card fit-for">
+          <div class="fit-card-header">
+            <span class="fit-status-dot dot-ok" aria-hidden="true"></span>
+            <span class="mono-tag">WHO IT'S FOR</span>
+          </div>
+          <h3 class="fit-title">Built for the single operator</h3>
+          <ul class="fit-list">
+            <li class="fit-item">
+              <span class="fit-bullet" aria-hidden="true">01</span>
+              <div>
+                <strong>One developer with one spare box.</strong>
+                <p>An old ThinkPad, Intel N100 mini PC, or repurposed desktop sitting in the closet or under your desk.</p>
+              </div>
+            </li>
+            <li class="fit-item">
+              <span class="fit-bullet" aria-hidden="true">02</span>
+              <div>
+                <strong>People stuck behind CGNAT.</strong>
+                <p>Your ISP doesn't provide a public IPv4, and router port-forwarding is impossible. The outbound Cloudflare Tunnel solves this cleanly.</p>
+              </div>
+            </li>
+            <li class="fit-item">
+              <span class="fit-bullet" aria-hidden="true">03</span>
+              <div>
+                <strong>You want a shell, not a walled garden.</strong>
+                <p>You expect real bash, package managers, and raw compose YAML — not an abstracted kiosk where root access is locked away.</p>
+              </div>
+            </li>
+            <li class="fit-item">
+              <span class="fit-bullet" aria-hidden="true">04</span>
+              <div>
+                <strong>Zero OS takeover.</strong>
+                <p>You want a single systemd service you can inspect, restart, or delete without re-flashing your drive or fighting customized Linux distributions.</p>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Who it's not for -->
+        <div class="fit-card fit-not">
+          <div class="fit-card-header">
+            <span class="fit-status-dot dot-neutral" aria-hidden="true"></span>
+            <span class="mono-tag">WHO IT'S NOT FOR</span>
+          </div>
+          <h3 class="fit-title">Where other tools fit better</h3>
+          <ul class="fit-list">
+            <li class="fit-item">
+              <span class="fit-bullet" aria-hidden="true">01</span>
+              <div>
+                <strong>Multi-user households or teams.</strong>
+                <p>Single-user by design. There is no multi-tenant permission hierarchy, RBAC, or separate user profiles.</p>
+              </div>
+            </li>
+            <li class="fit-item">
+              <span class="fit-bullet" aria-hidden="true">02</span>
+              <div>
+                <strong>People who want a curated one-click app store today.</strong>
+                <p>If you need an iPhone-style app store right now, CasaOS or Umbrel are more suitable today while our catalog is on the roadmap.</p>
+              </div>
+            </li>
+            <li class="fit-item">
+              <span class="fit-bullet" aria-hidden="true">03</span>
+              <div>
+                <strong>Anyone uncomfortable with passcode = root.</strong>
+                <p>The web terminal and Docker daemon run as your host user with full privileges. Your passcode is effectively root access — we are direct about this.</p>
+              </div>
+            </li>
+            <li class="fit-item">
+              <span class="fit-bullet" aria-hidden="true">04</span>
+              <div>
+                <strong>Non-technical consumer appliances.</strong>
+                <p>If you're looking for a set-top streaming appliance with zero Linux understanding, this is not designed for that audience.</p>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .compare-section {
+    background: var(--paper);
+    border-top: 1px solid var(--rule);
+    position: relative;
+  }
+
+  .header-eyebrow-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    margin-bottom: var(--space-3);
+  }
+
+  .spec-id {
+    font-family: var(--font-mono);
+    font-size: var(--step--1);
+    color: var(--ink-3);
+    letter-spacing: 0.08em;
+  }
+
+  .compare-title {
+    font-size: var(--step-3);
+    margin-bottom: var(--space-4);
+  }
+
+  .compare-lede {
+    margin-bottom: var(--space-7);
+  }
+
+  /* Table Card */
+  .table-card {
+    background: var(--paper-2);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    overflow: hidden;
+    position: relative;
+    margin-bottom: var(--space-7);
+  }
+
+  .table-card-topbar {
+    padding: var(--space-3) var(--space-5);
+    background: var(--paper-2);
+    border-bottom: 1px solid var(--rule);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .table-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .mono-tag {
+    font-family: var(--font-mono);
+    font-size: var(--step--1);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  .mono-subtag {
+    font-family: var(--font-mono);
+    font-size: var(--step--1);
+    letter-spacing: 0.06em;
+    color: var(--ink-3);
+  }
+
+  .table-mobile-tip {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--ink-3);
+  }
+  .tip-icon {
+    color: var(--signal-ink);
+  }
+
+  @media (max-width: 860px) {
+    .table-mobile-tip {
+      display: inline-flex;
+    }
+  }
+
+  /* Scroll wrap & Sticky table */
+  .table-scroll-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    position: relative;
+    scrollbar-width: thin;
+    scrollbar-color: var(--rule-strong) transparent;
+  }
+
+  .table-scroll-wrap:focus-visible {
+    outline: 2px solid var(--signal);
+    outline-offset: -2px;
+  }
+
+  .compare-table {
+    width: 100%;
+    min-width: 820px;
+    border-collapse: separate;
+    border-spacing: 0;
+    text-align: left;
+    font-size: 0.9rem;
+    line-height: 1.4;
+  }
+
+  /* Table Header */
+  .compare-table th {
+    padding: var(--space-4) var(--space-4);
+    font-weight: normal;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: bottom;
+  }
+
+  .th-spec {
+    width: 220px;
+    position: sticky;
+    left: 0;
+    background: var(--paper-2);
+    z-index: 3;
+    border-right: 1px solid var(--rule);
+    box-shadow: 2px 0 0 rgba(21, 19, 15, 0.05);
+  }
+
+  .th-label {
+    font-family: var(--font-mono);
+    font-size: var(--step--1);
+    letter-spacing: 0.08em;
+    color: var(--ink-3);
+  }
+
+  .th-col {
+    width: 150px;
+    border-right: 1px solid var(--rule);
+  }
+
+  .th-col:last-child {
+    border-right: 0;
+  }
+
+  .th-name {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  .th-sub {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--ink-3);
+    margin-top: 2px;
+  }
+
+  /* Highlighted Home Cloud Column */
+  .th-homecloud {
+    background: var(--paper);
+    position: relative;
+    border-top: 3px solid var(--signal);
+    padding-top: calc(var(--space-4) - 3px);
+  }
+
+  .th-badge {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.08em;
+    color: var(--signal-ink);
+    background: var(--signal-soft);
+    padding: 1px 6px;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .td-homecloud {
+    background: var(--paper);
+    border-right: 1px solid var(--rule);
+    position: relative;
+  }
+
+  /* Table Body */
+  .compare-table td {
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--rule);
+    border-right: 1px solid var(--rule);
+    vertical-align: top;
+    color: var(--ink-2);
+    font-size: 0.88rem;
+  }
+
+  .compare-table td:last-child {
+    border-right: 0;
+  }
+
+  .compare-table tr:last-child td,
+  .compare-table tr:last-child th {
+    border-bottom: 0;
+  }
+
+  .compare-table tr:hover td {
+    background-color: rgba(221, 215, 200, 0.4);
+  }
+
+  .compare-table tr:hover .td-homecloud {
+    background-color: var(--paper);
+  }
+
+  /* First sticky column cells */
+  .td-spec {
+    position: sticky;
+    left: 0;
+    background: var(--paper-2);
+    z-index: 2;
+    border-right: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    box-shadow: 2px 0 0 rgba(21, 19, 15, 0.05);
+    padding: var(--space-3) var(--space-4);
+    font-weight: normal;
+    text-align: left;
+  }
+
+  .spec-name {
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  .spec-detail {
+    font-size: 0.75rem;
+    color: var(--ink-3);
+    margin-top: 1px;
+  }
+
+  /* Value styling & glyphs */
+  .font-bold {
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  .val-pill {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .val-text {
+    font-size: 0.88rem;
+    color: var(--ink);
+  }
+
+  .val-note {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--ink-3);
+  }
+
+  .val-dim {
+    font-size: 0.84rem;
+    color: var(--ink-3);
+  }
+
+  .val-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .glyph-check {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ok);
+    width: 16px;
+    height: 16px;
+    margin-bottom: 2px;
+  }
+
+  .glyph-check-subtle {
+    display: inline-flex;
+    align-items: center;
+    color: var(--ink-2);
+  }
+
+  .glyph-dash {
+    color: var(--ink-3);
+    font-size: 1.1rem;
+    line-height: 1;
+    user-select: none;
+  }
+
+  /* Fit Evaluation Grid */
+  .fit-section {
+    margin-top: var(--space-6);
+  }
+
+  .fit-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-6);
+  }
+
+  @media (max-width: 860px) {
+    .fit-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .fit-card {
+    background: var(--paper-2);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    padding: var(--space-5);
+    position: relative;
+  }
+
+  .fit-for {
+    border-left: 3px solid var(--ok);
+  }
+
+  .fit-not {
+    border-left: 3px solid var(--rule-strong);
+  }
+
+  /* Corner crop marks */
+  .fit-card::before,
+  .fit-card::after {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--ink-3);
+    position: absolute;
+    line-height: 1;
+    pointer-events: none;
+    opacity: 0.4;
+  }
+  .fit-card::before {
+    content: '+';
+    top: 6px;
+    right: 8px;
+  }
+  .fit-card::after {
+    content: '+';
+    bottom: 6px;
+    right: 8px;
+  }
+
+  .fit-card-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-3);
+  }
+
+  .fit-status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+  }
+  .dot-ok {
+    background: var(--ok);
+  }
+  .dot-neutral {
+    background: var(--ink-3);
+  }
+
+  .fit-title {
+    font-size: 1.25rem;
+    font-family: var(--font-display);
+    color: var(--ink);
+    margin-bottom: var(--space-4);
+  }
+
+  .fit-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .fit-item {
+    display: flex;
+    gap: var(--space-3);
+    align-items: flex-start;
+    font-size: 0.9rem;
+  }
+
+  .fit-bullet {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--ink-3);
+    margin-top: 3px;
+    flex-shrink: 0;
+  }
+
+  .fit-item strong {
+    display: block;
+    color: var(--ink);
+    font-size: 0.92rem;
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+
+  .fit-item p {
+    color: var(--ink-2);
+    font-size: 0.85rem;
+    line-height: 1.45;
+  }
+</style>

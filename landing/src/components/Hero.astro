@@ -1,0 +1,1565 @@
+---
+// landing/src/components/Hero.astro — §00 Hero (id="top")
+// Staggered headline reveal, copyable install command pill,
+// FIG. 1 animated topology SVG with packets passing over the router,
+// and 4-cell datasheet stat row with hairline dividers.
+---
+
+<section id="top" class="hero-section section">
+  <div class="container hero-container">
+    <!-- Top row: Section Eyebrow + Spec Strip -->
+    <div class="hero-top-strip">
+      <span class="eyebrow">§ 00 — Open source · Self-hosted · Linux</span>
+      <div class="hero-spec-strip" aria-label="System compatibility specs">
+        <span class="spec-token">NODE 24</span>
+        <span class="spec-sep" aria-hidden="true">·</span>
+        <span class="spec-token">DOCKER</span>
+        <span class="spec-sep" aria-hidden="true">·</span>
+        <span class="spec-token">CLOUDFLARE TUNNEL</span>
+        <span class="spec-sep" aria-hidden="true">·</span>
+        <span class="spec-token">x86_64 / arm64</span>
+      </div>
+    </div>
+
+    <!-- Main Headline with staggered word mask-reveal -->
+    <h1
+      class="display hero-headline"
+      id="hero-headline"
+      aria-label="The cloud is just someone else's computer. Make it yours."
+    >
+      <span class="headline-line line-1" aria-hidden="true">
+        <span class="word-mask"><span class="word-inner" style="--w-idx: 0">The</span></span>
+        <span class="word-mask"><span class="word-inner" style="--w-idx: 1">cloud</span></span>
+        <span class="word-mask"><span class="word-inner" style="--w-idx: 2">is</span></span>
+        <span class="word-mask"><span class="word-inner" style="--w-idx: 3">just</span></span>
+        <span class="word-mask"><span class="word-inner" style="--w-idx: 4">someone</span></span>
+        <span class="word-mask"><span class="word-inner" style="--w-idx: 5">else's</span></span>
+        <span class="word-mask"><span class="word-inner" style="--w-idx: 6">computer.</span></span>
+      </span>
+      <span class="headline-line line-2" aria-hidden="true">
+        <em>
+          <span class="word-mask"><span class="word-inner" style="--w-idx: 7">Make</span></span>
+          <span class="word-mask"><span class="word-inner" style="--w-idx: 8">it</span></span>
+          <span class="word-mask"><span class="word-inner" style="--w-idx: 9">yours.</span></span>
+        </em>
+      </span>
+    </h1>
+
+    <!-- Lede paragraph -->
+    <p class="lede hero-lede">
+      Home Cloud turns the spare Linux box in your closet into a private cloud
+      you can reach from any browser — desktop, terminal, files and Docker —
+      through a Cloudflare Tunnel. Behind CGNAT. Zero ports opened.
+    </p>
+
+    <!-- Actions: Copyable install pill + GitHub ghost button -->
+    <div class="hero-actions">
+      <div
+        class="install-pill"
+        role="region"
+        aria-label="One-command install snippet"
+      >
+        <span class="pill-prompt" aria-hidden="true">$</span>
+        <div class="pill-code-container">
+          <code
+            class="pill-code"
+            id="hero-install-cmd"
+          >curl -fsSL https://raw.githubusercontent.com/Cypher-0071/Home_Cloud/main/setup.sh -o setup.sh &amp;&amp; chmod +x setup.sh &amp;&amp; ./setup.sh</code>
+        </div>
+        <button
+          type="button"
+          class="pill-copy-btn"
+          id="hero-copy-btn"
+          aria-label="Copy install command"
+          data-copy="curl -fsSL https://raw.githubusercontent.com/Cypher-0071/Home_Cloud/main/setup.sh -o setup.sh && chmod +x setup.sh && ./setup.sh"
+        >
+          <span class="copy-default">
+            <svg
+              class="copy-svg"
+              viewBox="0 0 16 16"
+              width="14"
+              height="14"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <rect x="5" y="5" width="9" height="9" rx="1.5"></rect>
+              <path d="M11 2H3.5A1.5 1.5 0 0 0 2 3.5V11"></path>
+            </svg>
+            <span class="copy-label">Copy</span>
+          </span>
+          <span class="copy-success" aria-hidden="true">
+            <svg
+              class="check-svg"
+              viewBox="0 0 16 16"
+              width="14"
+              height="14"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <polyline points="3.5 8.5 6.5 11.5 12.5 4.5"></polyline>
+            </svg>
+            <span class="copy-label">Copied</span>
+          </span>
+        </button>
+      </div>
+
+      <a
+        href="https://github.com/Cypher-0071/Home_Cloud"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="btn btn-ghost hero-gh-btn"
+        aria-label="Star Home Cloud on GitHub"
+      >
+        <svg
+          class="gh-icon"
+          viewBox="0 0 16 16"
+          width="16"
+          height="16"
+          fill="currentColor"
+          aria-hidden="true"
+        >
+          <path
+            d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8Z"
+          ></path>
+        </svg>
+        <span>Star on GitHub</span>
+      </a>
+    </div>
+
+    <!-- FIG. 1 — Topology Visual -->
+    <div class="topology-wrapper">
+      <!-- 4 crop marks at the corners of key figures -->
+      <span class="crop-mark top-left" aria-hidden="true">+</span>
+      <span class="crop-mark top-right" aria-hidden="true">+</span>
+      <span class="crop-mark bottom-left" aria-hidden="true">+</span>
+      <span class="crop-mark bottom-right" aria-hidden="true">+</span>
+
+      <div class="topology-box">
+        <!-- Technical header bar -->
+        <div class="topology-topbar">
+          <div class="topo-topbar-left">
+            <span class="topo-fig-id">FIG. 1 — TOPOLOGY</span>
+            <span class="topo-fig-title">// CONTROL &amp; DATA PLANES</span>
+          </div>
+          <div class="topo-topbar-right">
+            <span class="topo-meta-item">OUTBOUND TUNNEL ARCHITECTURE</span>
+            <span class="topo-meta-sep">·</span>
+            <span class="topo-meta-item">PORT 3000 · SSE / 2s</span>
+          </div>
+        </div>
+
+        <!-- Inline SVG Technical Diagram -->
+        <div class="topology-svg-wrap">
+          <svg
+            id="topology-svg"
+            class="topology-svg"
+            viewBox="0 0 1080 430"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            aria-label="FIG. 1: Home Cloud network topology diagram showing outbound tunnel from PC to Cloudflare Edge passing over the router"
+          >
+            <defs>
+              <!-- Faint technical dot grid -->
+              <pattern
+                id="topo-dot-grid"
+                x="0"
+                y="0"
+                width="20"
+                height="20"
+                patternUnits="userSpaceOnUse"
+              >
+                <circle cx="2" cy="2" r="0.8" fill="var(--ink)" opacity="0.12"
+                ></circle>
+              </pattern>
+            </defs>
+
+            <!-- Grid background -->
+            <rect
+              width="100%"
+              height="100%"
+              fill="url(#topo-dot-grid)"
+              opacity="0.9"
+            ></rect>
+
+            <!-- Hairline baseline rule -->
+            <line
+              x1="30"
+              y1="390"
+              x2="1050"
+              y2="390"
+              stroke="var(--rule)"
+              stroke-width="1"
+            ></line>
+
+            <!-- =========================================================
+                 1. OUTBOUND TUNNEL PATH (PC -> Edge passing OVER router)
+                 ========================================================= -->
+            <!-- The Arched Tunnel: passes 85px above the router -->
+            <path
+              id="path-tunnel-pc-to-edge"
+              d="M 145 195 C 220 75, 640 75, 715 195"
+              fill="none"
+              stroke="var(--ink)"
+              stroke-width="2"
+              stroke-dasharray="6 4"
+            ></path>
+
+            <!-- Return path for reversed motion: Edge -> PC -->
+            <path
+              id="path-tunnel-edge-to-pc"
+              d="M 715 195 C 640 75, 220 75, 145 195"
+              fill="none"
+              stroke="transparent"
+            ></path>
+
+            <!-- Tunnel Label Badge floating at apex -->
+            <g transform="translate(430, 72)">
+              <rect
+                x="-135"
+                y="-20"
+                width="270"
+                height="38"
+                rx="4"
+                fill="var(--paper)"
+                stroke="var(--rule-strong)"
+                stroke-width="1.2"
+              ></rect>
+              <text
+                x="0"
+                y="-3"
+                text-anchor="middle"
+                font-family="var(--font-mono)"
+                font-size="11"
+                font-weight="700"
+                letter-spacing="0.08em"
+                fill="var(--ink)"
+              >outbound QUIC</text>
+              <text
+                x="0"
+                y="11"
+                text-anchor="middle"
+                font-family="var(--font-mono)"
+                font-size="8.5"
+                font-weight="600"
+                fill="var(--signal-ink)"
+                letter-spacing="0.04em"
+              >PASSES OVER ROUTER · ZERO INBOUND PORTS</text>
+            </g>
+
+            <!-- =========================================================
+                 2. DEVICE <-> CLOUDFLARE EDGE CONNECTION
+                 ========================================================= -->
+            <line
+              x1="805"
+              y1="270"
+              x2="875"
+              y2="270"
+              stroke="var(--ink)"
+              stroke-width="2"
+            ></line>
+
+            <!-- Hidden explicit paths for packet animation -->
+            <path
+              id="path-dev-to-edge"
+              d="M 875 270 L 805 270"
+              stroke="transparent"
+              fill="none"
+            ></path>
+            <path
+              id="path-edge-to-dev"
+              d="M 805 270 L 875 270"
+              stroke="transparent"
+              fill="none"
+            ></path>
+
+            <!-- Device Connection Labels -->
+            <text
+              x="840"
+              y="253"
+              text-anchor="middle"
+              font-family="var(--font-mono)"
+              font-size="10"
+              font-weight="700"
+              fill="var(--signal-ink)"
+            >https://dash.you.dev</text>
+            <text
+              x="840"
+              y="290"
+              text-anchor="middle"
+              font-family="var(--font-mono)"
+              font-size="8.5"
+              letter-spacing="0.05em"
+              fill="var(--ink-3)"
+            >TLS 1.3 / HTTPS</text>
+
+            <!-- =========================================================
+                 3. ANIMATED VERMILION PACKETS
+                 ========================================================= -->
+            <!-- Packet 1: Request Device -> Edge -->
+            <g class="topo-packet">
+              <circle r="3.5" fill="var(--signal)">
+                <animateMotion
+                  path="M 875 270 L 805 270"
+                  dur="1.2s"
+                  repeatCount="indefinite"
+                ></animateMotion>
+              </circle>
+              <circle r="7" fill="var(--signal)" opacity="0.25">
+                <animateMotion
+                  path="M 875 270 L 805 270"
+                  dur="1.2s"
+                  repeatCount="indefinite"
+                ></animateMotion>
+              </circle>
+            </g>
+
+            <!-- Packet 2: Request forwarded Edge -> PC along Tunnel -->
+            <g class="topo-packet">
+              <circle r="3.5" fill="var(--signal)">
+                <animateMotion
+                  path="M 715 195 C 640 75, 220 75, 145 195"
+                  dur="2.4s"
+                  repeatCount="indefinite"
+                ></animateMotion>
+              </circle>
+              <circle r="7" fill="var(--signal)" opacity="0.25">
+                <animateMotion
+                  path="M 715 195 C 640 75, 220 75, 145 195"
+                  dur="2.4s"
+                  repeatCount="indefinite"
+                ></animateMotion>
+              </circle>
+            </g>
+
+            <!-- Packet 3: Response PC -> Edge along Tunnel -->
+            <g class="topo-packet">
+              <circle r="3.5" fill="var(--signal)">
+                <animateMotion
+                  path="M 145 195 C 220 75, 640 75, 715 195"
+                  dur="2.4s"
+                  begin="1.2s"
+                  repeatCount="indefinite"
+                ></animateMotion>
+              </circle>
+              <circle r="7" fill="var(--signal)" opacity="0.25">
+                <animateMotion
+                  path="M 145 195 C 220 75, 640 75, 715 195"
+                  dur="2.4s"
+                  begin="1.2s"
+                  repeatCount="indefinite"
+                ></animateMotion>
+              </circle>
+            </g>
+
+            <!-- Packet 4: Response delivered Edge -> Device -->
+            <g class="topo-packet">
+              <circle r="3.5" fill="var(--signal)">
+                <animateMotion
+                  path="M 805 270 L 875 270"
+                  dur="1.2s"
+                  begin="0.6s"
+                  repeatCount="indefinite"
+                ></animateMotion>
+              </circle>
+              <circle r="7" fill="var(--signal)" opacity="0.25">
+                <animateMotion
+                  path="M 805 270 L 875 270"
+                  dur="1.2s"
+                  begin="0.6s"
+                  repeatCount="indefinite"
+                ></animateMotion>
+              </circle>
+            </g>
+
+            <!-- =========================================================
+                 NODE 1: YOUR PC
+                 ========================================================= -->
+            <g class="topo-node" id="node-pc">
+              <!-- Label above box -->
+              <text
+                x="145"
+                y="162"
+                text-anchor="middle"
+                font-family="var(--font-mono)"
+                font-size="12.5"
+                font-weight="700"
+                letter-spacing="0.08em"
+                fill="var(--ink)"
+              >YOUR PC</text>
+              <text
+                x="145"
+                y="178"
+                text-anchor="middle"
+                font-family="var(--font-mono)"
+                font-size="9.5"
+                fill="var(--ink-3)"
+              >closet · "lid closed, always on"</text>
+
+              <!-- Node Card Box -->
+              <rect
+                x="55"
+                y="195"
+                width="180"
+                height="155"
+                rx="6"
+                fill="var(--paper-2)"
+                stroke="var(--ink)"
+                stroke-width="1.6"
+              ></rect>
+
+              <!-- Tunnel Attachment Port -->
+              <circle
+                cx="145"
+                y="195"
+                r="4.5"
+                fill="var(--paper)"
+                stroke="var(--ink)"
+                stroke-width="2"
+              ></circle>
+
+              <!-- Server Chassis Glyph -->
+              <rect
+                x="72"
+                y="218"
+                width="146"
+                height="62"
+                rx="4"
+                fill="var(--paper)"
+                stroke="var(--rule-strong)"
+                stroke-width="1.2"
+              ></rect>
+
+              <!-- Drive slots -->
+              <line
+                x1="84"
+                y1="233"
+                x2="155"
+                y2="233"
+                stroke="var(--rule-strong)"
+                stroke-width="1.5"
+              ></line>
+              <line
+                x1="84"
+                y1="243"
+                x2="155"
+                y2="243"
+                stroke="var(--rule-strong)"
+                stroke-width="1.5"
+              ></line>
+              <line
+                x1="84"
+                y1="253"
+                x2="155"
+                y2="253"
+                stroke="var(--rule-strong)"
+                stroke-width="1.5"
+              ></line>
+
+              <!-- Status LED (green pulse) -->
+              <circle cx="196" cy="235" r="3.5" fill="var(--ok)"></circle>
+              <circle
+                cx="196"
+                cy="235"
+                r="7"
+                fill="none"
+                stroke="var(--ok)"
+                stroke-width="1"
+                opacity="0.4"
+                class="pulsing-led"
+              ></circle>
+              <text
+                x="196"
+                y="255"
+                text-anchor="middle"
+                font-family="var(--font-mono)"
+                font-size="7.5"
+                fill="var(--ok)"
+                font-weight="600"
+              >RUN</text>
+
+              <!-- Daemon specs inside card -->
+              <text
+                x="145"
+                y="302"
+                text-anchor="middle"
+                font-family="var(--font-mono)"
+                font-size="9.5"
+                font-weight="700"
+                fill="var(--ink)"
+              >PORT 3000 · systemd</text>
+              <text
+                x="145"
+                y="318"
+                text-anchor="middle"
+                font-family="var(--font-mono)"
+                font-size="8.5"
+                fill="var(--ink-3)"
+              >Express 5 + ws · 192.168.1.42</text>
+              <text
+                x="145"
+                y="334"
+                text-anchor="middle"
+                font-family="var(--font-mono)"
+                font-size="8"
+                letter-spacing="0.04em"
+                fill="var(--signal-ink)"
+                font-weight="600"
+              >DOCKER COMPOSE + PTY</text>
+            </g>
+
+            <!-- =========================================================
+                 NODE 2: ROUTER (with 0 INBOUND PORTS stamp)
+                 ========================================================= -->
+            <g class="topo-node" id="node-router">
+              <!-- Label above box -->
+              <text
+                x="430"
+                y="162"
+                text-anchor="middle"
+                font-family="var(--font-mono)"
+                font-size="12.5"
+                font-weight="700"
+                letter-spacing="0.08em"
+                fill="var(--ink)"
+              >ROUTER</text>
+              <text
+                x="430"
+                y="178"
+                text-anchor="middle"
+                font-family="var(--font-mono)"
+                font-size="9.5"
+                fill="var(--ink-3)"
+              >ISP gateway · firewall</text>
+
+              <!-- Node Card Box -->
+              <rect
+                x="340"
+                y="195"
+                width="180"
+                height="155"
+                rx="6"
+                fill="var(--paper-2)"
+                stroke="var(--rule-strong)"
+                stroke-width="1.6"
+              ></rect>
+
+              <!-- Antennas -->
+              <line
+                x1="400"
+                y1="195"
+                x2="385"
+                y2="172"
+                stroke="var(--ink-3)"
+                stroke-width="2"
+                stroke-linecap="round"
+              ></line>
+              <line
+                x1="460"
+                y1="195"
+                x2="475"
+                y2="172"
+                stroke="var(--ink-3)"
+                stroke-width="2"
+                stroke-linecap="round"
+              ></line>
+
+              <!-- Blocked Inbound WAN Arrow probe -->
+              <g transform="translate(305, 260)">
+                <line
+                  x1="-35"
+                  y1="0"
+                  x2="15"
+                  y2="0"
+                  stroke="var(--signal-ink)"
+                  stroke-width="1.5"
+                  stroke-dasharray="3 3"
+                ></line>
+                <circle
+                  cx="20"
+                  cy="0"
+                  r="7.5"
+                  fill="var(--paper)"
+                  stroke="var(--signal-ink)"
+                  stroke-width="1.5"
+                ></circle>
+                <line
+                  x1="16"
+                  y1="-4"
+                  x2="24"
+                  y2="4"
+                  stroke="var(--signal-ink)"
+                  stroke-width="1.8"
+                ></line>
+                <line
+                  x1="24"
+                  y1="-4"
+                  x2="16"
+                  y2="4"
+                  stroke="var(--signal-ink)"
+                  stroke-width="1.8"
+                ></line>
+                <text
+                  x="-10"
+                  y="-8"
+                  text-anchor="middle"
+                  font-family="var(--font-mono)"
+                  font-size="7.5"
+                  font-weight="700"
+                  fill="var(--signal-ink)"
+                >WAN INBOUND</text>
+                <text
+                  x="-10"
+                  y="13"
+                  text-anchor="middle"
+                  font-family="var(--font-mono)"
+                  font-size="7.5"
+                  font-weight="600"
+                  fill="var(--signal-ink)"
+                >BLOCKED</text>
+              </g>
+
+              <!-- THE STAMP: 0 INBOUND PORTS / CGNAT -->
+              <g transform="translate(430, 245) rotate(-5)">
+                <rect
+                  x="-68"
+                  y="-22"
+                  width="136"
+                  height="44"
+                  rx="3"
+                  fill="color-mix(in srgb, var(--paper) 92%, var(--signal))"
+                  stroke="var(--signal-ink)"
+                  stroke-width="1.8"
+                ></rect>
+                <rect
+                  x="-65"
+                  y="-19"
+                  width="130"
+                  height="38"
+                  rx="2"
+                  fill="none"
+                  stroke="var(--signal-ink)"
+                  stroke-width="0.8"
+                  stroke-dasharray="3 2"
+                ></rect>
+                <text
+                  x="0"
+                  y="-4"
+                  text-anchor="middle"
+                  font-family="var(--font-mono)"
+                  font-size="10"
+                  font-weight="800"
+                  letter-spacing="0.08em"
+                  fill="var(--signal-ink)"
+                >0 INBOUND PORTS</text>
+                <text
+                  x="0"
+                  y="11"
+                  text-anchor="middle"
+                  font-family="var(--font-mono)"
+                  font-size="8.5"
+                  font-weight="700"
+                  letter-spacing="0.06em"
+                  fill="var(--signal-ink)"
+                >CGNAT ACTIVE</text>
+              </g>
+
+              <!-- Router spec text -->
+              <text
+                x="430"
+                y="312"
+                text-anchor="middle"
+                font-family="var(--font-mono)"
+                font-size="9"
+                fill="var(--ink)"
+              >NO PORT FORWARDING</text>
+              <text
+                x="430"
+                y="328"
+                text-anchor="middle"
+                font-family="var(--font-mono)"
+                font-size="8.5"
+                fill="var(--ink-3)"
+              >uPnP Disabled · NAT Jailed</text>
+            </g>
+
+            <!-- =========================================================
+                 NODE 3: CLOUDFLARE EDGE
+                 ========================================================= -->
+            <g class="topo-node" id="node-edge">
+              <!-- Label above box -->
+              <text
+                x="715"
+                y="162"
+                text-anchor="middle"
+                font-family="var(--font-mono)"
+                font-size="12.5"
+                font-weight="700"
+                letter-spacing="0.08em"
+                fill="var(--ink)"
+              >CLOUDFLARE EDGE</text>
+              <text
+                x="715"
+                y="178"
+                text-anchor="middle"
+                font-family="var(--font-mono)"
+                font-size="9.5"
+                font-weight="600"
+                fill="var(--signal-ink)"
+              >"TLS terminates here"</text>
+
+              <!-- Node Card Box -->
+              <rect
+                x="625"
+                y="195"
+                width="180"
+                height="155"
+                rx="6"
+                fill="var(--paper-2)"
+                stroke="var(--ink)"
+                stroke-width="1.6"
+              ></rect>
+
+              <!-- Tunnel Attachment Port -->
+              <circle
+                cx="715"
+                y="195"
+                r="4.5"
+                fill="var(--paper)"
+                stroke="var(--ink)"
+                stroke-width="2"
+              ></circle>
+
+              <!-- Lock & Cloud Icon Plaque -->
+              <g transform="translate(715, 235)">
+                <!-- Padlock -->
+                <rect
+                  x="-9"
+                  y="-5"
+                  width="18"
+                  height="14"
+                  rx="2.5"
+                  fill="var(--ink)"
+                ></rect>
+                <path
+                  d="M-5 -5 V-10 C-5 -13 5 -13 5 -10 V-5"
+                  fill="none"
+                  stroke="var(--ink)"
+                  stroke-width="1.8"
+                ></path>
+                <circle cx="0" cy="1" r="1.5" fill="var(--paper)"></circle>
+              </g>
+
+              <!-- Subdomain chip -->
+              <rect
+                x="640"
+                y="256"
+                width="150"
+                height="24"
+                rx="3"
+                fill="var(--paper)"
+                stroke="var(--rule-strong)"
+                stroke-width="1"
+              ></rect>
+              <text
+                x="715"
+                y="272"
+                text-anchor="middle"
+                font-family="var(--font-mono)"
+                font-size="9"
+                font-weight="600"
+                fill="var(--ink)"
+              >*.yourdomain.com</text>
+
+              <!-- Edge Specs -->
+              <text
+                x="715"
+                y="302"
+                text-anchor="middle"
+                font-family="var(--font-mono)"
+                font-size="9.5"
+                font-weight="700"
+                fill="var(--ink)"
+              >Anycast · 330+ Cities</text>
+              <text
+                x="715"
+                y="318"
+                text-anchor="middle"
+                font-family="var(--font-mono)"
+                font-size="8.5"
+                fill="var(--ink-3)"
+              >DDoS Shield · Automatic WAF</text>
+              <text
+                x="715"
+                y="334"
+                text-anchor="middle"
+                font-family="var(--font-mono)"
+                font-size="8"
+                letter-spacing="0.04em"
+                fill="var(--signal-ink)"
+                font-weight="600"
+              >AUTOMATIC INGRESS ROUTING</text>
+            </g>
+
+            <!-- =========================================================
+                 NODE 4: ANY DEVICE
+                 ========================================================= -->
+            <g class="topo-node" id="node-device">
+              <!-- Label above box -->
+              <text
+                x="955"
+                y="162"
+                text-anchor="middle"
+                font-family="var(--font-mono)"
+                font-size="12.5"
+                font-weight="700"
+                letter-spacing="0.08em"
+                fill="var(--ink)"
+              >ANY DEVICE</text>
+              <text
+                x="955"
+                y="178"
+                text-anchor="middle"
+                font-family="var(--font-mono)"
+                font-size="9.5"
+                fill="var(--ink-3)"
+              >phone + laptop</text>
+
+              <!-- Node Card Box -->
+              <rect
+                x="875"
+                y="195"
+                width="160"
+                height="155"
+                rx="6"
+                fill="var(--paper-2)"
+                stroke="var(--ink)"
+                stroke-width="1.6"
+              ></rect>
+
+              <!-- Connection port -->
+              <circle
+                cx="875"
+                y="270"
+                r="4.5"
+                fill="var(--paper)"
+                stroke="var(--ink)"
+                stroke-width="2"
+              ></circle>
+
+              <!-- Laptop + Phone Glyphs -->
+              <g transform="translate(955, 238)">
+                <!-- Laptop screen -->
+                <rect
+                  x="-38"
+                  y="-18"
+                  width="44"
+                  height="28"
+                  rx="2"
+                  fill="var(--paper)"
+                  stroke="var(--rule-strong)"
+                  stroke-width="1.2"
+                ></rect>
+                <!-- Laptop browser header -->
+                <line
+                  x1="-38"
+                  y1="-11"
+                  x2="6"
+                  y2="-11"
+                  stroke="var(--rule)"
+                  stroke-width="1"
+                ></line>
+                <!-- Laptop base -->
+                <path
+                  d="M -44 11 H 12 L 15 15 H -47 Z"
+                  fill="var(--ink-3)"
+                  opacity="0.8"
+                ></path>
+
+                <!-- Phone -->
+                <rect
+                  x="18"
+                  y="-18"
+                  width="18"
+                  height="33"
+                  rx="3"
+                  fill="var(--paper)"
+                  stroke="var(--rule-strong)"
+                  stroke-width="1.2"
+                ></rect>
+                <line
+                  x1="23"
+                  y1="11"
+                  x2="31"
+                  y2="11"
+                  stroke="var(--rule)"
+                  stroke-width="1"
+                ></line>
+              </g>
+
+              <!-- Specs -->
+              <text
+                x="955"
+                y="302"
+                text-anchor="middle"
+                font-family="var(--font-mono)"
+                font-size="9.5"
+                font-weight="700"
+                fill="var(--ink)"
+              >Web Desktop Client</text>
+              <text
+                x="955"
+                y="318"
+                text-anchor="middle"
+                font-family="var(--font-mono)"
+                font-size="8.5"
+                fill="var(--ink-3)"
+              >React 19 · Window Manager</text>
+              <text
+                x="955"
+                y="334"
+                text-anchor="middle"
+                font-family="var(--font-mono)"
+                font-size="8"
+                letter-spacing="0.04em"
+                fill="var(--ink-2)"
+              >NO CLIENT VPN REQUIRED</text>
+            </g>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Under the figure: 4-cell datasheet row with hairline dividers -->
+      <div class="datasheet-row" role="region" aria-label="System key metrics">
+        <div class="datasheet-cell">
+          <span class="datasheet-label">OPEN PORTS</span>
+          <div class="datasheet-val-wrap">
+            <span class="datasheet-number display">0</span>
+          </div>
+          <span class="datasheet-sub">Zero router inbound forwards</span>
+        </div>
+
+        <div class="datasheet-cell">
+          <span class="datasheet-label">DAEMONS</span>
+          <div class="datasheet-val-wrap">
+            <span class="datasheet-number display">1</span>
+          </div>
+          <span class="datasheet-sub">Node.js Express 5 + ws (systemd)</span>
+        </div>
+
+        <div class="datasheet-cell">
+          <span class="datasheet-label">MONTHLY BILL</span>
+          <div class="datasheet-val-wrap">
+            <span class="datasheet-number display">$0</span>
+          </div>
+          <span class="datasheet-sub">Self-hosted + Cloudflare free tier</span>
+        </div>
+
+        <div class="datasheet-cell">
+          <span class="datasheet-label">INSTALL</span>
+          <div class="datasheet-val-wrap">
+            <span class="datasheet-number display">1</span>
+            <span class="datasheet-unit">command</span>
+          </div>
+          <span class="datasheet-sub">Automated setup.sh wizard</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .hero-section {
+    padding-top: clamp(2.5rem, 1.8rem + 3vw, 5rem);
+    padding-bottom: clamp(3.5rem, 2.5rem + 4vw, 7rem);
+    position: relative;
+  }
+
+  .hero-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+  }
+
+  /* Top row */
+  .hero-top-strip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    padding-bottom: var(--space-2);
+  }
+
+  .hero-spec-strip {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    font-family: var(--font-mono);
+    font-size: var(--step--1);
+    color: var(--ink-3);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .spec-sep {
+    opacity: 0.5;
+  }
+
+  /* Headline & staggered word mask reveal */
+  .hero-headline {
+    font-size: var(--step-4);
+    line-height: 0.94;
+    letter-spacing: -0.025em;
+    margin-block: var(--space-3) var(--space-2);
+    color: var(--ink);
+  }
+
+  .headline-line {
+    display: block;
+  }
+
+  .line-2 {
+    margin-top: 0.12em;
+  }
+
+  .hero-headline em {
+    font-style: italic;
+    color: var(--signal-ink);
+  }
+
+  .word-mask {
+    display: inline-block;
+    overflow: hidden;
+    vertical-align: bottom;
+    padding-bottom: 0.06em;
+    margin-right: 0.22em;
+  }
+
+  .word-mask:last-child {
+    margin-right: 0;
+  }
+
+  .word-inner {
+    display: inline-block;
+    transform: translateY(115%);
+    opacity: 0;
+    transition:
+      transform 650ms var(--ease-out),
+      opacity 500ms var(--ease-out);
+    transition-delay: calc(var(--w-idx) * 60ms + 40ms);
+    will-change: transform, opacity;
+  }
+
+  /* Activated on load */
+  :global(.hero-revealed) .word-inner,
+  .hero-section.is-revealed .word-inner {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  /* Lede */
+  .hero-lede {
+    font-size: var(--step-1);
+    line-height: 1.48;
+    color: var(--ink-2);
+    max-width: 62ch;
+    margin-bottom: var(--space-2);
+  }
+
+  /* Actions Row */
+  .hero-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+    margin-bottom: var(--space-5);
+  }
+
+  /* Install Command Pill */
+  .install-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3);
+    height: 48px;
+    padding-left: var(--space-4);
+    padding-right: var(--space-2);
+    background: var(--paper-2);
+    border: 1px solid var(--rule-strong);
+    border-radius: 999px;
+    max-width: 100%;
+    min-width: 280px;
+    box-shadow: 0 1px 2px rgb(21 19 15 / 0.05);
+    transition:
+      border-color var(--dur-fast) var(--ease-out),
+      background-color var(--dur-fast) var(--ease-out);
+  }
+
+  .install-pill:hover {
+    border-color: var(--ink);
+  }
+
+  .pill-prompt {
+    font-family: var(--font-mono);
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--ink-3);
+    user-select: none;
+    flex-shrink: 0;
+  }
+
+  .pill-code-container {
+    overflow: hidden;
+    position: relative;
+    max-width: 440px;
+    mask-image: linear-gradient(
+      to right,
+      black 0%,
+      black calc(100% - 24px),
+      transparent 100%
+    );
+    -webkit-mask-image: linear-gradient(
+      to right,
+      black 0%,
+      black calc(100% - 24px),
+      transparent 100%
+    );
+  }
+
+  .pill-code {
+    font-family: var(--font-mono);
+    font-size: 0.84rem;
+    color: var(--ink);
+    white-space: nowrap;
+    user-select: all;
+  }
+
+  .pill-copy-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    height: 36px;
+    padding-inline: var(--space-4);
+    background: var(--ink);
+    color: var(--paper);
+    border-radius: 999px;
+    font-family: var(--font-sans);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: 0;
+    flex-shrink: 0;
+    transition:
+      background-color var(--dur-fast) var(--ease-out),
+      color var(--dur-fast) var(--ease-out),
+      transform var(--dur-fast) var(--ease-out);
+  }
+
+  .pill-copy-btn:hover {
+    background: var(--signal);
+    color: var(--ink);
+  }
+
+  .pill-copy-btn:active {
+    transform: scale(0.96);
+  }
+
+  .copy-default,
+  .copy-success {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .copy-success {
+    display: none;
+    color: var(--ink);
+  }
+
+  .pill-copy-btn.is-copied {
+    background: var(--ok);
+    color: var(--paper);
+  }
+
+  .pill-copy-btn.is-copied .copy-default {
+    display: none;
+  }
+
+  .pill-copy-btn.is-copied .copy-success {
+    display: inline-flex;
+    color: var(--paper);
+  }
+
+  .hero-gh-btn {
+    height: 48px;
+    padding-inline: var(--space-5);
+  }
+
+  /* ==========================================================================
+     FIG. 1 — Topology Container
+     ========================================================================== */
+  .topology-wrapper {
+    position: relative;
+    width: 100%;
+    margin-top: var(--space-2);
+  }
+
+  /* 4 corner crop marks */
+  .crop-mark {
+    position: absolute;
+    font-family: var(--font-mono);
+    font-size: 15px;
+    line-height: 1;
+    color: var(--ink-3);
+    user-select: none;
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  .top-left {
+    top: -7px;
+    left: -6px;
+  }
+
+  .top-right {
+    top: -7px;
+    right: -6px;
+  }
+
+  .bottom-left {
+    bottom: -7px;
+    left: -6px;
+  }
+
+  .bottom-right {
+    bottom: -7px;
+    right: -6px;
+  }
+
+  .topology-box {
+    position: relative;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-bottom: 0;
+    overflow: hidden;
+  }
+
+  /* Technical topbar */
+  .topology-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-3) var(--space-5);
+    background: var(--paper);
+    border-bottom: 1px solid var(--rule);
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .topo-topbar-left {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .topo-fig-id {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--ink);
+    text-transform: uppercase;
+  }
+
+  .topo-fig-title {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    color: var(--ink-3);
+  }
+
+  .topo-topbar-right {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.06em;
+    color: var(--ink-3);
+  }
+
+  .topo-meta-sep {
+    opacity: 0.4;
+  }
+
+  /* SVG wrap */
+  .topology-svg-wrap {
+    width: 100%;
+    position: relative;
+    background: var(--paper);
+    overflow: hidden;
+  }
+
+  .topology-svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: 460px;
+  }
+
+  /* Pulsing status LED in SVG */
+  @keyframes led-pulse {
+    0%,
+    100% {
+      opacity: 0.4;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.85;
+      transform: scale(1.3);
+    }
+  }
+
+  .pulsing-led {
+    transform-origin: 196px 235px;
+    animation: led-pulse 2.2s infinite ease-in-out;
+  }
+
+  /* ==========================================================================
+     Datasheet 4-cell row
+     ========================================================================== */
+  .datasheet-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    border: 1px solid var(--rule);
+    background: var(--paper);
+  }
+
+  .datasheet-cell {
+    display: flex;
+    flex-direction: column;
+    padding: var(--space-4) var(--space-5);
+    border-right: 1px solid var(--rule);
+    gap: var(--space-1);
+    transition: background-color var(--dur-fast) var(--ease-out);
+  }
+
+  .datasheet-cell:last-child {
+    border-right: none;
+  }
+
+  .datasheet-cell:hover {
+    background: var(--paper-2);
+  }
+
+  .datasheet-label {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+
+  .datasheet-val-wrap {
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--space-2);
+  }
+
+  .datasheet-number {
+    font-size: clamp(2rem, 1.6rem + 1.6vw, 3.2rem);
+    line-height: 1;
+    color: var(--ink);
+  }
+
+  .datasheet-unit {
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+
+  .datasheet-sub {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--ink-3);
+    line-height: 1.35;
+    margin-top: auto;
+  }
+
+  /* ==========================================================================
+     Responsive Adjustments
+     ========================================================================== */
+  @media (max-width: 900px) {
+    .datasheet-row {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .datasheet-cell:nth-child(1),
+    .datasheet-cell:nth-child(2) {
+      border-bottom: 1px solid var(--rule);
+    }
+    .datasheet-cell:nth-child(2) {
+      border-right: none;
+    }
+    .datasheet-cell:nth-child(4) {
+      border-right: none;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .install-pill {
+      min-width: 0;
+      width: 100%;
+    }
+    .pill-code-container {
+      max-width: none;
+      flex: 1;
+    }
+    .hero-actions {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .hero-gh-btn {
+      width: 100%;
+      justify-content: center;
+    }
+    .topology-topbar {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--space-1);
+    }
+  }
+
+  @media (max-width: 480px) {
+    .datasheet-row {
+      grid-template-columns: 1fr;
+    }
+    .datasheet-cell {
+      border-right: none;
+      border-bottom: 1px solid var(--rule);
+    }
+    .datasheet-cell:last-child {
+      border-bottom: none;
+    }
+  }
+
+  /* Respect reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    .word-inner {
+      transform: none !important;
+      opacity: 1 !important;
+      transition: none !important;
+    }
+    .topo-packet {
+      display: none !important;
+    }
+    .pulsing-led {
+      animation: none !important;
+    }
+  }
+</style>
+
+<script>
+  // 1. Reveal staggered headline on mount
+  const heroSec = document.getElementById('top');
+  if (heroSec) {
+    const prefersReduced = window.matchMedia(
+      '(prefers-reduced-motion: reduce)',
+    ).matches;
+    if (prefersReduced) {
+      heroSec.classList.add('is-revealed');
+    } else {
+      // Small frame delay to let paint settle for maximum smoothness
+      requestAnimationFrame(() => {
+        heroSec.classList.add('is-revealed');
+      });
+    }
+  }
+
+  // 2. Install command copy button handler
+  const copyBtn = document.getElementById('hero-copy-btn');
+  if (copyBtn) {
+    let copyTimer: number | undefined;
+
+    copyBtn.addEventListener('click', async () => {
+      const textToCopy = copyBtn.getAttribute('data-copy') || '';
+      try {
+        await navigator.clipboard.writeText(textToCopy);
+      } catch {
+        // Fallback for non-secure contexts
+        const textarea = document.createElement('textarea');
+        textarea.value = textToCopy;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+
+      copyBtn.classList.add('is-copied');
+      copyBtn.setAttribute('aria-label', 'Command copied to clipboard');
+
+      if (copyTimer) clearTimeout(copyTimer);
+      copyTimer = window.setTimeout(() => {
+        copyBtn.classList.remove('is-copied');
+        copyBtn.setAttribute('aria-label', 'Copy install command');
+      }, 1600);
+    });
+  }
+
+  // 3. Topology SVG animation lifecycle (pause when off-screen or tab hidden)
+  const topoSvg = document.getElementById(
+    'topology-svg',
+  ) as SVGSVGElement | null;
+  if (topoSvg && 'pauseAnimations' in topoSvg) {
+    const prefersReduced = window.matchMedia(
+      '(prefers-reduced-motion: reduce)',
+    ).matches;
+
+    if (prefersReduced) {
+      try {
+        topoSvg.pauseAnimations();
+      } catch {}
+    } else {
+      if ('IntersectionObserver' in window) {
+        const topoObserver = new IntersectionObserver(
+          (entries) => {
+            for (const entry of entries) {
+              try {
+                if (entry.isIntersecting && !document.hidden) {
+                  topoSvg.unpauseAnimations();
+                } else {
+                  topoSvg.pauseAnimations();
+                }
+              } catch {}
+            }
+          },
+          { threshold: 0.05 },
+        );
+        topoObserver.observe(topoSvg);
+      }
+
+      document.addEventListener('visibilitychange', () => {
+        try {
+          if (document.hidden) {
+            topoSvg.pauseAnimations();
+          } else {
+            topoSvg.unpauseAnimations();
+          }
+        } catch {}
+      });
+    }
+  }
+</script>
