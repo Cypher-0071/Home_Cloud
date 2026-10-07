@@ -1,24 +1,25 @@
 ---
+// landing/src/pages/index.astro
+// Rebuilt from scratch with breathable, dark-themed obsidian architecture:
+// Hero -> Interactive Product Showcase -> Quiet Hardware Craft -> Subsystem Features -> 3-Step Setup -> Footer
 import Base from '../layouts/Base.astro';
 import Nav from '../components/Nav.astro';
 import Hero from '../components/Hero.astro';
-import DesktopDemo from '../components/DesktopDemo.astro';
+import ProductShowcase from '../components/ProductShowcase.astro';
+import QuietCraft from '../components/QuietCraft.astro';
 import Features from '../components/Features.astro';
-import HowItWorks from '../components/HowItWorks.astro';
-import Install from '../components/Install.astro';
-import Compare from '../components/Compare.astro';
+import Setup from '../components/Setup.astro';
 import Footer from '../components/Footer.astro';
 ---
 
 <Base>
   <Nav />
-  <main>
-    <Hero />          <!-- #top      §00 -->
-    <DesktopDemo />   <!-- #desktop  §01 -->
-    <Features />      <!-- #features §02 -->
-    <HowItWorks />    <!-- #how      §03 -->
-    <Install />       <!-- #install  §04 -->
-    <Compare />       <!-- #compare  §05 -->
+  <main id="main-content">
+    <Hero />
+    <ProductShowcase />
+    <QuietCraft />
+    <Features />
+    <Setup />
   </main>
   <Footer />
 </Base>

@@ -1,0 +1,512 @@
+---
+// landing/src/components/Setup.astro
+// Effortless Setup: A clean, spacious 3-step walkthrough
+// (Plug in PC -> Run curl script -> Access your domain)
+---
+
+<section id="setup" class="setup-section">
+  <div class="container setup-container">
+    <div class="setup-header reveal">
+      <div class="eyebrow-pill">
+        <span class="pill-dot"></span>
+        <span>Installation</span>
+      </div>
+      <h2 class="setup-title">
+        From cold silicon to private cloud <span class="font-serif-italic">in 90 seconds.</span>
+      </h2>
+      <p class="setup-desc">
+        No complicated manuals or manual port forwarding. A single automated command
+        configures everything from dependencies to encrypted edge tunnels.
+      </p>
+    </div>
+
+    <!-- 3-Step Walkthrough Grid -->
+    <div class="setup-steps-grid">
+      <!-- Step 1 -->
+      <div class="step-card reveal">
+        <div class="step-badge">01</div>
+        <div class="step-content">
+          <h3 class="step-heading">Power On Any Linux PC</h3>
+          <p class="step-body">
+            Use an old laptop with the lid closed, an ultra-quiet N100 mini PC, or a custom desktop.
+            Compatible with Ubuntu 22.04+, Debian 12+, Fedora, and Arch Linux.
+          </p>
+          <div class="step-tag-row">
+            <span class="step-tag">x86_64</span>
+            <span class="step-tag">arm64 / RPi5</span>
+            <span class="step-tag">Low Power (6W+)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="step-card reveal">
+        <div class="step-badge">02</div>
+        <div class="step-content">
+          <h3 class="step-heading">Run One Bootstrap Command</h3>
+          <p class="step-body">
+            Paste the curl installer into your local machine's terminal. It provisions Docker,
+            generates cryptographically secure session keys, and registers the background systemd daemon.
+          </p>
+          <div class="step-cmd-box">
+            <div class="step-cmd-header">
+              <span class="step-cmd-label">Installer script:</span>
+              <button
+                type="button"
+                class="step-copy-btn"
+                id="setup-step-copy"
+                aria-label="Copy setup command"
+                data-copy="curl -fsSL https://raw.githubusercontent.com/Cypher-0071/Home_Cloud/main/setup.sh | bash"
+              >
+                <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <rect x="5" y="5" width="8" height="8" rx="1.5"></rect>
+                  <path d="M3 11V3a1.5 1.5 0 0 1 1.5-1.5H11"></path>
+                </svg>
+                <span id="setup-copy-text">Copy</span>
+              </button>
+            </div>
+            <code class="step-cmd" id="setup-step-cmd">curl -fsSL https://raw.githubusercontent.com/Cypher-0071/Home_Cloud/main/setup.sh | bash</code>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="step-card reveal">
+        <div class="step-badge">03</div>
+        <div class="step-content">
+          <h3 class="step-heading">Access Your Private Cloud</h3>
+          <p class="step-body">
+            Open your secure tunnel domain or local LAN IP in any browser on your phone,
+            tablet, or work laptop. Your terminal, Docker apps, and files are ready instantly.
+          </p>
+          <div class="step-status-chip">
+            <span class="chip-live-led"></span>
+            <span>Dashboard live on your custom domain</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Installer Output Visualizer -->
+    <div class="installer-terminal-wrap reveal">
+      <div class="term-window">
+        <div class="term-window-header">
+          <div class="term-dots">
+            <span></span><span></span><span></span>
+          </div>
+          <span class="term-title">installer-session — bash</span>
+          <span class="term-tag">auto-provisioned</span>
+        </div>
+        <div class="term-window-body mono">
+          <div class="log-row">
+            <span class="log-time">[00:01]</span>
+            <span class="log-step">→ Detecting architecture & Linux distribution...</span>
+            <span class="log-ok">x86_64 (Ubuntu 24.04 LTS) ✓</span>
+          </div>
+          <div class="log-row">
+            <span class="log-time">[00:14]</span>
+            <span class="log-step">→ Verifying container runtime (Docker 27.2)...</span>
+            <span class="log-ok">Found & Healthy ✓</span>
+          </div>
+          <div class="log-row">
+            <span class="log-time">[00:32]</span>
+            <span class="log-step">→ Provisioning Home Cloud background daemon...</span>
+            <span class="log-ok">systemd service enabled ✓</span>
+          </div>
+          <div class="log-row">
+            <span class="log-time">[00:48]</span>
+            <span class="log-step">→ Establishing outbound Cloudflare Zero-Trust Tunnel...</span>
+            <span class="log-ok">Connected (18ms latency) ✓</span>
+          </div>
+          <div class="log-row highlight">
+            <span class="log-time">[00:52]</span>
+            <span class="log-done">✓ Home Cloud installation complete.</span>
+          </div>
+          <div class="log-row url-row">
+            <span class="log-url-label">Access URL:</span>
+            <a href="#hero" class="log-url">https://cloud.yourdomain.com</a>
+            <span class="log-lan">(Local LAN: http://192.168.1.140:3000)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .setup-section {
+    position: relative;
+    padding-block: clamp(4rem, 6vw, 7.5rem);
+    background: #090b0f;
+  }
+
+  .setup-container {
+    max-width: 1140px;
+  }
+
+  .setup-header {
+    text-align: center;
+    max-width: 720px;
+    margin-inline: auto;
+    margin-bottom: var(--space-7);
+  }
+
+  .eyebrow-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: rgba(255, 92, 40, 0.08);
+    border: 1px solid rgba(255, 92, 40, 0.2);
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: var(--signal-text);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: var(--space-3);
+  }
+
+  .pill-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--signal);
+    box-shadow: 0 0 6px var(--signal-glow);
+  }
+
+  .setup-title {
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 3.2vw, 2.8rem);
+    font-weight: 600;
+    line-height: 1.15;
+    letter-spacing: -0.03em;
+    color: var(--text-primary);
+    margin-bottom: var(--space-3);
+  }
+
+  .setup-desc {
+    font-size: 1.05rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+
+  /* 3-Step Walkthrough Grid */
+  .setup-steps-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: clamp(1.2rem, 2vw, 1.8rem);
+    margin-bottom: var(--space-7);
+  }
+
+  .step-card {
+    position: relative;
+    background: #0e1118;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    padding: clamp(1.4rem, 2vw, 1.8rem);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 16px;
+    min-width: 0;
+    transition: all var(--dur-fast);
+  }
+
+  .step-card:hover {
+    border-color: rgba(255, 255, 255, 0.16);
+    background: #12151e;
+    transform: translateY(-2px);
+  }
+
+  .step-badge {
+    font-family: var(--font-mono);
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.15);
+    line-height: 1;
+  }
+
+  .step-content {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .step-heading {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .step-body {
+    font-size: 0.88rem;
+    line-height: 1.55;
+    color: var(--text-secondary);
+  }
+
+  .step-tag-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: auto;
+    padding-top: 8px;
+  }
+
+  .step-tag {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text-tertiary);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .step-cmd-box {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: #07090c;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: auto;
+    min-width: 0;
+  }
+
+  .step-cmd-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .step-cmd-label {
+    font-size: 0.72rem;
+    color: var(--text-tertiary);
+    font-family: var(--font-mono);
+  }
+
+  .step-cmd {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: #e2e8f0;
+    word-break: break-all;
+    line-height: 1.45;
+  }
+
+  .step-copy-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: var(--text-primary);
+    font-size: 0.72rem;
+    font-weight: 600;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .step-copy-btn:hover {
+    background: rgba(255, 255, 255, 0.16);
+  }
+
+  .step-status-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    background: rgba(16, 185, 129, 0.08);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    font-size: 0.78rem;
+    color: var(--ok-night);
+    font-weight: 500;
+    margin-top: auto;
+  }
+
+  .chip-live-led {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--ok);
+    box-shadow: 0 0 6px var(--ok-glow);
+  }
+
+  /* Installer Terminal Output */
+  .installer-terminal-wrap {
+    max-width: 900px;
+    margin-inline: auto;
+  }
+
+  .term-window {
+    background: #07090d;
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.75);
+  }
+
+  .term-window-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: #0d1016;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .term-dots {
+    display: flex;
+    gap: 6px;
+  }
+
+  .term-dots span {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.15);
+  }
+
+  .term-title {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--text-tertiary);
+  }
+
+  .term-tag {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--signal-text);
+  }
+
+  .term-window-body {
+    padding: 18px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 0.84rem;
+  }
+
+  .log-row {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .log-time {
+    color: var(--text-muted);
+    font-size: 0.76rem;
+  }
+
+  .log-step {
+    color: var(--text-secondary);
+  }
+
+  .log-ok {
+    color: var(--ok-night);
+    font-weight: 500;
+  }
+
+  .log-row.highlight {
+    margin-top: 6px;
+    padding-top: 8px;
+    border-top: 1px dashed rgba(255, 255, 255, 0.08);
+  }
+
+  .log-done {
+    color: #ffffff;
+    font-weight: 600;
+  }
+
+  .url-row {
+    margin-top: 4px;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .log-url-label {
+    color: var(--text-tertiary);
+  }
+
+  .log-url {
+    color: var(--signal-text);
+    text-decoration: underline;
+    font-weight: 500;
+  }
+
+  .log-lan {
+    color: var(--text-tertiary);
+    font-size: 0.78rem;
+  }
+
+  @media (max-width: 900px) {
+    .setup-steps-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .term-window-body {
+      padding: 12px;
+      font-size: 0.74rem;
+    }
+    .log-row {
+      gap: 6px;
+    }
+    .log-time {
+      font-size: 0.7rem;
+    }
+    .url-row {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+    }
+  }
+</style>
+
+<script>
+  // Setup step copy button
+  const stepCopyBtn = document.getElementById('setup-step-copy');
+  const stepCopyText = document.getElementById('setup-copy-text');
+  const stepCmd = document.getElementById('setup-step-cmd');
+
+  if (stepCopyBtn && stepCmd) {
+    stepCopyBtn.addEventListener('click', async () => {
+      const textToCopy = stepCopyBtn.getAttribute('data-copy') || stepCmd.textContent || '';
+      try {
+        await navigator.clipboard.writeText(textToCopy);
+        if (stepCopyText) stepCopyText.textContent = 'Copied!';
+        setTimeout(() => {
+          if (stepCopyText) stepCopyText.textContent = 'Copy';
+        }, 2200);
+      } catch (err) {
+        // Fallback
+        const textarea = document.createElement('textarea');
+        textarea.value = textToCopy;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+
+        if (stepCopyText) stepCopyText.textContent = 'Copied!';
+        setTimeout(() => {
+          if (stepCopyText) stepCopyText.textContent = 'Copy';
+        }, 2200);
+      }
+    });
+  }
+</script>

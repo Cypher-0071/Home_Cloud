@@ -1,412 +1,169 @@
 ---
-// Features.astro — §02 Features ("Paper & Signal")
+// landing/src/components/Features.astro
+// Feature Highlights: 4 focused, beautifully crafted Bento cards with tactile micro-interactions
+// (Host Terminal, Container Engine, Sovereign Storage, Zero-Trust Tunnel)
 ---
 
-<section class="section features-section" id="features">
-  <div class="container">
-    <!-- Section Header -->
-    <header class="features-header reveal">
-      <span class="eyebrow">§ 02 — Inside the box</span>
-      <h2 class="display features-title">Four instruments, <em>one daemon.</em></h2>
-      <p class="lede features-lede">
-        Everything lives in a single Node.js process (Express 5 + <code>ws</code>) on port 3000, supervised by systemd. No background sprawl, no container nesting penalties, no hijacked operating system. A single process handles telemetry, storage, shells, and containers.
-      </p>
-    </header>
-
-    <!-- Datasheet 2x2 Grid Frame -->
-    <div class="datasheet-wrap reveal" style="--reveal-delay: 80ms">
-      <span class="crop-mark top-left" aria-hidden="true">+</span>
-      <span class="crop-mark top-right" aria-hidden="true">+</span>
-      <span class="crop-mark bottom-left" aria-hidden="true">+</span>
-      <span class="crop-mark bottom-right" aria-hidden="true">+</span>
-
-      <div class="datasheet-grid">
-        <!-- Instrument 01: Activity Monitor -->
-        <article class="sheet-cell cell-telemetry" data-instrument="01">
-          <div class="cell-head">
-            <div class="cell-meta">
-              <span class="cell-idx">01</span>
-              <span class="cell-tag">TELEMETRY // SSE</span>
-            </div>
-            <div class="cell-indicator">
-              <span class="status-pulse" aria-hidden="true"></span>
-              <span class="indicator-label">LIVE STREAM</span>
-            </div>
-          </div>
-
-          <h3 class="cell-name">Activity Monitor</h3>
-          <p class="cell-desc">
-            Live CPU, memory, disk, and network I/O streamed over Server-Sent Events every 2 seconds. Sub-second kernel telemetry without polling overhead or daemon lag.
-          </p>
-
-          <!-- Micro-visual 01: Telemetry Dashboard -->
-          <div class="micro-visual mv-telemetry" aria-hidden="true">
-            <div class="mv-meta-bar">
-              <span class="mv-mono-id">PROC // TELEMETRY_STREAM</span>
-              <span class="mv-mono-val">CADENCE: 2.0s</span>
-            </div>
-
-            <!-- CPU Channel -->
-            <div class="mv-channel">
-              <div class="mv-channel-head">
-                <span class="mv-channel-label">CPU LOAD</span>
-                <span class="mv-channel-stat metric-cpu">38.4%</span>
-              </div>
-              <div class="mv-spark-box">
-                <svg class="telemetry-sparkline" viewBox="0 0 240 32" preserveAspectRatio="none">
-                  <path
-                    class="sparkline-grid-line"
-                    d="M 0 8 L 240 8 M 0 16 L 240 16 M 0 24 L 240 24"
-                  />
-                  <path
-                    class="sparkline-path"
-                    d="M 0,22 Q 20,24 40,16 T 80,18 T 120,8 T 160,20 T 200,10 T 240,14"
-                  />
-                  <circle class="sparkline-dot" cx="240" cy="14" r="3" />
-                </svg>
-              </div>
-              <div class="mv-meter-blocks">
-                <span class="meter-block is-active"></span>
-                <span class="meter-block is-active"></span>
-                <span class="meter-block is-active"></span>
-                <span class="meter-block is-active"></span>
-                <span class="meter-block is-active"></span>
-                <span class="meter-block is-active is-signal"></span>
-                <span class="meter-block"></span>
-                <span class="meter-block"></span>
-                <span class="meter-block"></span>
-                <span class="meter-block"></span>
-                <span class="meter-block"></span>
-                <span class="meter-block"></span>
-              </div>
-            </div>
-
-            <!-- Memory & Network mini dual row -->
-            <div class="mv-dual-row">
-              <div class="mv-mini-block">
-                <div class="mv-channel-head">
-                  <span class="mv-channel-label">RAM</span>
-                  <span class="mv-channel-stat">4.2 / 16 GB</span>
-                </div>
-                <div class="mv-seg-bar">
-                  <div class="seg-fill seg-used" style="width: 26%"></div>
-                  <div class="seg-fill seg-cache" style="width: 18%"></div>
-                </div>
-              </div>
-              <div class="mv-mini-block">
-                <div class="mv-channel-head">
-                  <span class="mv-channel-label">NET ENP3S0</span>
-                  <span class="mv-channel-stat">↑ 42K · ↓ 1.4M</span>
-                </div>
-                <div class="mv-net-activity">
-                  <span class="net-pulse pulse-tx"></span>
-                  <span class="net-pulse pulse-rx"></span>
-                  <span class="net-wire"></span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="cell-foot">
-            <code>SSE · 2s interval · systeminformation</code>
-          </div>
-        </article>
-
-        <!-- Instrument 02: File Explorer -->
-        <article class="sheet-cell cell-files" data-instrument="02">
-          <div class="cell-head">
-            <div class="cell-meta">
-              <span class="cell-idx">02</span>
-              <span class="cell-tag">STORAGE // FS</span>
-            </div>
-            <div class="cell-indicator">
-              <span class="status-pulse ok" aria-hidden="true"></span>
-              <span class="indicator-label">JAILED MOUNT</span>
-            </div>
-          </div>
-
-          <h3 class="cell-name">File Explorer</h3>
-          <p class="cell-desc">
-            Browse, upload, download, rename, and delete files with desktop speed. Strictly jailed to your home directory (<code>$BASE_DIR</code>) with zero symlink escapes or path traversal.
-          </p>
-
-          <!-- Micro-visual 02: Filesystem Tree -->
-          <div class="micro-visual mv-files" aria-hidden="true">
-            <div class="mv-crumb-bar">
-              <div class="mv-crumb-path">
-                <span class="crumb-root">$BASE_DIR</span>
-                <span class="crumb-sep">/</span>
-                <span class="crumb-node">media</span>
-                <span class="crumb-sep">/</span>
-                <span class="crumb-node is-active">compose</span>
-              </div>
-              <span class="mv-crumb-badge">RW ACCESS</span>
-            </div>
-
-            <div class="mv-file-list">
-              <div class="mv-file-row">
-                <span class="file-icon icon-dir">📁</span>
-                <span class="file-name">jellyfin/</span>
-                <span class="file-meta">drwxr-xr-x</span>
-                <span class="file-size">4 KB</span>
-              </div>
-              <div class="mv-file-row is-selected">
-                <span class="file-icon icon-yaml">📄</span>
-                <span class="file-name">docker-compose.yml</span>
-                <span class="file-meta">-rw-r--r--</span>
-                <span class="file-badge">COMPOSE</span>
-                <span class="file-size">2.4 KB</span>
-              </div>
-              <div class="mv-file-row">
-                <span class="file-icon icon-lock">🔒</span>
-                <span class="file-name">.env.secrets</span>
-                <span class="file-meta">-rw-------</span>
-                <span class="file-size">1.1 KB</span>
-              </div>
-              <div class="mv-file-row">
-                <span class="file-icon icon-pkg">📦</span>
-                <span class="file-name">backup-weekly.tar.gz</span>
-                <span class="file-meta">-rw-r--r--</span>
-                <span class="file-size">412 MB</span>
-              </div>
-            </div>
-
-            <div class="mv-file-action-strip">
-              <span class="action-pill">HTTP MULTIPART</span>
-              <span class="action-pill">JAILED ROOT</span>
-              <span class="action-pill">STREAMING IO</span>
-            </div>
-          </div>
-
-          <div class="cell-foot">
-            <code>jailed to $BASE_DIR · streaming multipart · posix</code>
-          </div>
-        </article>
-
-        <!-- Instrument 03: Terminal -->
-        <article class="sheet-cell cell-terminal" data-instrument="03">
-          <div class="cell-head">
-            <div class="cell-meta">
-              <span class="cell-idx">03</span>
-              <span class="cell-tag">SHELL // PTY</span>
-            </div>
-            <div class="cell-indicator">
-              <span class="status-pulse ok" aria-hidden="true"></span>
-              <span class="indicator-label">TTY ATTACHED</span>
-            </div>
-          </div>
-
-          <h3 class="cell-name">Terminal</h3>
-          <p class="cell-desc">
-            A real host shell powered by node-pty and xterm.js over WebSocket. Interactive terminal curses (htop, nano, vim), ANSI 256 colors, and proper window resize signals.
-          </p>
-
-          <!-- Micro-visual 03: Terminal Console -->
-          <div class="micro-visual mv-term" aria-hidden="true">
-            <div class="mv-term-bar">
-              <span class="term-pts">TTY // /dev/pts/3 · 80x24</span>
-              <div class="term-swatches">
-                <span class="swatch c-red"></span>
-                <span class="swatch c-grn"></span>
-                <span class="swatch c-yel"></span>
-                <span class="swatch c-blu"></span>
-                <span class="swatch c-mag"></span>
-                <span class="swatch c-cyn"></span>
-                <span class="swatch c-sig"></span>
-              </div>
-            </div>
-
-            <div class="term-screen">
-              <div class="term-line">
-                <span class="term-p-user">rudra@closet</span><span class="term-p-sep">:</span><span class="term-p-path">~</span><span class="term-p-dollar">$</span>
-                <span class="term-p-cmd">docker ps --format '&#123;&#123;.Names&#125;&#125;\t&#123;&#123;.Status&#125;&#125;'</span>
-              </div>
-              <div class="term-line term-dim">
-                <span class="col-name">jellyfin</span>
-                <span class="col-status">Up 6 days (healthy)</span>
-              </div>
-              <div class="term-line term-dim">
-                <span class="col-name">immich_server</span>
-                <span class="col-status">Up 6 days</span>
-              </div>
-              <div class="term-line">
-                <span class="term-p-user">rudra@closet</span><span class="term-p-sep">:</span><span class="term-p-path">~</span><span class="term-p-dollar">$</span>
-                <span class="term-p-active">pnpm build</span><span class="term-cursor">█</span>
-              </div>
-            </div>
-
-            <div class="mv-term-footer">
-              <span class="term-proto">WS // BINARY STREAM</span>
-              <span class="term-state">RAW MODE: ACTIVE</span>
-            </div>
-          </div>
-
-          <div class="cell-foot">
-            <code>node-pty · xterm-256color · ws binary stream</code>
-          </div>
-        </article>
-
-        <!-- Instrument 04: Docker Manager -->
-        <article class="sheet-cell cell-docker" data-instrument="04">
-          <div class="cell-head">
-            <div class="cell-meta">
-              <span class="cell-idx">04</span>
-              <span class="cell-tag">CONTAINERS // OCI</span>
-            </div>
-            <div class="cell-indicator">
-              <span class="status-pulse ok" aria-hidden="true"></span>
-              <span class="indicator-label">ENGINE READY</span>
-            </div>
-          </div>
-
-          <h3 class="cell-name">Docker Manager</h3>
-          <p class="cell-desc">
-            Direct container supervision, image pulls, and Compose stacks with an inline YAML editor. View live container logs, inspect resource stats, and launch in-container exec shells.
-          </p>
-
-          <!-- Micro-visual 04: Stacked Container Matrix -->
-          <div class="micro-visual mv-docker" aria-hidden="true">
-            <div class="mv-docker-bar">
-              <span class="docker-title">CONTAINER STACKS // DOCKER ENGINE</span>
-              <span class="docker-count">3 RUNNING</span>
-            </div>
-
-            <div class="mv-docker-rows">
-              <div class="mv-dock-row">
-                <div class="dock-left">
-                  <span class="dock-dot"></span>
-                  <span class="dock-name">jellyfin</span>
-                  <span class="dock-tag">latest</span>
-                </div>
-                <div class="dock-right">
-                  <span class="dock-port">8096/tcp</span>
-                  <span class="dock-ingress">jellyfin.you.dev ↗</span>
-                </div>
-              </div>
-
-              <div class="mv-dock-row">
-                <div class="dock-left">
-                  <span class="dock-dot"></span>
-                  <span class="dock-name">immich</span>
-                  <span class="dock-tag">v1.105</span>
-                </div>
-                <div class="dock-right">
-                  <span class="dock-port">2283/tcp</span>
-                  <span class="dock-ingress">immich.you.dev ↗</span>
-                </div>
-              </div>
-
-              <div class="mv-dock-row">
-                <div class="dock-left">
-                  <span class="dock-dot"></span>
-                  <span class="dock-name">vaultwarden</span>
-                  <span class="dock-tag">alpine</span>
-                </div>
-                <div class="dock-right">
-                  <span class="dock-port">8080/tcp</span>
-                  <span class="dock-ingress">vault.you.dev ↗</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="mv-dock-stats">
-              <span class="dock-stat-item">SOCKET: /var/run/docker.sock</span>
-              <span class="dock-stat-item">EXEC CONSOLE: READY</span>
-            </div>
-          </div>
-
-          <div class="cell-foot">
-            <code>dockerode · compose CLI · unix socket daemon</code>
-          </div>
-        </article>
+<section id="features" class="features-section">
+  <div class="container features-container">
+    <div class="features-header reveal">
+      <div class="eyebrow-pill">
+        <span class="pill-dot"></span>
+        <span>Capabilities</span>
       </div>
+      <h2 class="features-title">
+        Engineered for real self-hosting.<br />
+        <span class="font-serif-italic">Built without the clutter.</span>
+      </h2>
+      <p class="features-desc">
+        Four primary subsystems working together through a lightweight background daemon.
+        No bloated hypervisor layers or multi-gigabyte management frameworks.
+      </p>
     </div>
 
-    <!-- Also in the Box Section -->
-    <div class="also-section reveal" style="--reveal-delay: 140ms">
-      <div class="also-head">
-        <span class="eyebrow">§ 02.1 — Included Subsystems</span>
-        <h3 class="display also-title">Also in the <em>box.</em></h3>
+    <div class="features-bento-grid">
+      <!-- Feature Card 1: Web Terminal -->
+      <div class="bento-card reveal">
+        <div class="card-glow" aria-hidden="true"></div>
+        <div class="card-icon-bar">
+          <div class="feature-icon orange">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="4 17 10 11 4 5"></polyline>
+              <line x1="12" y1="19" x2="20" y2="19"></line>
+            </svg>
+          </div>
+          <span class="card-tag">Host Shell</span>
+        </div>
+
+        <h3 class="card-title">Real PTY Terminal in Any Browser</h3>
+        <p class="card-desc">
+          Full xterm-compatible terminal streaming over binary WebSockets. Run vim, htop, zsh,
+          and tmux with full 256-color support and UTF-8 glyphs. Your session stays alive
+          even if your laptop lid closes.
+        </p>
+
+        <!-- Micro-Interactive Visual Preview -->
+        <div class="card-micro-preview terminal-preview">
+          <div class="preview-chrome">
+            <span class="p-dot"></span>
+            <span class="p-dot"></span>
+            <span class="p-dot"></span>
+            <span class="p-title">pts/3 · zsh</span>
+          </div>
+          <div class="preview-body mono">
+            <div class="code-line"><span class="c-prompt">$</span> <span class="c-cmd">systemctl status homecloud</span></div>
+            <div class="code-line c-ok">● homecloud.service - active (running)</div>
+            <div class="code-line c-dim">  Memory: 42.1M · Tasks: 12 · CPU: 0.1%</div>
+          </div>
+        </div>
       </div>
 
-      <div class="also-table">
-        <!-- Row 1: Auto-wired subdomains -->
-        <div class="also-row">
-          <div class="also-col-label">
-            <span class="mono-idx">01</span>
-            <span class="mono-cat">ROUTING</span>
+      <!-- Feature Card 2: Docker Containers -->
+      <div class="bento-card reveal">
+        <div class="card-glow" aria-hidden="true"></div>
+        <div class="card-icon-bar">
+          <div class="feature-icon blue">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="3" width="20" height="14" rx="2"></rect>
+              <line x1="8" y1="21" x2="16" y2="21"></line>
+              <line x1="12" y1="17" x2="12" y2="21"></line>
+            </svg>
           </div>
-          <div class="also-col-body">
-            <h4 class="also-name">Auto-wired subdomains</h4>
-            <p class="also-desc">
-              Expose a container and Home Cloud writes the Cloudflare ingress rule and automatically reloads the tunnel. Zero manual YAML edits, zero Cloudflare dashboard logins.
-            </p>
-          </div>
-          <div class="also-col-demo">
-            <div class="flow-pill">
-              <span class="flow-cmd"><code>docker run jellyfin</code></span>
-              <span class="flow-arr" aria-hidden="true">→</span>
-              <span class="flow-target"><code>jellyfin.you.dev</code></span>
-            </div>
-          </div>
+          <span class="card-tag">Containers</span>
         </div>
 
-        <!-- Row 2: Split-horizon LAN switching -->
-        <div class="also-row">
-          <div class="also-col-label">
-            <span class="mono-idx">02</span>
-            <span class="mono-cat">NETWORKING</span>
+        <h3 class="card-title">Docker Orchestration Without Overhead</h3>
+        <p class="card-desc">
+          Spin up community services with zero configuration friction. Inspect live stdout logs,
+          restart crashed containers, pull image updates, and monitor memory caps without SSHing
+          into the box.
+        </p>
+
+        <!-- Micro-Interactive Visual Preview -->
+        <div class="card-micro-preview docker-preview">
+          <div class="docker-mini-row">
+            <span class="mini-status-led"></span>
+            <span class="mini-name">nextcloud</span>
+            <span class="mini-metric">284 MB</span>
+            <span class="mini-badge ok">Healthy</span>
           </div>
-          <div class="also-col-body">
-            <h4 class="also-name">Split-horizon LAN switching</h4>
-            <p class="also-desc">
-              At home, the dashboard detects your local Wi-Fi or ethernet subnet and speaks directly to port 3000 over gigabit LAN for zero-latency streaming. Outside, traffic routes seamlessly via Cloudflare's edge.
-            </p>
+          <div class="docker-mini-row">
+            <span class="mini-status-led"></span>
+            <span class="mini-name">plex-server</span>
+            <span class="mini-metric">512 MB</span>
+            <span class="mini-badge ok">Healthy</span>
           </div>
-          <div class="also-col-demo">
-            <div class="lan-pill">
-              <span class="lan-dot ok" aria-hidden="true"></span>
-              <span class="lan-meta"><code>192.168.1.0/24 ⇄ edge.quic</code></span>
-            </div>
+          <div class="docker-mini-row">
+            <span class="mini-status-led"></span>
+            <span class="mini-name">postgres-16</span>
+            <span class="mini-metric">146 MB</span>
+            <span class="mini-badge ok">Healthy</span>
           </div>
         </div>
+      </div>
 
-        <!-- Row 3: systemd service -->
-        <div class="also-row">
-          <div class="also-col-label">
-            <span class="mono-idx">03</span>
-            <span class="mono-cat">SUPERVISION</span>
+      <!-- Feature Card 3: Storage & Files -->
+      <div class="bento-card reveal">
+        <div class="card-glow" aria-hidden="true"></div>
+        <div class="card-icon-bar">
+          <div class="feature-icon purple">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+            </svg>
           </div>
-          <div class="also-col-body">
-            <h4 class="also-name">systemd service</h4>
-            <p class="also-desc">
-              Packaged as a native Linux service (<code>home-cloud.service</code>). Starts on boot, handles graceful SIGTERM shutdowns, logs to journald, and recovers in milliseconds on unexpected fault.
-            </p>
-          </div>
-          <div class="also-col-demo">
-            <div class="lan-pill">
-              <span class="lan-dot ok" aria-hidden="true"></span>
-              <span class="lan-meta"><code>systemctl status home-cloud</code></span>
-            </div>
-          </div>
+          <span class="card-tag">Filesystem</span>
         </div>
 
-        <!-- Row 4: Mobile-ready -->
-        <div class="also-row">
-          <div class="also-col-label">
-            <span class="mono-idx">04</span>
-            <span class="mono-cat">VIEWPORT</span>
+        <h3 class="card-title">Native Ext4 & ZFS Storage Workspace</h3>
+        <p class="card-desc">
+          Browse, upload, download, and manage files directly on your host disks.
+          Drag and drop large video files or folder trees with chunked resume support.
+          Direct filesystem calls, zero virtualization tax.
+        </p>
+
+        <!-- Micro-Interactive Visual Preview -->
+        <div class="card-micro-preview file-preview">
+          <div class="file-item">
+            <svg viewBox="0 0 16 16" width="14" height="14" fill="#60a5fa"><path d="M1 3.5A1.5 1.5 0 0 1 2.5 2h2.764c.958 0 1.76.56 2.311 1.184l.73.816H13.5A1.5 1.5 0 0 1 15 5.5v7a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 1 12.5v-9z"/></svg>
+            <span class="file-name">Media / 4K / Home-Video.mkv</span>
+            <span class="file-size">14.8 GB</span>
           </div>
-          <div class="also-col-body">
-            <h4 class="also-name">Mobile-ready desktop</h4>
-            <p class="also-desc">
-              Adaptive window manager transforms gracefully on touchscreens. Bottom drawer navigation, soft function keys, and touch-tested window multitasking down to 360px viewport widths.
-            </p>
+          <div class="file-item">
+            <svg viewBox="0 0 16 16" width="14" height="14" fill="#a78bfa"><path d="M4 0h5.293A1 1 0 0 1 10 .293L13.707 4a1 1 0 0 1 .293.707V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2z"/></svg>
+            <span class="file-name">docker-compose.production.yml</span>
+            <span class="file-size">4.2 KB</span>
           </div>
-          <div class="also-col-demo">
-            <div class="lan-pill">
-              <span class="lan-meta"><code>viewport ≥ 360px · soft-keys</code></span>
-            </div>
+        </div>
+      </div>
+
+      <!-- Feature Card 4: Zero Trust Tunnel -->
+      <div class="bento-card reveal">
+        <div class="card-glow" aria-hidden="true"></div>
+        <div class="card-icon-bar">
+          <div class="feature-icon green">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+          </div>
+          <span class="card-tag">Zero-Trust</span>
+        </div>
+
+        <h3 class="card-title">Encrypted Cloudflare Tunnel</h3>
+        <p class="card-desc">
+          Automated edge tunnel routing that completely obsoletes DDNS, UPnP, and risky router port forwarding.
+          Reach your dashboard securely from any coffee shop, airport Wi-Fi, or cellular network with instant TLS.
+        </p>
+
+        <!-- Micro-Interactive Visual Preview -->
+        <div class="card-micro-preview tunnel-preview">
+          <div class="tunnel-status-row">
+            <span class="tunnel-badge-dot"></span>
+            <span class="tunnel-domain mono">cloud.yourname.me</span>
+            <span class="tunnel-tls">TLS 1.3 · QUIC</span>
+          </div>
+          <div class="tunnel-meta-row">
+            <span>External Ports Open: <strong>0</strong></span>
+            <span>Edge Routing: <strong>330+ Cities</strong></span>
           </div>
         </div>
       </div>
@@ -415,939 +172,312 @@
 </section>
 
 <style>
-  /* ==========================================================================
-     Features Section Styles — Paper & Signal
-     ========================================================================== */
-
   .features-section {
-    background: var(--paper);
-    color: var(--ink-2);
+    position: relative;
+    padding-block: clamp(4rem, 6vw, 7.5rem);
+  }
+
+  .features-container {
+    max-width: 1200px;
   }
 
   .features-header {
-    margin-bottom: var(--space-8);
+    text-align: center;
+    max-width: 680px;
+    margin-inline: auto;
+    margin-bottom: var(--space-7);
   }
 
-  .features-title {
-    font-size: var(--step-3);
-    line-height: 1.04;
-    letter-spacing: -0.025em;
-    margin-top: var(--space-3);
-    margin-bottom: var(--space-4);
-  }
-
-  .features-lede {
-    max-width: 68ch;
-  }
-
-  /* ---- Datasheet 2x2 Grid Frame ---- */
-  .datasheet-wrap {
-    position: relative;
-    border: 1px solid var(--rule);
-    background: var(--paper);
-  }
-
-  /* Crop marks at frame corners */
-  .crop-mark {
-    position: absolute;
-    font-family: var(--font-mono);
-    font-size: 14px;
-    line-height: 1;
-    color: var(--ink-3);
-    pointer-events: none;
-    user-select: none;
-    z-index: 2;
-  }
-  .crop-mark.top-left {
-    top: -8px;
-    left: -6px;
-  }
-  .crop-mark.top-right {
-    top: -8px;
-    right: -6px;
-  }
-  .crop-mark.bottom-left {
-    bottom: -8px;
-    left: -6px;
-  }
-  .crop-mark.bottom-right {
-    bottom: -8px;
-    right: -6px;
-  }
-
-  .datasheet-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  /* Grid Cells */
-  .sheet-cell {
-    position: relative;
-    padding: clamp(1.75rem, 1.25rem + 1.5vw, 2.75rem);
-    border-right: 1px solid var(--rule);
-    border-bottom: 1px solid var(--rule);
-    background: var(--paper);
-    display: flex;
-    flex-direction: column;
-    transition: background-color var(--dur) var(--ease-out);
-  }
-
-  /* Remove outer cell borders inside 2x2 grid */
-  .sheet-cell:nth-child(2n) {
-    border-right: none;
-  }
-  .sheet-cell:nth-child(3),
-  .sheet-cell:nth-child(4) {
-    border-bottom: none;
-  }
-
-  .sheet-cell:hover {
-    background: var(--paper-2);
-  }
-
-  /* Cell Header */
-  .cell-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: var(--space-3);
-  }
-
-  .cell-meta {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-  }
-
-  .cell-idx {
-    font-family: var(--font-mono);
-    font-size: var(--step--1);
-    font-weight: 600;
-    color: var(--signal-ink);
-  }
-
-  .cell-tag {
-    font-family: var(--font-mono);
-    font-size: 0.76rem;
-    letter-spacing: 0.08em;
-    color: var(--ink-3);
-  }
-
-  .cell-indicator {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .status-pulse {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: var(--ok);
-    box-shadow: 0 0 0 0 rgba(31, 122, 85, 0.4);
-    animation: statusPulse 2.4s infinite;
-  }
-  .status-pulse.ok {
-    background: var(--ok);
-  }
-
-  @keyframes statusPulse {
-    0% {
-      box-shadow: 0 0 0 0 rgba(31, 122, 85, 0.4);
-    }
-    70% {
-      box-shadow: 0 0 0 5px rgba(31, 122, 85, 0);
-    }
-    100% {
-      box-shadow: 0 0 0 0 rgba(31, 122, 85, 0);
-    }
-  }
-
-  .indicator-label {
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    letter-spacing: 0.06em;
-    color: var(--ink-3);
-    text-transform: uppercase;
-  }
-
-  /* Cell Titles & Body */
-  .cell-name {
-    font-family: var(--font-display);
-    font-size: var(--step-2);
-    font-weight: 400;
-    line-height: 1.1;
-    color: var(--ink);
-    margin-bottom: var(--space-2);
-    letter-spacing: -0.015em;
-  }
-
-  .cell-desc {
-    font-size: var(--step-0);
-    line-height: 1.5;
-    color: var(--ink-2);
-    margin-bottom: var(--space-5);
-    max-width: 50ch;
-  }
-
-  .cell-desc code {
-    background: var(--paper-2);
-    padding: 0.1em 0.35em;
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--rule);
-    font-size: 0.88em;
-  }
-
-  .cell-foot {
-    margin-top: auto;
-    padding-top: var(--space-4);
-    border-top: 1px dashed var(--rule);
-  }
-
-  .cell-foot code {
-    font-family: var(--font-mono);
-    font-size: 0.76rem;
-    letter-spacing: 0.04em;
-    color: var(--ink-3);
-    text-transform: uppercase;
-  }
-
-  /* ==========================================================================
-     Micro-visuals Styling
-     ========================================================================== */
-
-  .micro-visual {
-    background: var(--paper-2);
-    border: 1px solid var(--rule);
-    border-radius: var(--radius-sm);
-    padding: var(--space-3) var(--space-4);
-    margin-bottom: var(--space-5);
-    font-family: var(--font-mono);
-    user-select: none;
-    transition: border-color var(--dur) var(--ease-out);
-  }
-
-  .sheet-cell:hover .micro-visual {
-    border-color: var(--rule-strong);
-    background: var(--paper-3);
-  }
-
-  /* ---- Visual 01: Telemetry ---- */
-  .mv-meta-bar {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.72rem;
-    color: var(--ink-3);
-    border-bottom: 1px solid var(--rule);
-    padding-bottom: var(--space-2);
-    margin-bottom: var(--space-3);
-  }
-
-  .mv-channel {
-    margin-bottom: var(--space-3);
-  }
-
-  .mv-channel-head {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.75rem;
-    color: var(--ink-2);
-    margin-bottom: 4px;
-  }
-
-  .mv-channel-stat {
-    font-weight: 600;
-    color: var(--ink);
-  }
-  .mv-channel-stat.metric-cpu {
-    color: var(--signal-ink);
-  }
-
-  .mv-spark-box {
-    width: 100%;
-    height: 32px;
-    background: var(--paper);
-    border: 1px solid var(--rule);
-    border-radius: 2px;
-    overflow: hidden;
-    margin-bottom: 6px;
-  }
-
-  .telemetry-sparkline {
-    width: 100%;
-    height: 100%;
-    display: block;
-  }
-
-  .sparkline-grid-line {
-    stroke: var(--rule);
-    stroke-width: 0.5;
-    stroke-dasharray: 2 3;
-    fill: none;
-  }
-
-  .sparkline-path {
-    stroke: var(--signal);
-    stroke-width: 1.5;
-    fill: none;
-    stroke-linecap: round;
-    transition: stroke-dashoffset 0.6s var(--ease-out);
-  }
-
-  .sparkline-dot {
-    fill: var(--signal);
-    animation: sparkPulse 1.8s infinite;
-  }
-
-  @keyframes sparkPulse {
-    0%, 100% {
-      r: 2.5;
-      opacity: 0.9;
-    }
-    50% {
-      r: 4;
-      opacity: 1;
-    }
-  }
-
-  .mv-meter-blocks {
-    display: flex;
-    gap: 3px;
-  }
-
-  .meter-block {
-    flex: 1;
-    height: 6px;
-    background: var(--rule);
-    border-radius: 1px;
-    transition: background-color var(--dur-fast) var(--ease-out);
-  }
-
-  .meter-block.is-active {
-    background: var(--ink);
-  }
-
-  .meter-block.is-active.is-signal {
-    background: var(--signal);
-  }
-
-  .sheet-cell:hover .meter-block:nth-child(7) {
-    background: var(--signal);
-  }
-
-  .mv-dual-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: var(--space-4);
-    padding-top: var(--space-2);
-    border-top: 1px dashed var(--rule);
-  }
-
-  .mv-seg-bar {
-    height: 6px;
-    background: var(--paper);
-    border: 1px solid var(--rule);
-    border-radius: 2px;
-    display: flex;
-    overflow: hidden;
-  }
-
-  .seg-fill.seg-used {
-    background: var(--ink);
-  }
-  .seg-fill.seg-cache {
-    background: var(--ink-3);
-  }
-
-  .mv-net-activity {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    height: 6px;
-  }
-
-  .net-pulse {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--rule);
-  }
-
-  .pulse-tx {
-    background: var(--signal);
-    animation: netFlicker 1.2s infinite ease-in-out;
-  }
-
-  .pulse-rx {
-    background: var(--ok);
-    animation: netFlicker 0.8s infinite ease-in-out reverse;
-  }
-
-  .net-wire {
-    flex: 1;
-    height: 1px;
-    background: var(--rule);
-  }
-
-  @keyframes netFlicker {
-    0%, 100% { opacity: 0.3; }
-    50% { opacity: 1; }
-  }
-
-  /* ---- Visual 02: Filesystem ---- */
-  .mv-crumb-bar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding-bottom: var(--space-2);
-    margin-bottom: var(--space-2);
-    border-bottom: 1px solid var(--rule);
-    font-size: 0.72rem;
-  }
-
-  .mv-crumb-path {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    color: var(--ink-2);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .crumb-root {
-    color: var(--signal-ink);
-    font-weight: 600;
-  }
-  .crumb-sep {
-    color: var(--ink-3);
-  }
-  .crumb-node.is-active {
-    color: var(--ink);
-    font-weight: 600;
-  }
-
-  .mv-crumb-badge {
-    font-size: 0.68rem;
-    padding: 1px 5px;
-    border: 1px solid var(--rule);
-    border-radius: 2px;
-    background: var(--paper);
-    color: var(--ink-3);
-  }
-
-  .mv-file-list {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    margin-bottom: var(--space-3);
-  }
-
-  .mv-file-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.75rem;
-    padding: 3px 6px;
-    border-radius: 2px;
-    color: var(--ink-2);
-    transition: background-color var(--dur-fast) var(--ease-out);
-  }
-
-  .mv-file-row.is-selected {
-    background: var(--paper);
-    border-left: 2px solid var(--signal);
-    color: var(--ink);
-  }
-
-  .file-icon {
-    font-size: 0.85rem;
-    line-height: 1;
-  }
-
-  .file-name {
-    font-weight: 500;
-  }
-
-  .file-meta {
-    margin-left: auto;
-    font-size: 0.68rem;
-    color: var(--ink-3);
-  }
-
-  .file-badge {
-    font-size: 0.62rem;
-    padding: 0 4px;
-    background: var(--signal-soft);
-    color: var(--signal-ink);
-    border-radius: 2px;
-    font-weight: 600;
-  }
-
-  .file-size {
-    font-size: 0.7rem;
-    color: var(--ink-3);
-    min-width: 48px;
-    text-align: right;
-  }
-
-  .mv-file-action-strip {
-    display: flex;
-    gap: 6px;
-    padding-top: var(--space-2);
-    border-top: 1px dashed var(--rule);
-  }
-
-  .action-pill {
-    font-size: 0.65rem;
-    letter-spacing: 0.04em;
-    color: var(--ink-3);
-    background: var(--paper);
-    padding: 2px 6px;
-    border-radius: 2px;
-    border: 1px solid var(--rule);
-  }
-
-  /* ---- Visual 03: Terminal Console ---- */
-  .mv-term-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding-bottom: var(--space-2);
-    margin-bottom: var(--space-2);
-    border-bottom: 1px solid var(--rule);
-    font-size: 0.72rem;
-    color: var(--ink-3);
-  }
-
-  .term-swatches {
-    display: flex;
-    gap: 3px;
-  }
-
-  .swatch {
-    width: 6px;
-    height: 6px;
-    border-radius: 1px;
-  }
-  .c-red { background: var(--signal-ink); }
-  .c-grn { background: var(--ok); }
-  .c-yel { background: var(--warn); }
-  .c-blu { background: var(--ink-2); }
-  .c-mag { background: var(--ink-3); }
-  .c-cyn { background: var(--rule-strong); }
-  .c-sig { background: var(--signal); }
-
-  .term-screen {
-    background: var(--paper);
-    border: 1px solid var(--rule);
-    border-radius: 2px;
-    padding: var(--space-3);
-    font-size: 0.74rem;
-    line-height: 1.5;
-    margin-bottom: var(--space-2);
-  }
-
-  .term-line {
-    display: flex;
-    align-items: baseline;
-    flex-wrap: wrap;
-    gap: 4px;
-    white-space: pre-wrap;
-    word-break: break-all;
-  }
-
-  .term-p-user {
-    color: var(--ok);
-    font-weight: 600;
-  }
-  .term-p-sep {
-    color: var(--ink-3);
-  }
-  .term-p-path {
-    color: var(--ink-2);
-    font-weight: 600;
-  }
-  .term-p-dollar {
-    color: var(--ink-3);
-  }
-  .term-p-cmd {
-    color: var(--ink);
-  }
-  .term-p-active {
-    color: var(--ink);
-  }
-
-  .term-line.term-dim {
-    color: var(--ink-3);
-    display: flex;
-    justify-content: space-between;
-    padding-left: var(--space-2);
-  }
-
-  .term-cursor {
-    display: inline-block;
-    color: var(--signal);
-    font-weight: bold;
-    animation: cursorBlink 1s infinite steps(2, start);
-  }
-
-  @keyframes cursorBlink {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0; }
-  }
-
-  .mv-term-footer {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.68rem;
-    color: var(--ink-3);
-  }
-
-  /* ---- Visual 04: Docker Matrix ---- */
-  .mv-docker-bar {
-    display: flex;
-    justify-content: space-between;
-    padding-bottom: var(--space-2);
-    margin-bottom: var(--space-2);
-    border-bottom: 1px solid var(--rule);
-    font-size: 0.72rem;
-    color: var(--ink-3);
-  }
-
-  .docker-count {
-    color: var(--ok);
-    font-weight: 600;
-  }
-
-  .mv-docker-rows {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    margin-bottom: var(--space-2);
-  }
-
-  .mv-dock-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 4px 6px;
-    background: var(--paper);
-    border: 1px solid var(--rule);
-    border-radius: 2px;
-    font-size: 0.72rem;
-    transition: border-color var(--dur-fast) var(--ease-out);
-  }
-
-  .sheet-cell:hover .mv-dock-row {
-    border-color: var(--rule-strong);
-  }
-
-  .dock-left {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .dock-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--ok);
-  }
-
-  .dock-name {
-    font-weight: 600;
-    color: var(--ink);
-  }
-
-  .dock-tag {
-    color: var(--ink-3);
-    font-size: 0.68rem;
-  }
-
-  .dock-right {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .dock-port {
-    color: var(--ink-3);
-  }
-
-  .dock-ingress {
-    color: var(--signal-ink);
-    font-weight: 500;
-  }
-
-  .mv-dock-stats {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.68rem;
-    color: var(--ink-3);
-    padding-top: var(--space-2);
-    border-top: 1px dashed var(--rule);
-  }
-
-  /* ==========================================================================
-     Also In The Box Styles
-     ========================================================================== */
-
-  .also-section {
-    margin-top: var(--space-8);
-  }
-
-  .also-head {
-    margin-bottom: var(--space-5);
-  }
-
-  .also-title {
-    font-size: var(--step-2);
-    letter-spacing: -0.015em;
-    margin-top: var(--space-2);
-  }
-
-  .also-table {
-    border-top: 1px solid var(--rule);
-  }
-
-  .also-row {
-    display: grid;
-    grid-template-columns: 180px 1fr auto;
-    align-items: center;
-    gap: var(--space-5);
-    padding-block: var(--space-5);
-    border-bottom: 1px solid var(--rule);
-    transition: background-color var(--dur-fast) var(--ease-out);
-  }
-
-  .also-row:hover {
-    background: var(--paper-2);
-  }
-
-  .also-col-label {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    font-family: var(--font-mono);
-  }
-
-  .mono-idx {
-    font-size: 0.82rem;
-    font-weight: 600;
-    color: var(--signal-ink);
-  }
-
-  .mono-cat {
-    font-size: 0.72rem;
-    letter-spacing: 0.08em;
-    color: var(--ink-3);
-  }
-
-  .also-col-body {
-    padding-right: var(--space-4);
-  }
-
-  .also-name {
-    font-family: var(--font-sans);
-    font-size: 1.05rem;
-    font-weight: 600;
-    color: var(--ink);
-    margin-bottom: 4px;
-  }
-
-  .also-desc {
-    font-size: 0.94rem;
-    color: var(--ink-2);
-    line-height: 1.5;
-  }
-
-  .also-desc code {
-    background: var(--paper-2);
-    padding: 0.1em 0.35em;
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--rule);
-    font-size: 0.88em;
-  }
-
-  .also-col-demo {
-    display: flex;
-    justify-content: flex-end;
-  }
-
-  /* Micro demonstration pills */
-  .flow-pill,
-  .lan-pill {
+  .eyebrow-pill {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 6px 12px;
-    background: var(--paper-2);
-    border: 1px solid var(--rule);
-    border-radius: var(--radius-sm);
-    font-family: var(--font-mono);
-    font-size: 0.82rem;
-    white-space: nowrap;
-  }
-
-  .flow-cmd code {
-    color: var(--ink);
-  }
-
-  .flow-arr {
-    color: var(--signal);
-    font-weight: bold;
-  }
-
-  .flow-target code {
-    color: var(--signal-ink);
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: rgba(255, 92, 40, 0.08);
+    border: 1px solid rgba(255, 92, 40, 0.2);
+    font-size: 0.76rem;
     font-weight: 600;
+    color: var(--signal-text);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: var(--space-3);
   }
 
-  .lan-dot {
+  .pill-dot {
     width: 6px;
     height: 6px;
     border-radius: 50%;
+    background: var(--signal);
+    box-shadow: 0 0 6px var(--signal-glow);
+  }
+
+  .features-title {
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 3.2vw, 2.8rem);
+    font-weight: 600;
+    line-height: 1.15;
+    letter-spacing: -0.03em;
+    color: var(--text-primary);
+    margin-bottom: var(--space-3);
+  }
+
+  .features-desc {
+    font-size: 1.05rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+
+  .features-bento-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: clamp(1.2rem, 2vw, 1.8rem);
+  }
+
+  .bento-card {
+    position: relative;
+    background: #0d1017;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    padding: clamp(1.5rem, 2.5vw, 2rem);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: all var(--dur) var(--ease-out);
+  }
+
+  .bento-card:hover {
+    border-color: rgba(255, 255, 255, 0.18);
+    transform: translateY(-2px);
+    box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.7);
+  }
+
+  .card-glow {
+    position: absolute;
+    top: 0;
+    left: 15%;
+    right: 15%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    opacity: 0.5;
+  }
+
+  .card-icon-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-4);
+  }
+
+  .feature-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .feature-icon.orange {
+    color: var(--signal-text);
+    background: rgba(255, 92, 40, 0.08);
+    border-color: rgba(255, 92, 40, 0.2);
+  }
+
+  .feature-icon.blue {
+    color: #60a5fa;
+    background: rgba(96, 165, 250, 0.08);
+    border-color: rgba(96, 165, 250, 0.2);
+  }
+
+  .feature-icon.purple {
+    color: #c084fc;
+    background: rgba(192, 132, 252, 0.08);
+    border-color: rgba(192, 132, 252, 0.2);
+  }
+
+  .feature-icon.green {
+    color: var(--ok-night);
+    background: rgba(16, 185, 129, 0.08);
+    border-color: rgba(16, 185, 129, 0.2);
+  }
+
+  .card-tag {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--text-tertiary);
+  }
+
+  .card-title {
+    font-size: 1.22rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+    letter-spacing: -0.015em;
+  }
+
+  .card-desc {
+    font-size: 0.92rem;
+    line-height: 1.55;
+    color: var(--text-secondary);
+    margin-bottom: var(--space-5);
+  }
+
+  /* Micro previews */
+  .card-micro-preview {
+    margin-top: auto;
+    background: #080a0e;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 10px;
+    padding: 12px;
+    overflow: hidden;
+  }
+
+  /* Terminal Micro Preview */
+  .preview-chrome {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  }
+
+  .p-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .p-title {
+    margin-left: auto;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: var(--text-tertiary);
+  }
+
+  .preview-body {
+    font-size: 0.78rem;
+    line-height: 1.5;
+  }
+
+  .c-prompt { color: var(--signal); }
+  .c-cmd { color: #ffffff; }
+  .c-ok { color: var(--ok-night); }
+  .c-dim { color: var(--text-tertiary); }
+
+  /* Docker Mini Rows */
+  .docker-mini-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 8px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.02);
+    font-family: var(--font-mono);
+    font-size: 0.76rem;
+    margin-bottom: 4px;
+  }
+
+  .docker-mini-row:last-child {
+    margin-bottom: 0;
+  }
+
+  .mini-status-led {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
     background: var(--ok);
+    box-shadow: 0 0 5px var(--ok-glow);
   }
 
-  .lan-meta code {
-    color: var(--ink-2);
+  .mini-name { color: var(--text-primary); font-weight: 500; }
+  .mini-metric { color: var(--text-tertiary); }
+  .mini-badge {
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 0.68rem;
+  }
+  .mini-badge.ok {
+    background: rgba(16, 185, 129, 0.12);
+    color: var(--ok-night);
   }
 
-  /* ==========================================================================
-     Responsive Adjustments
-     ========================================================================== */
+  /* File item preview */
+  .file-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+  }
 
-  @media (max-width: 900px) {
-    .datasheet-grid {
+  .file-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: var(--font-mono);
+  }
+
+  .file-size {
+    font-family: var(--font-mono);
+    color: var(--text-tertiary);
+    font-size: 0.72rem;
+  }
+
+  /* Tunnel preview */
+  .tunnel-status-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  }
+
+  .tunnel-badge-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--signal);
+    box-shadow: 0 0 6px var(--signal-glow);
+  }
+
+  .tunnel-domain {
+    font-size: 0.8rem;
+    color: var(--text-primary);
+    font-weight: 500;
+  }
+
+  .tunnel-tls {
+    font-size: 0.7rem;
+    color: var(--ok-night);
+    font-family: var(--font-mono);
+  }
+
+  .tunnel-meta-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.74rem;
+    color: var(--text-tertiary);
+  }
+
+  .tunnel-meta-row strong {
+    color: var(--text-primary);
+  }
+
+  @media (max-width: 860px) {
+    .features-bento-grid {
       grid-template-columns: 1fr;
-    }
-    .sheet-cell {
-      border-right: none;
-    }
-    .sheet-cell:nth-child(3) {
-      border-bottom: 1px solid var(--rule);
-    }
-
-    .also-row {
-      grid-template-columns: 1fr;
-      gap: var(--space-3);
-      padding-block: var(--space-4);
-    }
-    .also-col-demo {
-      justify-content: flex-start;
-    }
-  }
-
-  @media (max-width: 480px) {
-    .sheet-cell {
-      padding: var(--space-4);
-    }
-    .mv-dual-row {
-      grid-template-columns: 1fr;
-    }
-    .flow-pill,
-    .lan-pill {
-      font-size: 0.75rem;
-      padding: 4px 8px;
-      flex-wrap: wrap;
-    }
-  }
-
-  /* Respect reduced motion */
-  @media (prefers-reduced-motion: reduce) {
-    .status-pulse,
-    .sparkline-dot,
-    .pulse-tx,
-    .pulse-rx,
-    .term-cursor {
-      animation: none !important;
     }
   }
 </style>
-
-<script>
-  // Features section interactive telemetry & animation observer
-  (() => {
-    const section = document.getElementById('features');
-    if (!section) return;
-
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReducedMotion) return;
-
-    const sparkPath = section.querySelector<SVGPathElement>('.sparkline-path');
-    const sparkDot = section.querySelector<SVGCircleElement>('.sparkline-dot');
-    const cpuStat = section.querySelector<HTMLElement>('.metric-cpu');
-
-    // Simulation points for CPU sparkline
-    let step = 0;
-    let animFrameId: number | null = null;
-    let isVisible = false;
-
-    const updateTelemetry = () => {
-      if (!isVisible || document.hidden) return;
-
-      step++;
-      // Subtle sine wave variation with jitter for realistic telemetry stream
-      const load = 34 + Math.sin(step * 0.4) * 8 + (Math.random() * 4 - 2);
-      const clampedLoad = Math.max(20, Math.min(85, load)).toFixed(1);
-
-      if (cpuStat) {
-        cpuStat.textContent = `${clampedLoad}%`;
-      }
-
-      if (sparkPath && sparkDot) {
-        const yEnd = 24 - (Number(clampedLoad) / 100) * 20;
-        const yMid1 = 18 + Math.sin(step * 0.3) * 6;
-        const yMid2 = 14 + Math.cos(step * 0.4) * 6;
-        sparkPath.setAttribute(
-          'd',
-          `M 0,22 Q 20,${yMid1} 40,16 T 80,${yMid2} T 120,${18 + Math.sin(step) * 4} T 160,${yMid1} T 200,${yMid2} T 240,${yEnd.toFixed(1)}`
-        );
-        sparkDot.setAttribute('cy', yEnd.toFixed(1));
-      }
-    };
-
-    let intervalId: number | null = null;
-
-    const startLoop = () => {
-      if (!intervalId) {
-        intervalId = window.setInterval(updateTelemetry, 1600);
-      }
-    };
-
-    const stopLoop = () => {
-      if (intervalId) {
-        clearInterval(intervalId);
-        intervalId = null;
-      }
-    };
-
-    // IntersectionObserver to only animate when in view
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          isVisible = entry.isIntersecting;
-          if (isVisible && !document.hidden) {
-            startLoop();
-          } else {
-            stopLoop();
-          }
-        });
-      },
-      { threshold: 0.1 }
-    );
-
-    observer.observe(section);
-
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden) {
-        stopLoop();
-      } else if (isVisible) {
-        startLoop();
-      }
-    });
-  })();
-</script>

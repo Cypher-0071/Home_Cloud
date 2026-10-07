@@ -1,50 +1,78 @@
 /* ==========================================================================
-   Home Cloud — Landing design tokens
-   Direction: "Paper & Signal" — an engineering spec sheet printed on warm
-   paper, with a single vermilion signal colour and a dark "night shift"
-   surface for the live product demo.
+   Home Cloud — Design Tokens
+   Direction: "The Quiet Server" — A distinct, original dark-themed aesthetic
+   authentic to Home Cloud: a personal Linux server humming reliably in the
+   corner of your home. Deep obsidian surfaces, ambient grain, dot-matrix
+   telemetry, tactile hardware indicators, and razor-sharp modern typography.
    ========================================================================== */
 
 :root {
-  /* ---- Paper (light, default surface) ---- */
-  --paper: #f1ede4;
-  --paper-2: #e8e3d7;       /* recessed panels, code wells */
-  --paper-3: #ddd7c8;       /* pressed / hover on recessed */
-  --ink: #15130f;           /* primary text, strong rules */
-  --ink-2: #4a463e;         /* body copy */
-  --ink-3: #6f6a5f;         /* captions, labels (AA on paper) */
-  --rule: rgb(21 19 15 / 0.14);
-  --rule-strong: rgb(21 19 15 / 0.32);
+  /* ---- Canvas & Obsidian Hardware Surfaces ---- */
+  --canvas: #090a0d;
+  --surface-base: #0d0f14;        /* Primary page surface */
+  --surface-card: #13161f;        /* Cards, panels, spec wells */
+  --surface-card-hover: #191d28;  /* Hover / elevated states */
+  --surface-recessed: #08090c;    /* Deep recessed wells, code slots */
+  --surface-overlay: #1e2330;     /* Tooltips, floating menus */
 
-  /* ---- Signal (the only accent) ---- */
-  --signal: #ff4d17;        /* fills, dots, graphics */
-  --signal-ink: #c2380b;    /* signal used as TEXT on paper (AA) */
-  --signal-soft: rgb(255 77 23 / 0.12);
+  /* Aliased for full backward compatibility across all components */
+  --paper: var(--surface-base);
+  --paper-2: var(--surface-card);
+  --paper-3: var(--surface-card-hover);
 
-  /* ---- Status ---- */
-  --ok: #1f7a55;            /* running / healthy on paper */
-  --ok-night: #5bd68a;      /* running / healthy on night */
-  --warn: #b7791f;
+  /* ---- Ink & Type (High Contrast, Legible, Calm) ---- */
+  --text-primary: #f4f5f7;        /* Crisp silver-white headings & titles */
+  --text-secondary: #9da3af;      /* Calm warm-slate body copy */
+  --text-tertiary: #6b7280;       /* Muted technical annotations & labels */
+  --text-muted: #4b5563;          /* Faint coordinates, disabled states */
 
-  /* ---- Night (dark surface for demo + footer) ---- */
-  --night: #0f100d;
-  --night-2: #171813;       /* window bodies */
-  --night-3: #22231d;       /* chrome, taskbar */
-  --night-rule: rgb(241 237 228 / 0.1);
-  --night-text: #ece8de;
-  --night-text-2: #a39e92;
+  --ink: var(--text-primary);
+  --ink-2: var(--text-secondary);
+  --ink-3: var(--text-tertiary);
 
-  /* ---- Type ---- */
-  --font-display: 'Instrument Serif', 'Iowan Old Style', Georgia, serif;
-  --font-sans: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono Variable', ui-monospace, 'SFMono-Regular', monospace;
+  /* ---- Rules & Milled Hardware Edges ---- */
+  --rule: rgba(255, 255, 255, 0.08);
+  --rule-strong: rgba(255, 255, 255, 0.16);
+  --rule-subtle: rgba(255, 255, 255, 0.04);
+  --rule-glow: rgba(255, 92, 40, 0.25);
 
-  --step--1: clamp(0.8rem, 0.78rem + 0.1vw, 0.86rem);
-  --step-0: clamp(1rem, 0.96rem + 0.2vw, 1.125rem);
-  --step-1: clamp(1.2rem, 1.1rem + 0.5vw, 1.5rem);
-  --step-2: clamp(1.6rem, 1.3rem + 1.2vw, 2.4rem);
-  --step-3: clamp(2.2rem, 1.6rem + 2.8vw, 4rem);
-  --step-4: clamp(3rem, 1.8rem + 6vw, 7.5rem);   /* hero display */
+  /* ---- Signal & Telemetry (Warm Phosphor Cadmium & Active Green) ---- */
+  --signal: #ff5c28;              /* Hardware signal accent / CTA */
+  --signal-bright: #ff7748;       /* Highlight signal */
+  --signal-ink: #ff6b35;          /* Text accent */
+  --signal-text: #ff733d;
+  --signal-soft: rgba(255, 92, 40, 0.12);
+  --signal-glow: rgba(255, 92, 40, 0.28);
+
+  /* ---- Hardware Status Indicators ---- */
+  --ok: #10b981;                  /* Emerald LED: live, healthy, connected */
+  --ok-glow: rgba(16, 185, 129, 0.35);
+  --ok-soft: rgba(16, 185, 129, 0.12);
+  --ok-night: #34d399;
+  --warn: #f59e0b;                /* Amber LED: alert, warning, lock wait */
+  --warn-glow: rgba(245, 158, 11, 0.3);
+  --warn-soft: rgba(245, 158, 11, 0.12);
+
+  /* ---- Night surfaces (unified with page dark aesthetic) ---- */
+  --night: #090a0d;
+  --night-2: #12151d;
+  --night-3: #181c26;
+  --night-rule: rgba(255, 255, 255, 0.08);
+  --night-text: #f4f5f7;
+  --night-text-2: #9da3af;
+
+  /* ---- Refined Typography (Geist Variable + JetBrains Mono + Instrument Serif) ---- */
+  --font-display: 'Geist Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: 'Geist Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, 'SFMono-Regular', Menlo, Monaco, Consolas, monospace;
+  --font-serif: 'Instrument Serif', Georgia, 'Times New Roman', serif;
+
+  --step--1: clamp(0.78rem, 0.75rem + 0.12vw, 0.85rem);
+  --step-0: clamp(0.95rem, 0.92rem + 0.2vw, 1.08rem);
+  --step-1: clamp(1.15rem, 1.05rem + 0.5vw, 1.45rem);
+  --step-2: clamp(1.5rem, 1.3rem + 1vw, 2.2rem);
+  --step-3: clamp(2rem, 1.6rem + 2.4vw, 3.4rem);
+  --step-4: clamp(2.8rem, 2rem + 5vw, 5.8rem);   /* hero display */
 
   /* ---- Space & layout ---- */
   --space-1: 0.25rem;
@@ -62,16 +90,19 @@
   --gutter: clamp(1.25rem, 0.8rem + 2vw, 2.5rem);
   --radius-sm: 4px;
   --radius: 8px;
-  --radius-lg: 14px;
+  --radius-lg: 12px;
 
   /* ---- Motion ---- */
-  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
-  --dur-fast: 160ms;
-  --dur: 320ms;
-  --dur-slow: 700ms;
+  --dur-fast: 140ms;
+  --dur: 260ms;
+  --dur-slow: 600ms;
 
-  --shadow-window: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 24px 60px -20px rgb(0 0 0 / 0.65),
-    0 8px 20px -8px rgb(0 0 0 / 0.5);
-  --shadow-paper: 0 1px 0 rgb(255 255 255 / 0.6) inset, 0 18px 40px -24px rgb(21 19 15 / 0.35);
+  /* ---- Tactile Hardware Shadows ---- */
+  --shadow-window: 0 1px 0 rgba(255, 255, 255, 0.08) inset, 0 24px 60px -20px rgba(0, 0, 0, 0.85),
+    0 8px 24px -8px rgba(0, 0, 0, 0.7);
+  --shadow-paper: 0 1px 0 rgba(255, 255, 255, 0.08) inset, 0 18px 40px -24px rgba(0, 0, 0, 0.75);
+  --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.06) inset, 0 12px 30px -10px rgba(0, 0, 0, 0.65);
+  --shadow-led: 0 0 10px var(--ok-glow);
 }
