@@ -500,7 +500,18 @@ Nothing rejected yet.
 
 # 16. Locked Decisions
 
-Nothing locked yet.
+## Locked — Global Canvas & Color Foundation
+
+- Primary canvas: near-black neutral.
+- Surface hierarchy: black → graphite → dark gray.
+- No blue/blue-gray bias in neutral surfaces.
+- No purple/cyan decorative accents.
+- No ambient colored gradients.
+- Orange (`#ff6a3d`) is a signal color, not an ambient brand color.
+- Green is reserved for genuine system/health states.
+- Grain is subtle and neutral.
+- Future sections must inherit the global surface system rather than inventing their own dark colors.
+- The canvas/background is LOCKED unless a future design decision explicitly supersedes this section.
 
 ---
 
