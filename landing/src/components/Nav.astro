@@ -10,29 +10,23 @@
   </div>
 
   <div class="container nav-container">
-    <!-- Brand + Live Hardware Status -->
+    <!-- Brand -->
     <div class="nav-brand-group">
       <a href="#hero" class="nav-brand" aria-label="Home Cloud — Home">
         <div class="nav-brand-icon">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="2" y="4" width="20" height="7" rx="2"></rect>
-            <rect x="2" y="13" width="20" height="7" rx="2"></rect>
-            <circle cx="6" cy="7.5" r="1" fill="currentColor"></circle>
-            <circle cx="6" cy="16.5" r="1" fill="currentColor"></circle>
-            <path d="M18 7.5h.01"></path>
-            <path d="M18 16.5h.01"></path>
-          </svg>
+          <img
+            src="/favicon.svg"
+            alt="Home Cloud"
+            width="32"
+            height="32"
+            class="nav-brand-favicon"
+            loading="eager"
+            decoding="async"
+          />
           <span class="brand-glow"></span>
         </div>
         <span class="nav-brand-name">Home Cloud</span>
       </a>
-
-      <div class="nav-status-pill" title="Server daemon status">
-        <span class="status-dot"></span>
-        <span class="status-host">CLOSET.LAN</span>
-        <span class="status-sep">·</span>
-        <span class="status-state">ONLINE</span>
-      </div>
     </div>
 
     <!-- Desktop Navigation Links -->
@@ -83,12 +77,6 @@
   <!-- Mobile Drawer -->
   <div id="mobile-nav" class="mobile-drawer" aria-hidden="true">
     <div class="mobile-drawer-content">
-      <div class="mobile-status-row">
-        <span class="status-dot"></span>
-        <span class="status-host">CLOSET.LAN</span>
-        <span class="status-sep">·</span>
-        <span class="status-state">ONLINE (PORT 3000)</span>
-      </div>
       <nav class="mobile-nav-links">
         <a href="#showcase" class="mobile-link">Interactive Preview</a>
         <a href="#craft" class="mobile-link">Hardware Craft</a>
@@ -169,21 +157,38 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 34px;
-    height: 34px;
-    border-radius: var(--radius);
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: var(--signal);
+    width: 32px;
+    height: 32px;
+    border-radius: 7px;
+    flex-shrink: 0;
+  }
+
+  .nav-brand-favicon {
+    width: 32px;
+    height: 32px;
+    border-radius: 7px;
+    display: block;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1), 0 2px 6px rgba(0, 0, 0, 0.4);
+    transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
   }
 
   .brand-glow {
     position: absolute;
-    inset: 0;
-    border-radius: var(--radius);
+    inset: -2px;
+    border-radius: 9px;
     box-shadow: 0 0 16px var(--signal-glow);
-    opacity: 0.6;
+    opacity: 0.45;
     pointer-events: none;
+    transition: opacity var(--dur-fast) var(--ease-out);
+  }
+
+  .nav-brand:hover .nav-brand-favicon {
+    transform: scale(1.04);
+    box-shadow: 0 0 0 1px rgba(255, 92, 40, 0.4), 0 4px 12px rgba(0, 0, 0, 0.6);
+  }
+
+  .nav-brand:hover .brand-glow {
+    opacity: 0.85;
   }
 
   .nav-brand-name {
@@ -193,53 +198,6 @@
     color: var(--text-primary);
   }
 
-  .nav-status-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 3px 10px;
-    border-radius: 999px;
-    background: rgba(16, 185, 129, 0.08);
-    border: 1px solid rgba(16, 185, 129, 0.2);
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    letter-spacing: 0.04em;
-    color: var(--ok-night);
-  }
-
-  .status-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--ok);
-    box-shadow: 0 0 8px var(--ok-glow);
-    animation: statusPulse 2.8s ease-in-out infinite;
-  }
-
-  @keyframes statusPulse {
-    0%, 100% {
-      opacity: 1;
-      transform: scale(1);
-    }
-    50% {
-      opacity: 0.45;
-      transform: scale(0.85);
-    }
-  }
-
-  .status-host {
-    font-weight: 600;
-    color: #e2e8f0;
-  }
-
-  .status-sep {
-    color: rgba(255, 255, 255, 0.2);
-  }
-
-  .status-state {
-    color: var(--ok);
-    font-weight: 500;
-  }
 
   .nav-links {
     display: flex;
@@ -364,19 +322,6 @@
     }
   }
 
-  .mobile-status-row {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 12px;
-    margin-bottom: var(--space-4);
-    border-radius: 999px;
-    background: rgba(16, 185, 129, 0.08);
-    border: 1px solid rgba(16, 185, 129, 0.2);
-    font-family: var(--font-mono);
-    font-size: 0.76rem;
-  }
-
   .mobile-nav-links {
     display: flex;
     flex-direction: column;
@@ -422,8 +367,7 @@
 
   @media (max-width: 860px) {
     .nav-links,
-    .nav-gh-link,
-    .nav-status-pill {
+    .nav-gh-link {
       display: none;
     }
     .nav-toggle {

@@ -7,10 +7,6 @@
 <section id="features" class="features-section">
   <div class="container features-container">
     <div class="features-header reveal">
-      <div class="eyebrow-pill">
-        <span class="pill-dot"></span>
-        <span>Capabilities</span>
-      </div>
       <h2 class="features-title">
         Engineered for real self-hosting.<br />
         <span class="font-serif-italic">Built without the clutter.</span>
@@ -32,7 +28,6 @@
               <line x1="12" y1="19" x2="20" y2="19"></line>
             </svg>
           </div>
-          <span class="card-tag">Host Shell</span>
         </div>
 
         <h3 class="card-title">Real PTY Terminal in Any Browser</h3>
@@ -69,7 +64,6 @@
               <line x1="12" y1="17" x2="12" y2="21"></line>
             </svg>
           </div>
-          <span class="card-tag">Containers</span>
         </div>
 
         <h3 class="card-title">Docker Orchestration Without Overhead</h3>
@@ -85,19 +79,19 @@
             <span class="mini-status-led"></span>
             <span class="mini-name">nextcloud</span>
             <span class="mini-metric">284 MB</span>
-            <span class="mini-badge ok">Healthy</span>
+            <span class="mini-state">running</span>
           </div>
           <div class="docker-mini-row">
             <span class="mini-status-led"></span>
             <span class="mini-name">plex-server</span>
             <span class="mini-metric">512 MB</span>
-            <span class="mini-badge ok">Healthy</span>
+            <span class="mini-state">running</span>
           </div>
           <div class="docker-mini-row">
             <span class="mini-status-led"></span>
             <span class="mini-name">postgres-16</span>
             <span class="mini-metric">146 MB</span>
-            <span class="mini-badge ok">Healthy</span>
+            <span class="mini-state">running</span>
           </div>
         </div>
       </div>
@@ -111,7 +105,6 @@
               <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
             </svg>
           </div>
-          <span class="card-tag">Filesystem</span>
         </div>
 
         <h3 class="card-title">Native Ext4 & ZFS Storage Workspace</h3>
@@ -145,7 +138,6 @@
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
             </svg>
           </div>
-          <span class="card-tag">Zero-Trust</span>
         </div>
 
         <h3 class="card-title">Encrypted Cloudflare Tunnel</h3>
@@ -188,29 +180,7 @@
     margin-bottom: var(--space-7);
   }
 
-  .eyebrow-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 4px 12px;
-    border-radius: 999px;
-    background: rgba(255, 92, 40, 0.08);
-    border: 1px solid rgba(255, 92, 40, 0.2);
-    font-size: 0.76rem;
-    font-weight: 600;
-    color: var(--signal-text);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    margin-bottom: var(--space-3);
-  }
 
-  .pill-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--signal);
-    box-shadow: 0 0 6px var(--signal-glow);
-  }
 
   .features-title {
     font-family: var(--font-display);
@@ -304,15 +274,7 @@
     border-color: rgba(16, 185, 129, 0.2);
   }
 
-  .card-tag {
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
-    padding: 3px 10px;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    color: var(--text-tertiary);
-  }
+
 
   .card-title {
     font-size: 1.22rem;
@@ -400,13 +362,9 @@
 
   .mini-name { color: var(--text-primary); font-weight: 500; }
   .mini-metric { color: var(--text-tertiary); }
-  .mini-badge {
-    padding: 1px 6px;
-    border-radius: 4px;
-    font-size: 0.68rem;
-  }
-  .mini-badge.ok {
-    background: rgba(16, 185, 129, 0.12);
+  .mini-state {
+    font-size: 0.72rem;
+    font-family: var(--font-mono);
     color: var(--ok-night);
   }
 

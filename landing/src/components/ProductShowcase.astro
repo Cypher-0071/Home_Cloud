@@ -8,10 +8,6 @@
   <div class="container showcase-container">
     <!-- Section Header -->
     <div class="showcase-header reveal">
-      <div class="eyebrow-pill">
-        <span class="pill-dot"></span>
-        <span>Interactive Web Console</span>
-      </div>
       <h2 class="showcase-title">
         The control plane designed for <span class="font-serif-italic">quiet reliability.</span>
       </h2>
@@ -31,13 +27,12 @@
           <span class="dot dot-expand"></span>
         </div>
 
-        <!-- Host identity chip -->
+        <!-- Host identity -->
         <div class="chrome-host">
           <span class="host-icon">
             <svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor"><path d="M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2zm4 4a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm0 4a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm0 4a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm3-7h6v-2H7v2zm0 4h6v-2H7v2zm0 4h6v-2H7v2z"/></svg>
           </span>
           <span class="host-name">closet-node-01.lan</span>
-          <span class="host-badge">TLS 1.3</span>
         </div>
 
         <!-- Interactive View Switcher Tabs -->
@@ -160,9 +155,10 @@
                 <span class="info-title">Docker Engine 27.2</span>
                 <span class="info-sub">Bridge network `homecloud-net` · Zero external ports opened</span>
               </div>
-              <div class="containers-summary-chips">
-                <span class="sum-chip ok"><span class="chip-led"></span> <span id="containers-running-count">4</span> Running</span>
-                <span class="sum-chip"><span class="chip-led-dim"></span> 0 Exited</span>
+              <div class="containers-summary-meta mono">
+                <span><span id="containers-running-count">4</span> active</span>
+                <span class="summary-sep">·</span>
+                <span>0 exited</span>
               </div>
             </div>
 
@@ -527,29 +523,7 @@
     margin-bottom: var(--space-6);
   }
 
-  .eyebrow-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 4px 12px;
-    border-radius: 999px;
-    background: rgba(255, 92, 40, 0.08);
-    border: 1px solid rgba(255, 92, 40, 0.2);
-    font-size: 0.78rem;
-    font-weight: 600;
-    color: var(--signal-text);
-    margin-bottom: var(--space-3);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-  }
 
-  .pill-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--signal);
-    box-shadow: 0 0 6px var(--signal-glow);
-  }
 
   .showcase-title {
     font-family: var(--font-display);
