@@ -1,11 +1,11 @@
 ---
 // landing/src/pages/index.astro
-// Rebuilt from scratch with breathable, dark-themed obsidian architecture:
-// Hero -> Interactive Product Showcase -> Quiet Hardware Craft -> Subsystem Features -> 3-Step Setup -> Footer
+// Hero -> Quiet Hardware Craft -> Subsystem Features -> 3-Step Setup -> Footer
+// NOTE: ProductShowcase (Interactive Preview) removed from flow in Phase 2A.
+// The component file is kept for later concept reuse; it is not rendered.
 import Base from '../layouts/Base.astro';
 import Nav from '../components/Nav.astro';
 import Hero from '../components/Hero.astro';
-import ProductShowcase from '../components/ProductShowcase.astro';
 import QuietCraft from '../components/QuietCraft.astro';
 import Features from '../components/Features.astro';
 import Setup from '../components/Setup.astro';
@@ -16,7 +16,6 @@ import Footer from '../components/Footer.astro';
   <Nav />
   <main id="main-content">
     <Hero />
-    <ProductShowcase />
     <QuietCraft />
     <Features />
     <Setup />

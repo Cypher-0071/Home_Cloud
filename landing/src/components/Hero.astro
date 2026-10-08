@@ -5,12 +5,6 @@
 ---
 
 <section id="hero" class="hero-section">
-  <!-- Ambient background glow elements -->
-  <div class="hero-ambient-glow" aria-hidden="true">
-    <div class="glow-orb glow-warm"></div>
-    <div class="glow-orb glow-emerald"></div>
-  </div>
-
   <div class="container hero-container">
     <!-- Main Headline -->
     <h1 class="hero-title reveal">
@@ -60,12 +54,6 @@
 
     <!-- Call to action buttons -->
     <div class="hero-actions-row reveal">
-      <a href="#showcase" class="btn-primary-hero">
-        <span>Try Interactive Preview</span>
-        <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M6 3l5 5-5 5"></path>
-        </svg>
-      </a>
       <a href="https://github.com/Cypher-0071/Home_Cloud" target="_blank" rel="noopener noreferrer" class="btn-secondary-hero">
         <svg viewBox="0 0 16 16" width="15" height="15" fill="currentColor">
           <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8Z"></path>
@@ -78,28 +66,28 @@
     <div class="hero-strip reveal">
       <div class="strip-item">
         <span class="strip-icon">
-          <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="var(--ok)" stroke-width="2"><circle cx="8" cy="8" r="6"/><path d="M5.5 8l2 2 3.5-4"/></svg>
+          <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="8" r="6"/><path d="M5.5 8l2 2 3.5-4"/></svg>
         </span>
         <span class="strip-text">Zero Open Ports</span>
       </div>
       <div class="strip-sep">·</div>
       <div class="strip-item">
         <span class="strip-icon">
-          <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="var(--signal)" stroke-width="2"><path d="M2 13h12M4 10V6a4 4 0 0 1 8 0v4"/></svg>
+          <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 13h12M4 10V6a4 4 0 0 1 8 0v4"/></svg>
         </span>
         <span class="strip-text">Cloudflare Tunnel Edge</span>
       </div>
       <div class="strip-sep">·</div>
       <div class="strip-item">
         <span class="strip-icon">
-          <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="#60a5fa" stroke-width="2"><rect x="2" y="3" width="12" height="10" rx="2"/><path d="M8 7v2M6 8h4"/></svg>
+          <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="12" height="10" rx="2"/><path d="M8 7v2M6 8h4"/></svg>
         </span>
         <span class="strip-text">Docker & PTY Terminal</span>
       </div>
       <div class="strip-sep">·</div>
       <div class="strip-item">
         <span class="strip-icon">
-          <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="#a78bfa" stroke-width="2"><path d="M3 3h10v10H3z"/><circle cx="8" cy="8" r="2"/></svg>
+          <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h10v10H3z"/><circle cx="8" cy="8" r="2"/></svg>
         </span>
         <span class="strip-text">Self-Hosted Ext4 / NVMe</span>
       </div>
@@ -113,40 +101,6 @@
     padding-top: clamp(4rem, 6vw, 7.5rem);
     padding-bottom: clamp(4rem, 6vw, 6.5rem);
     overflow: hidden;
-  }
-
-  .hero-ambient-glow {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    z-index: 0;
-    overflow: hidden;
-  }
-
-  .glow-orb {
-    position: absolute;
-    border-radius: 50%;
-    filter: blur(120px);
-    opacity: 0.28;
-    max-width: 100vw;
-  }
-
-  .glow-warm {
-    top: -15%;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 600px;
-    height: 400px;
-    background: radial-gradient(circle, var(--signal) 0%, rgba(255, 92, 40, 0) 70%);
-  }
-
-  .glow-emerald {
-    top: 30%;
-    right: 5%;
-    width: 400px;
-    height: 350px;
-    background: radial-gradient(circle, var(--ok) 0%, rgba(16, 185, 129, 0) 70%);
-    opacity: 0.12;
   }
 
   .hero-container {
@@ -175,9 +129,7 @@
   }
 
   .hero-title-accent {
-    background: linear-gradient(135deg, #ffffff 30%, #9ca3af 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    color: inherit;
     font-weight: 500;
   }
 
@@ -199,12 +151,9 @@
   .install-pill {
     display: flex;
     align-items: center;
-    background: rgba(13, 16, 22, 0.95);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.08) inset,
-      0 12px 32px -8px rgba(0, 0, 0, 0.7),
-      0 0 20px -8px var(--signal-glow);
+    background: var(--hc-surface-2);
+    border: 1px solid var(--hc-border-default);
+    box-shadow: none;
     border-radius: 12px;
     padding: 6px 8px 6px 16px;
     min-width: 0;
@@ -214,11 +163,8 @@
 
   .install-pill:focus-within,
   .install-pill:hover {
-    border-color: rgba(255, 92, 40, 0.4);
-    box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.1) inset,
-      0 16px 36px -8px rgba(0, 0, 0, 0.8),
-      0 0 24px -6px var(--signal-glow);
+    border-color: var(--hc-border-strong);
+    box-shadow: none;
   }
 
   .pill-prefix {
@@ -232,7 +178,7 @@
     font-family: var(--font-mono);
     font-size: 0.9rem;
     font-weight: 700;
-    color: var(--signal);
+    color: var(--hc-text-tertiary);
     user-select: none;
   }
 
@@ -253,7 +199,7 @@
   .pill-code {
     font-family: var(--font-mono);
     font-size: 0.88rem;
-    color: #e2e8f0;
+    color: var(--hc-text-primary);
     white-space: nowrap;
     letter-spacing: -0.01em;
   }
@@ -327,30 +273,6 @@
     flex-wrap: wrap;
   }
 
-  .btn-primary-hero {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 12px 26px;
-    border-radius: 999px;
-    background: #f4f5f7;
-    color: #090a0d;
-    font-size: 0.95rem;
-    font-weight: 600;
-    box-shadow:
-      0 1px 2px rgba(0, 0, 0, 0.3),
-      0 8px 24px -4px rgba(255, 255, 255, 0.15);
-    transition: all var(--dur-fast) var(--ease-out);
-  }
-
-  .btn-primary-hero:hover {
-    background: #ffffff;
-    box-shadow:
-      0 1px 2px rgba(0, 0, 0, 0.3),
-      0 12px 28px -4px rgba(255, 255, 255, 0.25);
-    transform: translateY(-2px);
-  }
-
   .btn-secondary-hero {
     display: inline-flex;
     align-items: center;
@@ -394,6 +316,7 @@
   .strip-icon {
     display: flex;
     align-items: center;
+    color: var(--hc-text-tertiary);
   }
 
   .strip-sep {
@@ -423,7 +346,6 @@
       width: 100%;
       gap: 10px;
     }
-    .btn-primary-hero,
     .btn-secondary-hero {
       width: 100%;
       justify-content: center;

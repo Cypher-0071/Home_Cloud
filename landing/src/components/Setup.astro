@@ -127,7 +127,7 @@
   .setup-section {
     position: relative;
     padding-block: clamp(4rem, 6vw, 7.5rem);
-    background: #090b0f;
+    background: var(--hc-canvas);
   }
 
   .setup-container {
@@ -147,11 +147,11 @@
     gap: 8px;
     padding: 4px 12px;
     border-radius: 999px;
-    background: rgba(255, 92, 40, 0.08);
-    border: 1px solid rgba(255, 92, 40, 0.2);
+    background: var(--hc-surface-2);
+    border: 1px solid var(--hc-border-default);
     font-size: 0.76rem;
     font-weight: 600;
-    color: var(--signal-text);
+    color: var(--hc-text-tertiary);
     text-transform: uppercase;
     letter-spacing: 0.06em;
     margin-bottom: var(--space-3);
@@ -161,8 +161,7 @@
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: var(--signal);
-    box-shadow: 0 0 6px var(--signal-glow);
+    background: var(--hc-text-tertiary);
   }
 
   .setup-title {
@@ -191,8 +190,8 @@
 
   .step-card {
     position: relative;
-    background: #0e1118;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--hc-surface-1);
+    border: 1px solid var(--hc-border-default);
     border-radius: 16px;
     padding: clamp(1.4rem, 2vw, 1.8rem);
     display: flex;
@@ -204,8 +203,8 @@
   }
 
   .step-card:hover {
-    border-color: rgba(255, 255, 255, 0.16);
-    background: #12151e;
+    border-color: var(--hc-border-strong);
+    background: var(--hc-surface-2);
     transform: translateY(-2px);
   }
 
@@ -259,8 +258,8 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    background: #07090c;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--hc-canvas);
+    border: 1px solid var(--hc-border-default);
     border-radius: 8px;
     padding: 10px 12px;
     margin-top: auto;
@@ -283,7 +282,7 @@
   .step-cmd {
     font-family: var(--font-mono);
     font-size: 0.75rem;
-    color: #e2e8f0;
+    color: var(--hc-text-primary);
     word-break: break-all;
     line-height: 1.45;
   }
@@ -307,28 +306,6 @@
     background: rgba(255, 255, 255, 0.16);
   }
 
-  .step-status-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 12px;
-    border-radius: 8px;
-    background: rgba(16, 185, 129, 0.08);
-    border: 1px solid rgba(16, 185, 129, 0.2);
-    font-size: 0.78rem;
-    color: var(--ok-night);
-    font-weight: 500;
-    margin-top: auto;
-  }
-
-  .chip-live-led {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--ok);
-    box-shadow: 0 0 6px var(--ok-glow);
-  }
-
   /* Installer Terminal Output */
   .installer-terminal-wrap {
     max-width: 900px;
@@ -336,11 +313,11 @@
   }
 
   .term-window {
-    background: #07090d;
-    border: 1px solid rgba(255, 255, 255, 0.09);
+    background: var(--hc-canvas);
+    border: 1px solid var(--hc-border-default);
     border-radius: 12px;
     overflow: hidden;
-    box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.75);
+    box-shadow: none;
   }
 
   .term-window-header {
@@ -348,8 +325,8 @@
     align-items: center;
     justify-content: space-between;
     padding: 10px 16px;
-    background: #0d1016;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    background: var(--hc-surface-1);
+    border-bottom: 1px solid var(--hc-border-subtle);
   }
 
   .term-dots {
@@ -373,7 +350,7 @@
   .term-tag {
     font-family: var(--font-mono);
     font-size: 0.7rem;
-    color: var(--signal-text);
+    color: var(--hc-text-tertiary);
   }
 
   .term-window-body {

@@ -1,108 +1,188 @@
 /* ==========================================================================
-   Home Cloud — Design Tokens
-   Direction: "The Quiet Server" — A distinct, original dark-themed aesthetic
-   authentic to Home Cloud: a personal Linux server humming reliably in the
-   corner of your home. Deep obsidian surfaces, ambient grain, dot-matrix
-   telemetry, tactile hardware indicators, and razor-sharp modern typography.
+   Home Cloud — Global Visual Foundation (Phase 1)
+   Direction: QUIET INFRASTRUCTURE — precise, calm, technical, sparse.
+   This file is the single source of truth for color, type, space,
+   geometry, borders, shadows, and motion. Section components must use
+   these tokens and must not introduce hardcoded colors.
+   Old token names are kept below as compatibility aliases so existing
+   sections keep working until they are redesigned one by one.
    ========================================================================== */
 
 :root {
-  /* ---- Canvas & Obsidian Hardware Surfaces ---- */
-  --canvas: #090a0d;
-  --surface-base: #0d0f14;        /* Primary page surface */
-  --surface-card: #13161f;        /* Cards, panels, spec wells */
-  --surface-card-hover: #191d28;  /* Hover / elevated states */
-  --surface-recessed: #08090c;    /* Deep recessed wells, code slots */
-  --surface-overlay: #1e2330;     /* Tooltips, floating menus */
+  /* ---- Canvas & surfaces (small deliberate hierarchy) ----
+     Neutral near-black: black → graphite → dark gray. No blue hue. */
+  --hc-canvas: #050505;
+  --hc-surface-1: #090909;
+  --hc-surface-2: #0d0d0d;
+  --hc-surface-3: #121212;
 
-  /* Aliased for full backward compatibility across all components */
-  --paper: var(--surface-base);
-  --paper-2: var(--surface-card);
-  --paper-3: var(--surface-card-hover);
+  /* ---- Text (neutral grays) ---- */
+  --hc-text-primary: #f5f5f5;
+  --hc-text-secondary: #a1a1a1;
+  --hc-text-tertiary: #6f6f6f;
+  --hc-text-muted: #4a4a4a;
 
-  /* ---- Ink & Type (High Contrast, Legible, Calm) ---- */
-  --text-primary: #f4f5f7;        /* Crisp silver-white headings & titles */
-  --text-secondary: #9da3af;      /* Calm warm-slate body copy */
-  --text-tertiary: #6b7280;       /* Muted technical annotations & labels */
-  --text-muted: #4b5563;          /* Faint coordinates, disabled states */
+  /* ---- Signal accent (reserved, not decoration) ---- */
+  --hc-accent: #ff6a3d;
+  --hc-accent-soft: rgba(255, 106, 61, 0.12);
+  --hc-accent-faint: rgba(255, 106, 61, 0.06);
 
-  --ink: var(--text-primary);
-  --ink-2: var(--text-secondary);
-  --ink-3: var(--text-tertiary);
+  /* ---- Success (genuine health/status only) ---- */
+  --hc-success: #36c98f;
+  --hc-success-soft: rgba(54, 201, 143, 0.12);
 
-  /* ---- Rules & Milled Hardware Edges ---- */
-  --rule: rgba(255, 255, 255, 0.08);
-  --rule-strong: rgba(255, 255, 255, 0.16);
-  --rule-subtle: rgba(255, 255, 255, 0.04);
-  --rule-glow: rgba(255, 92, 40, 0.25);
+  /* ---- Warning (kept for genuine warning semantics) ---- */
+  --hc-warn: #f59e0b;
+  --hc-warn-soft: rgba(245, 158, 11, 0.12);
 
-  /* ---- Signal & Telemetry (Warm Phosphor Cadmium & Active Green) ---- */
-  --signal: #ff5c28;              /* Hardware signal accent / CTA */
-  --signal-bright: #ff7748;       /* Highlight signal */
-  --signal-ink: #ff6b35;          /* Text accent */
-  --signal-text: #ff733d;
-  --signal-soft: rgba(255, 92, 40, 0.12);
-  --signal-glow: rgba(255, 92, 40, 0.28);
+  /* ---- Borders (structural, neutral white, no glow, no gradients) ---- */
+  --hc-border-subtle: rgba(255, 255, 255, 0.06);
+  --hc-border-default: rgba(255, 255, 255, 0.09);
+  --hc-border-strong: rgba(255, 255, 255, 0.13);
 
-  /* ---- Hardware Status Indicators ---- */
-  --ok: #10b981;                  /* Emerald LED: live, healthy, connected */
-  --ok-glow: rgba(16, 185, 129, 0.35);
-  --ok-soft: rgba(16, 185, 129, 0.12);
-  --ok-night: #34d399;
-  --warn: #f59e0b;                /* Amber LED: alert, warning, lock wait */
-  --warn-glow: rgba(245, 158, 11, 0.3);
-  --warn-soft: rgba(245, 158, 11, 0.12);
+  /* ---- Typography stacks ---- */
+  --hc-font-display: 'Geist Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --hc-font-sans: 'Geist Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --hc-font-mono: 'JetBrains Mono Variable', ui-monospace, 'SFMono-Regular', Menlo, Monaco, Consolas, monospace;
+  --hc-font-serif: 'Instrument Serif', Georgia, 'Times New Roman', serif;
 
-  /* ---- Night surfaces (unified with page dark aesthetic) ---- */
-  --night: #090a0d;
-  --night-2: #12151d;
-  --night-3: #181c26;
-  --night-rule: rgba(255, 255, 255, 0.08);
-  --night-text: #f4f5f7;
-  --night-text-2: #9da3af;
+  /* ---- Unified fluid type scale ---- */
+  --hc-text-display-xl: clamp(4rem, 3rem + 5vw, 5.5rem);      /* 64–88px */
+  --hc-text-display-l: clamp(3rem, 2.5rem + 3vw, 4rem);       /* 48–64px */
+  --hc-text-heading: clamp(2.25rem, 1.8rem + 2.5vw, 3rem);    /* 36–48px */
+  --hc-text-subheading: clamp(1.5rem, 1.3rem + 1vw, 2rem);    /* 24–32px */
+  --hc-text-body: clamp(1rem, 0.95rem + 0.2vw, 1.125rem);      /* 16–18px */
+  --hc-text-small: clamp(0.8125rem, 0.8rem + 0.1vw, 0.875rem); /* 13–14px */
+  --hc-text-mono: clamp(0.6875rem, 0.68rem + 0.1vw, 0.8125rem);/* 11–13px */
 
-  /* ---- Refined Typography (Geist Variable + JetBrains Mono + Instrument Serif) ---- */
-  --font-display: 'Geist Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-sans: 'Geist Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: 'JetBrains Mono Variable', ui-monospace, 'SFMono-Regular', Menlo, Monaco, Consolas, monospace;
-  --font-serif: 'Instrument Serif', Georgia, 'Times New Roman', serif;
+  /* ---- Spacing scale ---- */
+  --hc-space-1: 4px;
+  --hc-space-2: 8px;
+  --hc-space-3: 12px;
+  --hc-space-4: 16px;
+  --hc-space-5: 24px;
+  --hc-space-6: 32px;
+  --hc-space-7: 48px;
+  --hc-space-8: 64px;
+  --hc-space-9: 96px;
+  --hc-space-10: 128px;
+  --hc-space-11: 160px;
+  --hc-section-pad: clamp(5rem, 3rem + 8vw, 9rem);
 
-  --step--1: clamp(0.78rem, 0.75rem + 0.12vw, 0.85rem);
-  --step-0: clamp(0.95rem, 0.92rem + 0.2vw, 1.08rem);
+  /* ---- Layout ---- */
+  --hc-container: 1200px;
+  --hc-gutter: clamp(20px, 4vw, 56px);
+
+  /* ---- Geometry (0/4/8/12; 16 reserved for large product surfaces) ---- */
+  --hc-radius-0: 0px;
+  --hc-radius-sm: 4px;
+  --hc-radius-md: 8px;
+  --hc-radius-lg: 12px;
+  --hc-radius-xl: 16px;
+
+  /* ---- Motion ---- */
+  --hc-duration-micro: 150ms;
+  --hc-duration-ui: 280ms;
+  --hc-duration-reveal: 650ms;
+  --hc-duration-large: 1000ms;
+  --hc-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* ---- Shadows (minimal; depth comes from tone/border/spacing) ---- */
+  --hc-shadow-none: none;
+  --hc-shadow-float: 0 8px 30px -12px rgba(0, 0, 0, 0.7);
+
+  /* ---- Background capabilities (quiet; full dot/shader systems come later) ---- */
+  --hc-grain-opacity: 0.032;
+  --hc-dot-color: rgba(255, 255, 255, 0.06);
+  --hc-grid-color: rgba(255, 255, 255, 0.04);
+
+  /* ======================================================================
+     Compatibility aliases — existing sections reference these names.
+     They map onto the new foundation with restrained glow values so old
+     sections render correctly without inheriting the old excessive glow.
+     Do not use these aliases in new work; use --hc-* directly.
+     ====================================================================== */
+  --canvas: var(--hc-canvas);
+  --surface-base: var(--hc-surface-1);
+  --surface-card: var(--hc-surface-2);
+  --surface-card-hover: var(--hc-surface-3);
+  --surface-recessed: var(--hc-canvas);
+  --surface-overlay: var(--hc-surface-3);
+  --paper: var(--hc-surface-1);
+  --paper-2: var(--hc-surface-2);
+  --paper-3: var(--hc-surface-3);
+
+  --text-primary: var(--hc-text-primary);
+  --text-secondary: var(--hc-text-secondary);
+  --text-tertiary: var(--hc-text-tertiary);
+  --text-muted: var(--hc-text-muted);
+  --ink: var(--hc-text-primary);
+  --ink-2: var(--hc-text-secondary);
+  --ink-3: var(--hc-text-tertiary);
+
+  --rule-subtle: var(--hc-border-subtle);
+  --rule: var(--hc-border-default);
+  --rule-strong: var(--hc-border-strong);
+  --rule-glow: var(--hc-accent-faint);
+
+  --signal: var(--hc-accent);
+  --signal-bright: var(--hc-accent);
+  --signal-ink: var(--hc-accent);
+  --signal-text: var(--hc-accent);
+  --signal-soft: var(--hc-accent-soft);
+  --signal-glow: var(--hc-accent-faint);
+
+  --ok: var(--hc-success);
+  --ok-night: var(--hc-success);
+  --ok-soft: var(--hc-success-soft);
+  --ok-glow: var(--hc-success-soft);
+  --warn: var(--hc-warn);
+  --warn-soft: var(--hc-warn-soft);
+  --warn-glow: var(--hc-warn-soft);
+
+  --night: var(--hc-canvas);
+  --night-2: var(--hc-surface-1);
+  --night-3: var(--hc-surface-2);
+  --night-rule: var(--hc-border-default);
+  --night-text: var(--hc-text-primary);
+  --night-text-2: var(--hc-text-secondary);
+
+  --font-display: var(--hc-font-display);
+  --font-sans: var(--hc-font-sans);
+  --font-mono: var(--hc-font-mono);
+  --font-serif: var(--hc-font-serif);
+
+  --step--1: var(--hc-text-small);
+  --step-0: var(--hc-text-body);
   --step-1: clamp(1.15rem, 1.05rem + 0.5vw, 1.45rem);
   --step-2: clamp(1.5rem, 1.3rem + 1vw, 2.2rem);
   --step-3: clamp(2rem, 1.6rem + 2.4vw, 3.4rem);
-  --step-4: clamp(2.8rem, 2rem + 5vw, 5.8rem);   /* hero display */
+  --step-4: clamp(2.8rem, 2rem + 5vw, 5.8rem);
 
-  /* ---- Space & layout ---- */
-  --space-1: 0.25rem;
-  --space-2: 0.5rem;
-  --space-3: 0.75rem;
-  --space-4: 1rem;
-  --space-5: 1.5rem;
-  --space-6: 2rem;
-  --space-7: 3rem;
-  --space-8: 4.5rem;
-  --space-9: 7rem;
-  --section-pad: clamp(4.5rem, 3rem + 7vw, 9rem);
+  --space-1: var(--hc-space-1);
+  --space-2: var(--hc-space-2);
+  --space-3: var(--hc-space-3);
+  --space-4: var(--hc-space-4);
+  --space-5: var(--hc-space-5);
+  --space-6: var(--hc-space-6);
+  --space-7: var(--hc-space-7);
+  --space-8: var(--hc-space-8);
+  --space-9: var(--hc-space-9);
+  --section-pad: var(--hc-section-pad);
+  --container: var(--hc-container);
+  --gutter: var(--hc-gutter);
+  --radius-sm: var(--hc-radius-sm);
+  --radius: var(--hc-radius-md);
+  --radius-lg: var(--hc-radius-lg);
 
-  --container: 1240px;
-  --gutter: clamp(1.25rem, 0.8rem + 2vw, 2.5rem);
-  --radius-sm: 4px;
-  --radius: 8px;
-  --radius-lg: 12px;
+  --ease-out: var(--hc-ease-out);
+  --ease-in-out: var(--hc-ease-out);
+  --dur-fast: var(--hc-duration-micro);
+  --dur: var(--hc-duration-ui);
+  --dur-slow: var(--hc-duration-reveal);
 
-  /* ---- Motion ---- */
-  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
-  --dur-fast: 140ms;
-  --dur: 260ms;
-  --dur-slow: 600ms;
-
-  /* ---- Tactile Hardware Shadows ---- */
-  --shadow-window: 0 1px 0 rgba(255, 255, 255, 0.08) inset, 0 24px 60px -20px rgba(0, 0, 0, 0.85),
-    0 8px 24px -8px rgba(0, 0, 0, 0.7);
-  --shadow-paper: 0 1px 0 rgba(255, 255, 255, 0.08) inset, 0 18px 40px -24px rgba(0, 0, 0, 0.75);
-  --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.06) inset, 0 12px 30px -10px rgba(0, 0, 0, 0.65);
-  --shadow-led: 0 0 10px var(--ok-glow);
+  --shadow-window: var(--hc-shadow-none);
+  --shadow-paper: var(--hc-shadow-none);
+  --shadow-card: var(--hc-shadow-none);
+  --shadow-led: none;
 }

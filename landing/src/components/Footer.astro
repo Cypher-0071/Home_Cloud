@@ -30,7 +30,6 @@
     <div class="footer-links-grid">
       <div class="link-col">
         <span class="link-col-title">Product</span>
-        <a href="#showcase" class="f-link">Interactive Console</a>
         <a href="#craft" class="f-link">Hardware Craft</a>
         <a href="#features" class="f-link">Subsystems</a>
         <a href="#setup" class="f-link">Quickstart Guide</a>
@@ -77,8 +76,8 @@
 <style>
   .footer-root {
     position: relative;
-    background: #06070a;
-    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    background: var(--hc-canvas);
+    border-top: 1px solid var(--hc-border-subtle);
     padding-top: clamp(3rem, 5vw, 5rem);
     padding-bottom: clamp(2rem, 3vw, 3.5rem);
     color: var(--text-secondary);
@@ -110,7 +109,7 @@
   }
 
   .footer-brand svg {
-    color: var(--signal);
+    color: var(--hc-text-secondary);
   }
 
   .footer-brand-name {
@@ -128,7 +127,7 @@
 
   .footer-rule {
     height: 1px;
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--hc-border-subtle);
     margin-bottom: var(--space-6);
   }
 
@@ -165,8 +164,8 @@
   }
 
   .footer-mini-cmd {
-    background: #0d1017;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--hc-surface-1);
+    border: 1px solid var(--hc-border-default);
     border-radius: 8px;
     padding: 8px 12px;
     display: flex;
@@ -177,7 +176,7 @@
   .footer-mini-cmd code {
     font-family: var(--font-mono);
     font-size: 0.74rem;
-    color: #e2e8f0;
+    color: var(--hc-text-primary);
   }
 
   .mini-cmd-link {

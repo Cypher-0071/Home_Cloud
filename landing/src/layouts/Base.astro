@@ -27,17 +27,22 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="theme-color" content="#090a0d" />
+    <meta name="theme-color" content="#050505" />
+    <meta name="color-scheme" content="dark" />
     <meta property="og:type" content="website" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
     <meta name="twitter:card" content="summary_large_image" />
+    <script is:inline>
+      document.documentElement.classList.add('js');
+    </script>
   </head>
   <body>
     <slot />
     <script>
-      // Shared reveal-on-scroll for any element with class="reveal".
+      // Foundation reveal architecture: JS-gated (html.js .reveal starts hidden),
+      // IntersectionObserver adds .is-visible once. No generic mount animation.
       const els = document.querySelectorAll<HTMLElement>('.reveal');
       if (!('IntersectionObserver' in window)) {
         els.forEach((el) => el.classList.add('is-visible'));
