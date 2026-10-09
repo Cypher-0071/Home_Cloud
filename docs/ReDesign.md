@@ -513,6 +513,12 @@ Nothing rejected yet.
 - Future sections must inherit the global surface system rather than inventing their own dark colors.
 - The canvas/background is LOCKED unless a future design decision explicitly supersedes this section.
 
+## Locked — Navbar Frosted Glass
+
+- Scoped exception to the glassmorphism avoidance: the floating navbar capsules (and mobile drawer) use frosted glass.
+- `blur(18px) saturate(1.3)` over translucent warm surfaces, subtle border, restrained shadow.
+- No page-wide glass, no glass on any other component. If glass appears anywhere else, it needs its own locked decision.
+
 ---
 
 # 17. Open Questions
