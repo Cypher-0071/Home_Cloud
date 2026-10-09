@@ -13,9 +13,40 @@ html {
   scroll-padding-top: 88px;
   background-color: var(--hc-canvas);
   color-scheme: dark;
-  overflow-x: hidden;
+  /* overflow-x: clip (not hidden): kills horizontal overflow without creating
+     a scroll container, so position:sticky keeps working page-wide. */
+  overflow-x: clip;
   max-width: 100vw;
   width: 100%;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+
+/* Modern overlay-style scrollbar: transparent rail, floating thumb */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.28);
+  border: 3px solid transparent;
+  background-clip: padding-box;
 }
 
 body {
@@ -29,7 +60,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  overflow-x: hidden;
+  overflow-x: clip;
   position: relative;
   min-height: 100vh;
 }
