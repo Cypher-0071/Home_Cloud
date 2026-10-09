@@ -1,12 +1,13 @@
 ---
 // landing/src/pages/index.astro
-// Hero -> Quiet Hardware Craft -> Subsystem Features -> 3-Step Setup -> Footer
+// Hero -> How It Works -> Subsystem Features -> 3-Step Setup -> Footer
 // NOTE: ProductShowcase (Interactive Preview) removed from flow in Phase 2A.
-// The component file is kept for later concept reuse; it is not rendered.
+// NOTE: QuietCraft (Hardware Craft) removed from flow per request.
+// Both component files are kept for later concept reuse; neither is rendered.
 import Base from '../layouts/Base.astro';
 import Nav from '../components/Nav.astro';
 import Hero from '../components/Hero.astro';
-import QuietCraft from '../components/QuietCraft.astro';
+import HowItWorks from '../components/HowItWorks.astro';
 import Features from '../components/Features.astro';
 import Setup from '../components/Setup.astro';
 import Footer from '../components/Footer.astro';
@@ -16,7 +17,7 @@ import Footer from '../components/Footer.astro';
   <Nav />
   <main id="main-content">
     <Hero />
-    <QuietCraft />
+    <HowItWorks />
     <Features />
     <Setup />
   </main>

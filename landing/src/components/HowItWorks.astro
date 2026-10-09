@@ -1,0 +1,537 @@
+---
+// landing/src/components/HowItWorks.astro
+// "How it works" — Griffin-style scroll story: sticky narrative rail on the
+// left (eyebrow, heading, three numbered stages on a progress line), one
+// continuous visual canvas on the right with a tall panel per stage.
+// Active stage follows scroll via IntersectionObserver; the rail fill tracks
+// section scroll continuously. No animation libraries, no elaborate scenes:
+// typography and restrained geometry carry the visuals.
+---
+
+<section id="how-it-works" class="hiw">
+  <div class="container hiw-cols">
+    <!-- Left: narrative + progress rail -->
+    <div class="hiw-rail">
+      <p class="hiw-eyebrow">HOW IT WORKS</p>
+      <h2 class="hiw-title">Your machine. Your tunnel. Your cloud.</h2>
+      <ol class="hiw-stages">
+        <span class="rail-track" aria-hidden="true"><span class="rail-fill" id="hiw-rail-fill"></span></span>
+        <li class="hiw-stage" data-active="true">
+          <a class="stage-link" href="#hiw-stage-1" data-stage="0">
+            <span class="stage-num" aria-hidden="true">01</span>
+            <span class="stage-text">
+              <span class="stage-heading">Run it at home</span>
+              <span class="stage-desc">Install Home Cloud on a spare Linux PC. The agent serves your dashboard and tools locally on port 3000.</span>
+            </span>
+          </a>
+        </li>
+        <li class="hiw-stage" data-active="false">
+          <a class="stage-link" href="#hiw-stage-2" data-stage="1">
+            <span class="stage-num" aria-hidden="true">02</span>
+            <span class="stage-text">
+              <span class="stage-heading">Connect outward</span>
+              <span class="stage-desc"><code>cloudflared</code> establishes an outbound tunnel to Cloudflare. No inbound router ports need to be opened.</span>
+            </span>
+          </a>
+        </li>
+        <li class="hiw-stage" data-active="false">
+          <a class="stage-link" href="#hiw-stage-3" data-stage="2">
+            <span class="stage-num" aria-hidden="true">03</span>
+            <span class="stage-text">
+              <span class="stage-heading">Access it anywhere</span>
+              <span class="stage-desc">Open your configured domain, authenticate with your passcode, and access your Home Cloud desktop from anywhere.</span>
+            </span>
+          </a>
+        </li>
+      </ol>
+    </div>
+
+    <!-- Right: one continuous canvas, one panel per stage -->
+    <div class="hiw-canvas">
+      <div class="hiw-panel" id="hiw-stage-1">
+        <p class="viz-caption" aria-hidden="true"><span>01</span>Run it at home</p>
+        <p class="viz-kicker">HOME CLOUD AGENT</p>
+        <p class="viz-giant">:3000</p>
+        <div class="viz-meta">
+          <p><strong>HOST</strong><span>SPARE LINUX PC</span></p>
+          <p><strong>ORIGIN</strong><span>LOCALHOST</span></p>
+        </div>
+      </div>
+
+      <div class="hiw-panel" id="hiw-stage-2">
+        <p class="viz-caption" aria-hidden="true"><span>02</span>Connect outward</p>
+        <p class="viz-giant viz-giant-outbound">OUTBOUND</p>
+        <div class="tunnel-bar" aria-hidden="true"><span class="tunnel-core"></span></div>
+        <div class="tunnel-ends">
+          <span>HOME PC</span>
+          <span class="tunnel-note">0 INBOUND ROUTER PORTS</span>
+          <span>CLOUDFLARE EDGE</span>
+        </div>
+      </div>
+
+      <div class="hiw-panel" id="hiw-stage-3">
+        <p class="viz-caption" aria-hidden="true"><span>03</span>Access it anywhere</p>
+        <div class="viz-browser">
+          <div class="viz-chrome">
+            <span class="chrome-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+            <span class="chrome-addr">dash.&lt;domain&gt;</span>
+            <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+              <rect x="3.5" y="7" width="9" height="6.5" rx="1"></rect>
+              <path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"></path>
+            </svg>
+          </div>
+          <p class="viz-auth"><span class="auth-dot" aria-hidden="true"></span>SHARED PASSCODE ACCEPTED</p>
+          <ul class="viz-apps">
+            <li><span>TERMINAL</span><span>PTY</span></li>
+            <li><span>FILES</span><span>DISK</span></li>
+            <li><span>METRICS</span><span>LIVE</span></li>
+            <li><span>DOCKER</span><span>ENGINE</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .hiw {
+    position: relative;
+    padding-block: var(--hc-section-pad);
+    background: transparent;
+    border-top: 1px solid var(--hc-border-subtle);
+  }
+
+  .hiw-cols {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    gap: clamp(40px, 5vw, 88px);
+    align-items: start;
+  }
+
+  /* ---- Left rail ---- */
+  .hiw-rail {
+    position: sticky;
+    top: 108px;
+  }
+
+  .hiw-eyebrow {
+    margin-bottom: var(--hc-space-4);
+    font-family: var(--hc-font-mono);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    color: var(--hc-text-tertiary);
+  }
+
+  .hiw-title {
+    margin-bottom: var(--hc-space-6);
+    font-family: var(--hc-font-display);
+    font-size: clamp(2rem, 1.6rem + 2vw, 3rem);
+    font-weight: 600;
+    line-height: 1.06;
+    letter-spacing: -0.025em;
+    color: var(--hc-text-primary);
+  }
+
+  .hiw-stages {
+    position: relative;
+    list-style: none;
+    margin: 0;
+    padding: 0 0 0 var(--hc-space-5);
+    display: flex;
+    flex-direction: column;
+    gap: var(--hc-space-6);
+  }
+
+  .rail-track {
+    position: absolute;
+    left: 0;
+    top: 6px;
+    bottom: 6px;
+    width: 1px;
+    background: var(--hc-border-subtle);
+  }
+
+  .rail-fill {
+    display: block;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.28);
+    transform: scaleY(0.33);
+    transform-origin: top;
+  }
+
+  .stage-link {
+    display: flex;
+    gap: var(--hc-space-4);
+    text-decoration: none;
+  }
+
+  .stage-num {
+    font-family: var(--hc-font-mono);
+    font-size: 12px;
+    color: var(--hc-text-muted);
+    padding-top: 3px;
+    transition: color 300ms var(--hc-ease-out);
+  }
+
+  .stage-text {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .stage-heading {
+    font-size: 1.02rem;
+    font-weight: 550;
+    letter-spacing: -0.01em;
+    color: var(--hc-text-secondary);
+    transition: color 300ms var(--hc-ease-out);
+  }
+
+  .stage-desc {
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: var(--hc-text-tertiary);
+    transition: color 300ms var(--hc-ease-out);
+  }
+
+  .stage-desc code {
+    font-family: var(--hc-font-mono);
+    font-size: 0.85em;
+    color: inherit;
+  }
+
+  .hiw-stage[data-active='true'] .stage-num {
+    color: var(--hc-accent);
+  }
+
+  .hiw-stage[data-active='true'] .stage-heading {
+    color: var(--hc-text-primary);
+  }
+
+  .hiw-stage[data-active='true'] .stage-desc {
+    color: var(--hc-text-secondary);
+  }
+
+  /* ---- Right canvas: one continuous surface ---- */
+  .hiw-canvas {
+    border: 1px solid var(--hc-border-subtle);
+    border-radius: var(--hc-radius-lg);
+    background: var(--hc-canvas);
+    overflow: hidden;
+  }
+
+  .hiw-panel {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: var(--hc-space-5);
+    min-height: min(72vh, 640px);
+    padding: clamp(32px, 4vw, 64px);
+    scroll-margin-top: 120px;
+    transition: opacity 300ms var(--hc-ease-out);
+  }
+
+  /* Dim inactive panels only when JS drives the active state (html.js). */
+  html.js .hiw-panel {
+    opacity: 0.45;
+  }
+
+  html.js .hiw-panel[data-active='true'] {
+    opacity: 1;
+  }
+
+  .hiw-panel + .hiw-panel {
+    border-top: 1px solid var(--hc-border-subtle);
+  }
+
+  .viz-caption {
+    display: none;
+  }
+
+  .viz-kicker {
+    font-family: var(--hc-font-mono);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    color: var(--hc-text-tertiary);
+  }
+
+  .viz-giant {
+    margin: 0;
+    font-family: var(--hc-font-display);
+    font-size: clamp(96px, 11vw, 176px);
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: -0.04em;
+    color: var(--hc-text-primary);
+  }
+
+  .viz-giant-outbound {
+    font-size: clamp(56px, 7vw, 108px);
+  }
+
+  .viz-meta {
+    display: flex;
+    flex-direction: column;
+    border-top: 1px solid var(--hc-border-subtle);
+  }
+
+  .viz-meta p {
+    display: flex;
+    gap: var(--hc-space-4);
+    margin: 0;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--hc-border-subtle);
+    font-family: var(--hc-font-mono);
+    font-size: 12px;
+  }
+
+  .viz-meta strong {
+    min-width: 72px;
+    font-weight: 500;
+    color: var(--hc-text-tertiary);
+  }
+
+  .viz-meta span {
+    color: var(--hc-text-secondary);
+  }
+
+  /* Stage 02: the defining event */
+  .tunnel-bar {
+    position: relative;
+    height: 22px;
+    background: var(--hc-surface-3);
+    border: 1px solid var(--hc-border-default);
+    border-radius: 999px;
+  }
+
+  .tunnel-core {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 3px;
+    transform: translateY(-50%);
+    border-radius: 999px;
+    background: var(--hc-accent);
+  }
+
+  .tunnel-ends {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    font-family: var(--hc-font-mono);
+    font-size: 11px;
+    color: var(--hc-text-tertiary);
+  }
+
+  .tunnel-note {
+    letter-spacing: 0.06em;
+    color: var(--hc-text-secondary);
+  }
+
+  /* Stage 03: legible browser */
+  .viz-browser {
+    border: 1px solid var(--hc-border-default);
+    border-radius: var(--hc-radius-md);
+    background: var(--hc-surface-1);
+    overflow: hidden;
+  }
+
+  .viz-chrome {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--hc-border-subtle);
+    color: var(--hc-text-tertiary);
+  }
+
+  .chrome-dots {
+    display: inline-flex;
+    gap: 6px;
+  }
+
+  .chrome-dots i {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--hc-text-muted);
+  }
+
+  .chrome-addr {
+    flex: 1;
+    font-family: var(--hc-font-mono);
+    font-size: 13px;
+    color: var(--hc-text-secondary);
+  }
+
+  .viz-auth {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--hc-border-subtle);
+    font-family: var(--hc-font-mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    color: var(--hc-text-tertiary);
+  }
+
+  .auth-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--hc-success);
+  }
+
+  .viz-apps {
+    list-style: none;
+    margin: 0;
+    padding: 4px 0;
+  }
+
+  .viz-apps li {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 13px 16px;
+    font-family: var(--hc-font-mono);
+    font-size: 15px;
+    color: var(--hc-text-primary);
+  }
+
+  .viz-apps li + li {
+    border-top: 1px solid var(--hc-border-subtle);
+  }
+
+  .viz-apps li span:last-child {
+    font-size: 11px;
+    color: var(--hc-text-tertiary);
+  }
+
+  /* ---- Mobile: vertical text+visual sequence ---- */
+  @media (max-width: 900px) {
+    .hiw-cols {
+      grid-template-columns: 1fr;
+    }
+    .hiw-rail {
+      position: static;
+    }
+    .hiw-panel {
+      min-height: 0;
+      padding: 28px 20px;
+    }
+    .viz-giant {
+      font-size: clamp(72px, 22vw, 120px);
+    }
+    .viz-giant-outbound {
+      font-size: clamp(44px, 13vw, 72px);
+    }
+    .viz-caption {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      margin: 0;
+      font-size: 0.95rem;
+      font-weight: 550;
+      color: var(--hc-text-primary);
+    }
+    .viz-caption span {
+      font-family: var(--hc-font-mono);
+      font-size: 12px;
+      color: var(--hc-accent);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hiw-panel,
+    .stage-num,
+    .stage-heading,
+    .stage-desc {
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  // Scroll story: the active stage follows the visual panels; the rail fill
+  // tracks section scroll continuously. No libraries, no hijacking.
+  const section = document.getElementById('how-it-works');
+  const fill = document.getElementById('hiw-rail-fill');
+  const stages = section ? Array.from(section.querySelectorAll('.hiw-stage')) : [];
+  const panels = section ? Array.from(section.querySelectorAll('.hiw-panel')) : [];
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  let activeIndex = 0;
+  let ticking = false;
+
+  function setActive(index) {
+    if (index === activeIndex) return;
+    activeIndex = index;
+    stages.forEach((stage, i) => {
+      stage.setAttribute('data-active', String(i === index));
+    });
+    panels.forEach((panel, i) => {
+      if (i === index) {
+        panel.setAttribute('data-active', 'true');
+      } else {
+        panel.removeAttribute('data-active');
+      }
+    });
+  }
+
+  function updateFill() {
+    if (!section || !fill) return;
+    const rect = section.getBoundingClientRect();
+    const span = rect.height - window.innerHeight;
+    const p = span > 0 ? (0 - rect.top) / span : 1;
+    const clamped = Math.min(1, Math.max(0, p));
+    // Fill grows across the three stages, starting at the first marker.
+    fill.style.transform = `scaleY(${0.05 + clamped * 0.95})`;
+  }
+
+  function onScroll() {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => {
+      ticking = false;
+      updateFill();
+    });
+  }
+
+  if (section && panels.length > 0) {
+    panels[0].setAttribute('data-active', 'true');
+    if ('IntersectionObserver' in window) {
+      const io = new IntersectionObserver(
+        (entries) => {
+          for (const entry of entries) {
+            if (entry.isIntersecting) {
+              const index = panels.indexOf(entry.target);
+              if (index >= 0) setActive(index);
+            }
+          }
+        },
+        { rootMargin: '-42% 0px -42% 0px', threshold: 0 },
+      );
+      panels.forEach((panel) => io.observe(panel));
+    }
+    updateFill();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
+
+    // Rail links smooth-scroll unless reduced motion is preferred.
+    section.querySelectorAll('.stage-link').forEach((link) => {
+      link.addEventListener('click', (event) => {
+        const href = link.getAttribute('href');
+        if (!href || !href.startsWith('#')) return;
+        const target = section.querySelector(href);
+        if (!target) return;
+        event.preventDefault();
+        target.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
+      });
+    });
+  }
+</script>
