@@ -1,161 +1,166 @@
 ---
 // landing/src/components/Features.astro
-// Feature Highlights: 4 focused, beautifully crafted Bento cards with tactile micro-interactions
-// (Host Terminal, Container Engine, Sovereign Storage, Zero-Trust Tunnel)
+// Feature grid: four implemented capabilities, each with a compact preview
+// that resembles the real product. Preview data is illustrative where noted;
+// no fabricated measurements, no unimplemented features.
 ---
 
 <section id="features" class="features-section">
   <div class="container features-container">
     <div class="features-header reveal">
       <h2 class="features-title">
-        Engineered for real self-hosting.<br />
-        <span class="font-serif-italic">Built without the clutter.</span>
+        Everything runs on your machine.
       </h2>
       <p class="features-desc">
-        Four primary subsystems working together through a lightweight background daemon.
-        No bloated hypervisor layers or multi-gigabyte management frameworks.
+        Four tools served by the agent on your spare PC — no cloud VM,
+        no separate services.
       </p>
     </div>
 
     <div class="features-bento-grid">
-      <!-- Feature Card 1: Web Terminal -->
+      <!-- 01: Terminal -->
       <div class="bento-card reveal">
-        <div class="card-glow" aria-hidden="true"></div>
         <div class="card-icon-bar">
-          <div class="feature-icon orange">
+          <div class="feature-icon">
             <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="4 17 10 11 4 5"></polyline>
               <line x1="12" y1="19" x2="20" y2="19"></line>
             </svg>
           </div>
+          <span class="card-num">01</span>
         </div>
 
-        <h3 class="card-title">Real PTY Terminal in Any Browser</h3>
+        <h3 class="card-title">Terminal in Your Browser</h3>
         <p class="card-desc">
-          Full xterm-compatible terminal streaming over binary WebSockets. Run vim, htop, zsh,
-          and tmux with full 256-color support and UTF-8 glyphs. Your session stays alive
-          even if your laptop lid closes.
+          Run commands on your home machine from a browser-based terminal.
+          Interactive PTY sessions with persistence and replay — the shell runs
+          as the agent user, not in a sandbox.
         </p>
 
-        <!-- Micro-Interactive Visual Preview -->
         <div class="card-micro-preview terminal-preview">
           <div class="preview-chrome">
-            <span class="p-dot"></span>
-            <span class="p-dot"></span>
-            <span class="p-dot"></span>
-            <span class="p-title">pts/3 · zsh</span>
+            <span class="p-title">terminal · PTY</span>
           </div>
           <div class="preview-body mono">
-            <div class="code-line"><span class="c-prompt">$</span> <span class="c-cmd">systemctl status homecloud</span></div>
-            <div class="code-line c-ok">● homecloud.service - active (running)</div>
-            <div class="code-line c-dim">  Memory: 42.1M · Tasks: 12 · CPU: 0.1%</div>
+            <div class="code-line"><span class="c-prompt">$</span> <span class="c-cmd">ls ~/media</span></div>
+            <div class="code-line c-dim">movies&ensp;&ensp;music&ensp;&ensp;backups</div>
+            <div class="code-line"><span class="c-prompt">$</span> <span class="c-caret">▊</span></div>
           </div>
         </div>
       </div>
 
-      <!-- Feature Card 2: Docker Containers -->
+      <!-- 02: Docker -->
       <div class="bento-card reveal">
-        <div class="card-glow" aria-hidden="true"></div>
         <div class="card-icon-bar">
-          <div class="feature-icon blue">
+          <div class="feature-icon">
             <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="2" y="3" width="20" height="14" rx="2"></rect>
-              <line x1="8" y1="21" x2="16" y2="21"></line>
-              <line x1="12" y1="17" x2="12" y2="21"></line>
+              <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+              <polyline points="3.3 7 12 12 20.7 7"></polyline>
+              <line x1="12" y1="22" x2="12" y2="12"></line>
             </svg>
           </div>
+          <span class="card-num">02</span>
         </div>
 
-        <h3 class="card-title">Docker Orchestration Without Overhead</h3>
+        <h3 class="card-title">Docker Management</h3>
         <p class="card-desc">
-          Spin up community services with zero configuration friction. Inspect live stdout logs,
-          restart crashed containers, pull image updates, and monitor memory caps without SSHing
-          into the box.
+          Manage containers and images, read logs, inspect resource usage, pull
+          image updates, and deploy Compose projects — all from the dashboard.
         </p>
 
-        <!-- Micro-Interactive Visual Preview -->
         <div class="card-micro-preview docker-preview">
+          <div class="preview-chrome">
+            <span class="p-title">containers</span>
+            <span class="p-note">SAMPLE ENTRIES</span>
+          </div>
           <div class="docker-mini-row">
             <span class="mini-status-led"></span>
-            <span class="mini-name">nextcloud</span>
-            <span class="mini-metric">284 MB</span>
+            <span class="mini-name">media-server</span>
             <span class="mini-state">running</span>
           </div>
           <div class="docker-mini-row">
             <span class="mini-status-led"></span>
-            <span class="mini-name">plex-server</span>
-            <span class="mini-metric">512 MB</span>
+            <span class="mini-name">home-wiki</span>
             <span class="mini-state">running</span>
           </div>
-          <div class="docker-mini-row">
+          <div class="docker-mini-row is-stopped">
             <span class="mini-status-led"></span>
-            <span class="mini-name">postgres-16</span>
-            <span class="mini-metric">146 MB</span>
-            <span class="mini-state">running</span>
+            <span class="mini-name">test-build</span>
+            <span class="mini-state">stopped</span>
           </div>
         </div>
       </div>
 
-      <!-- Feature Card 3: Storage & Files -->
+      <!-- 03: Files -->
       <div class="bento-card reveal">
-        <div class="card-glow" aria-hidden="true"></div>
         <div class="card-icon-bar">
-          <div class="feature-icon purple">
+          <div class="feature-icon">
             <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
             </svg>
           </div>
+          <span class="card-num">03</span>
         </div>
 
-        <h3 class="card-title">Native Ext4 & ZFS Storage Workspace</h3>
+        <h3 class="card-title">Direct File Management</h3>
         <p class="card-desc">
-          Browse, upload, download, and manage files directly on your host disks.
-          Drag and drop large video files or folder trees with chunked resume support.
-          Direct filesystem calls, zero virtualization tax.
+          Browse, upload, download, search, and manage files on the host through
+          the browser. File APIs stay inside the configured <code>BASE_DIR</code>.
         </p>
 
-        <!-- Micro-Interactive Visual Preview -->
         <div class="card-micro-preview file-preview">
+          <div class="preview-chrome">
+            <span class="p-title">~/media</span>
+          </div>
           <div class="file-item">
             <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M1 3.5A1.5 1.5 0 0 1 2.5 2h2.764c.958 0 1.76.56 2.311 1.184l.73.816H13.5A1.5 1.5 0 0 1 15 5.5v7a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 1 12.5v-9z"/></svg>
-            <span class="file-name">Media / 4K / Home-Video.mkv</span>
-            <span class="file-size">14.8 GB</span>
+            <span class="file-name">movies/</span>
+          </div>
+          <div class="file-item">
+            <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M1 3.5A1.5 1.5 0 0 1 2.5 2h2.764c.958 0 1.76.56 2.311 1.184l.73.816H13.5A1.5 1.5 0 0 1 15 5.5v7a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 1 12.5v-9z"/></svg>
+            <span class="file-name">photos/</span>
           </div>
           <div class="file-item">
             <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M4 0h5.293A1 1 0 0 1 10 .293L13.707 4a1 1 0 0 1 .293.707V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2z"/></svg>
-            <span class="file-name">docker-compose.production.yml</span>
-            <span class="file-size">4.2 KB</span>
+            <span class="file-name">notes.txt</span>
           </div>
+          <p class="preview-foot">CONFINED TO BASE_DIR</p>
         </div>
       </div>
 
-      <!-- Feature Card 4: Zero Trust Tunnel -->
+      <!-- 04: Metrics -->
       <div class="bento-card reveal">
-        <div class="card-glow" aria-hidden="true"></div>
         <div class="card-icon-bar">
-          <div class="feature-icon green">
+          <div class="feature-icon">
             <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
             </svg>
           </div>
+          <span class="card-num">04</span>
         </div>
 
-        <h3 class="card-title">Encrypted Cloudflare Tunnel</h3>
+        <h3 class="card-title">Live System Metrics</h3>
         <p class="card-desc">
-          Automated edge tunnel routing that completely obsoletes DDNS, UPnP, and risky router port forwarding.
-          Reach your dashboard securely from any coffee shop, airport Wi-Fi, or cellular network with instant TLS.
+          Monitor CPU, memory, disk, and network through the dashboard's live
+          metrics stream.
         </p>
 
-        <!-- Micro-Interactive Visual Preview -->
-        <div class="card-micro-preview tunnel-preview">
-          <div class="tunnel-status-row">
-            <span class="tunnel-badge-dot"></span>
-            <span class="tunnel-domain mono">cloud.yourname.me</span>
-            <span class="tunnel-tls">TLS 1.3 · QUIC</span>
+        <div class="card-micro-preview metrics-preview">
+          <div class="preview-chrome">
+            <span class="p-title">system</span>
+            <span class="p-note">SCHEMATIC</span>
           </div>
-          <div class="tunnel-meta-row">
-            <span>External Ports Open: <strong>0</strong></span>
-            <span>Edge Routing: <strong>330+ Cities</strong></span>
+          <div class="metric-row">
+            <span class="metric-label">CPU</span>
+            <span class="metric-track"><span class="metric-fill" style="width: 38%;"></span></span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-label">MEM</span>
+            <span class="metric-track"><span class="metric-fill" style="width: 56%;"></span></span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-label">DISK</span>
+            <span class="metric-track"><span class="metric-fill" style="width: 24%;"></span></span>
           </div>
         </div>
       </div>
@@ -175,12 +180,10 @@
 
   .features-header {
     text-align: center;
-    max-width: 680px;
+    max-width: 640px;
     margin-inline: auto;
     margin-bottom: var(--space-7);
   }
-
-
 
   .features-title {
     font-family: var(--font-display);
@@ -222,16 +225,6 @@
     box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.7);
   }
 
-  .card-glow {
-    position: absolute;
-    top: 0;
-    left: 15%;
-    right: 15%;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-    opacity: 0.5;
-  }
-
   .card-icon-bar {
     display: flex;
     align-items: center;
@@ -251,16 +244,11 @@
     color: var(--hc-text-secondary);
   }
 
-  .feature-icon.orange,
-  .feature-icon.blue,
-  .feature-icon.purple,
-  .feature-icon.green {
-    color: var(--hc-text-secondary);
-    background: var(--hc-surface-2);
-    border-color: var(--hc-border-default);
+  .card-num {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--hc-text-muted);
   }
-
-
 
   .card-title {
     font-size: 1.22rem;
@@ -277,9 +265,16 @@
     margin-bottom: var(--space-5);
   }
 
-  /* Micro previews */
+  .card-desc code {
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    color: var(--text-primary);
+  }
+
+  /* Previews: consistent weight, one quiet well per card */
   .card-micro-preview {
     margin-top: auto;
+    min-height: 118px;
     background: var(--hc-canvas);
     border: 1px solid var(--hc-border-subtle);
     border-radius: 10px;
@@ -287,45 +282,54 @@
     overflow: hidden;
   }
 
-  /* Terminal Micro Preview */
   .preview-chrome {
     display: flex;
     align-items: center;
-    gap: 5px;
+    justify-content: space-between;
+    gap: 8px;
     margin-bottom: 8px;
     padding-bottom: 6px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.04);
   }
 
-  .p-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.2);
-  }
-
   .p-title {
-    margin-left: auto;
     font-family: var(--font-mono);
     font-size: 0.68rem;
     color: var(--text-tertiary);
   }
 
+  .p-note {
+    font-family: var(--font-mono);
+    font-size: 0.64rem;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+  }
+
+  .preview-foot {
+    margin: 8px 0 0;
+    padding-top: 6px;
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
+    font-family: var(--font-mono);
+    font-size: 0.64rem;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+  }
+
   .preview-body {
     font-size: 0.78rem;
-    line-height: 1.5;
+    line-height: 1.55;
   }
 
   .c-prompt { color: var(--hc-text-tertiary); }
   .c-cmd { color: #ffffff; }
-  .c-ok { color: var(--ok-night); }
   .c-dim { color: var(--text-tertiary); }
+  .c-caret { color: var(--text-primary); }
 
-  /* Docker Mini Rows */
+  /* Docker rows: name + state only, no invented measurements */
   .docker-mini-row {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    gap: 8px;
     padding: 6px 8px;
     border-radius: 6px;
     background: rgba(255, 255, 255, 0.02);
@@ -343,17 +347,33 @@
     height: 5px;
     border-radius: 50%;
     background: var(--ok);
+    flex-shrink: 0;
   }
 
-  .mini-name { color: var(--text-primary); font-weight: 500; }
-  .mini-metric { color: var(--text-tertiary); }
+  .docker-mini-row.is-stopped .mini-status-led {
+    background: var(--text-muted);
+  }
+
+  .mini-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text-primary);
+    font-weight: 500;
+  }
+
   .mini-state {
     font-size: 0.72rem;
-    font-family: var(--font-mono);
     color: var(--ok-night);
+    flex-shrink: 0;
   }
 
-  /* File item preview */
+  .docker-mini-row.is-stopped .mini-state {
+    color: var(--text-tertiary);
+  }
+
+  /* File rows */
   .file-item {
     display: flex;
     align-items: center;
@@ -371,50 +391,39 @@
     font-family: var(--font-mono);
   }
 
-  .file-size {
-    font-family: var(--font-mono);
-    color: var(--text-tertiary);
-    font-size: 0.72rem;
-  }
-
-  /* Tunnel preview */
-  .tunnel-status-row {
+  /* Metrics: schematic bars, no numbers */
+  .metric-row {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    margin-bottom: 8px;
-    padding-bottom: 6px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    gap: 10px;
+    padding: 7px 8px;
   }
 
-  .tunnel-badge-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--hc-text-tertiary);
+  .metric-row + .metric-row {
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
   }
 
-  .tunnel-domain {
-    font-size: 0.8rem;
-    color: var(--text-primary);
-    font-weight: 500;
-  }
-
-  .tunnel-tls {
-    font-size: 0.7rem;
-    color: var(--ok-night);
+  .metric-label {
+    width: 38px;
+    flex-shrink: 0;
     font-family: var(--font-mono);
-  }
-
-  .tunnel-meta-row {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.74rem;
+    font-size: 0.7rem;
     color: var(--text-tertiary);
   }
 
-  .tunnel-meta-row strong {
-    color: var(--text-primary);
+  .metric-track {
+    flex: 1;
+    height: 5px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.06);
+    overflow: hidden;
+  }
+
+  .metric-fill {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: var(--text-secondary);
   }
 
   @media (max-width: 860px) {
