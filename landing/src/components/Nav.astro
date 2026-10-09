@@ -400,6 +400,12 @@
     .nav-floats {
       padding-inline: 16px;
     }
+    /* Mobile fallback (pre-redesign): dock brand left so capsules
+       can never overlap at narrow widths. Desktop centering untouched. */
+    .brand-capsule {
+      position: static;
+      transform: none;
+    }
     /* Keep brand legible on mobile — no collapse in this phase */
     .nav-root.is-scrolled .brand-name {
       max-width: 140px;

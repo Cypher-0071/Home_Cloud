@@ -1,367 +1,489 @@
 ---
 // landing/src/components/Hero.astro
-// Atmospheric Hero: obsidian canvas, warm phosphor ambient glow, confident headline,
-// and tactile one-line install copy interaction.
+// Hero visual: the computer you own, and the laptop you reach it from.
+//
+// One scene. The machine is the large object. The laptop sits in front of
+// it, screen open on your files. No cloud, no connector. Stacked below the
+// copy under 1280px so it never covers type.
 ---
 
-<section id="hero" class="hero-section">
-  <div class="container hero-container">
-    <!-- Main Headline -->
-    <h1 class="hero-title reveal">
-      Your quiet personal server.<br />
-      <span class="hero-title-accent"><span class="font-serif-italic">Humming at home,</span> reachable anywhere.</span>
+<section id="hero" class="hero">
+  <!-- Sparse dot field (atmosphere, not illustration) -->
+  <div class="hero-dots hero-dot-field" aria-hidden="true"></div>
+
+  <div class="container hero-inner">
+    <p class="hero-kicker"><span class="kicker-mark" aria-hidden="true"></span>OPEN SOURCE · SELF-HOSTED</p>
+
+    <h1 class="hero-title">
+      YOUR COMPUTER.<br />YOUR CLOUD.
     </h1>
 
-    <!-- Subtitle / Lede -->
-    <p class="hero-lede reveal">
-      Transform any spare PC, mini-workstation, or laptop into a private personal cloud.
-      Access your full desktop, terminal, Docker containers, and storage from any browser in the world
-      via encrypted Cloudflare Tunnel. Zero open ports. Zero monthly fees.
+    <p class="hero-sub">
+      Turn a spare PC, mini PC, or laptop into a private cloud you can reach from anywhere.
     </p>
 
-    <!-- Sleek One-Line Install Command Pill -->
-    <div class="hero-install-box reveal">
-      <div class="install-pill" id="hero-install-pill">
-        <div class="pill-prefix">
-          <span class="terminal-prompt">$</span>
-        </div>
-        <div class="pill-code-wrapper">
-          <code class="pill-code" id="hero-install-cmd">curl -fsSL https://raw.githubusercontent.com/Cypher-0071/Home_Cloud/main/setup.sh | bash</code>
-        </div>
-        <button
-          type="button"
-          class="pill-copy-btn"
-          id="hero-copy-btn"
-          aria-label="Copy install command to clipboard"
-          data-copy="curl -fsSL https://raw.githubusercontent.com/Cypher-0071/Home_Cloud/main/setup.sh | bash"
-        >
-          <span class="copy-icon-wrap" aria-hidden="true">
-            <svg class="icon-copy" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="5" y="5" width="8" height="8" rx="1.5"></rect>
-              <path d="M3 11V3a1.5 1.5 0 0 1 1.5-1.5H11"></path>
-            </svg>
-            <svg class="icon-check" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="3.5 8.5 6.5 11.5 12.5 4.5"></polyline>
-            </svg>
-          </span>
-          <span class="copy-label" id="hero-copy-label">Copy</span>
-        </button>
-      </div>
-      <div class="install-hint">
-        <span>One-step automated setup · Installs Docker, Node daemon, and Cloudflare Tunnel</span>
-      </div>
+    <div class="hero-cmd" id="hero-install-pill">
+      <span class="cmd-prompt" aria-hidden="true">$</span>
+      <code class="cmd-code" id="hero-install-cmd">curl -fsSL https://raw.githubusercontent.com/Cypher-0071/Home_Cloud/main/setup.sh | bash</code>
+      <button
+        type="button"
+        class="cmd-copy"
+        id="hero-copy-btn"
+        aria-label="Copy install command to clipboard"
+        data-copy="curl -fsSL https://raw.githubusercontent.com/Cypher-0071/Home_Cloud/main/setup.sh | bash"
+      >
+        <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="5" y="5" width="8" height="8" rx="1.5"></rect>
+          <path d="M3 11V3a1.5 1.5 0 0 1 1.5-1.5H11"></path>
+        </svg>
+        <span id="hero-copy-label">Copy</span>
+      </button>
     </div>
 
-    <!-- Call to action buttons -->
-    <div class="hero-actions-row reveal">
-      <a href="https://github.com/Cypher-0071/Home_Cloud" target="_blank" rel="noopener noreferrer" class="btn-secondary-hero">
-        <svg viewBox="0 0 16 16" width="15" height="15" fill="currentColor">
+    <div class="hero-actions">
+      <a href="#setup" class="hero-install">Install</a>
+      <a href="https://github.com/Cypher-0071/Home_Cloud" target="_blank" rel="noopener noreferrer" class="hero-github">
+        <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true">
           <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8Z"></path>
         </svg>
-        <span>Source Code</span>
+        <span>GitHub</span>
       </a>
     </div>
 
-    <!-- Quiet Architecture Highlights Strip -->
-    <div class="hero-strip reveal">
-      <div class="strip-item">
-        <span class="strip-icon">
-          <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="8" r="6"/><path d="M5.5 8l2 2 3.5-4"/></svg>
-        </span>
-        <span class="strip-text">Zero Open Ports</span>
-      </div>
-      <div class="strip-sep">·</div>
-      <div class="strip-item">
-        <span class="strip-icon">
-          <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 13h12M4 10V6a4 4 0 0 1 8 0v4"/></svg>
-        </span>
-        <span class="strip-text">Cloudflare Tunnel Edge</span>
-      </div>
-      <div class="strip-sep">·</div>
-      <div class="strip-item">
-        <span class="strip-icon">
-          <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="12" height="10" rx="2"/><path d="M8 7v2M6 8h4"/></svg>
-        </span>
-        <span class="strip-text">Docker & PTY Terminal</span>
-      </div>
-      <div class="strip-sep">·</div>
-      <div class="strip-item">
-        <span class="strip-icon">
-          <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h10v10H3z"/><circle cx="8" cy="8" r="2"/></svg>
-        </span>
-        <span class="strip-text">Self-Hosted Ext4 / NVMe</span>
-      </div>
-    </div>
+    <p class="hero-meta">LINUX · X86_64 / ARM64 · ZERO OPEN PORTS</p>
+  </div>
+
+  <!-- Remote browser, secure tunnel, and the server that stays at home. -->
+  <div class="hero-visual">
+    <svg class="hero-visual-svg" viewBox="0 0 900 560" role="img" aria-labelledby="hero-visual-title hero-visual-desc">
+      <title id="hero-visual-title">Your home server, securely reachable from anywhere.</title>
+      <desc id="hero-visual-desc">A remote browser controls files, system metrics, Docker, and a terminal on a Linux computer at home through an encrypted Cloudflare Tunnel, with no open ports.</desc>
+
+      <!-- Remote control surface -->
+      <g class="hc-browser">
+        <path class="hc-browser-shell" d="M38 136h332a10 10 0 0 1 10 10v205H28V146a10 10 0 0 1 10-10Z" />
+        <path class="hc-browser-top" d="M28 166v-20a10 10 0 0 1 10-10h332a10 10 0 0 1 10 10v20Z" />
+        <circle class="hc-window-dot" cx="48" cy="151" r="3" />
+        <circle class="hc-window-dot" cx="61" cy="151" r="3" />
+        <circle class="hc-window-dot" cx="74" cy="151" r="3" />
+        <rect class="hc-address" x="105" y="143" width="214" height="16" rx="3" />
+        <path class="hc-lock" d="M115 151v-2a2 2 0 0 1 4 0v2m-5 0h6v5h-6z" />
+        <text class="hc-browser-url" x="128" y="154">dash.your-home.net</text>
+
+        <rect class="hc-screen" x="42" y="180" width="304" height="150" rx="2" />
+        <path class="hc-screen-head" d="M42 180h304v26H42z" />
+        <path class="hc-brand-mark" d="M57 188h10v10H57z" />
+        <text class="hc-screen-brand" x="75" y="197">HOME CLOUD</text>
+        <text class="hc-screen-state" x="313" y="197">CONNECTED</text>
+        <circle class="hc-screen-live" cx="304" cy="193" r="3" />
+
+        <g class="hc-tool">
+          <rect x="55" y="219" width="130" height="45" rx="3" />
+          <path class="hc-tool-icon" d="M67 250v-12l7-6 7 6v12m-10 0v-7h6v7" />
+          <text x="91" y="237">SYSTEM</text>
+          <text class="hc-tool-value" x="91" y="252">12% CPU</text>
+        </g>
+        <g class="hc-tool">
+          <rect x="195" y="219" width="137" height="45" rx="3" />
+          <path class="hc-tool-icon" d="M207 232h12v12h-12zm0 0 4-4h6l2 4" />
+          <text x="226" y="237">FILES</text>
+          <text class="hc-tool-value" x="226" y="252">Home directory</text>
+        </g>
+        <g class="hc-tool">
+          <rect x="55" y="273" width="130" height="43" rx="3" />
+          <path class="hc-tool-icon" d="M68 287h12v12H68zm-2 15h16" />
+          <text x="91" y="291">DOCKER</text>
+          <text class="hc-tool-value" x="91" y="306">2 containers</text>
+        </g>
+        <g class="hc-tool hc-terminal">
+          <rect x="195" y="273" width="137" height="43" rx="3" />
+          <path class="hc-terminal-prompt" d="m208 288 5 4-5 4m9 1h8" />
+          <text x="232" y="291">TERMINAL</text>
+          <text class="hc-tool-value" x="232" y="306">root@home:~</text>
+        </g>
+        <path class="hc-laptop-base" d="M22 351h354l17 13H5z" />
+        <path class="hc-laptop-edge" d="M5 364h388" />
+        <path class="hc-trackpad" d="M163 354h74" />
+      </g>
+
+      <!-- The connection is initiated from the home host; no inbound port is exposed. -->
+      <g class="hc-route">
+        <path class="hc-route-line" d="M393 283h92c23 0 31-20 52-20h31" />
+        <path class="hc-route-dash" d="M393 283h92c23 0 31-20 52-20h31" />
+        <circle class="hc-route-node" cx="393" cy="283" r="4" />
+        <circle class="hc-route-node hc-route-node-end" cx="568" cy="263" r="4" />
+        <g class="hc-tunnel-badge" transform="translate(443 218)">
+          <rect x="0" y="0" width="132" height="42" rx="4" />
+          <path class="hc-shield" d="M17 10 26 7l9 3v8c0 6-4 10-9 13-5-3-9-7-9-13z" />
+          <path class="hc-shield-check" d="m22 18 3 3 5-6" />
+          <text x="44" y="18">CLOUDFLARE</text>
+          <text class="hc-route-caption" x="44" y="31">ENCRYPTED TUNNEL</text>
+        </g>
+        <text class="hc-route-note" x="411" y="304">OUTBOUND CONNECTION · ZERO OPEN PORTS</text>
+      </g>
+
+      <!-- A restrained home boundary around the machine that owns the data. -->
+      <g class="hc-home-zone">
+        <path class="hc-home-frame" d="M558 178v-21l132-76 132 76v21M558 422v28h264v-28" />
+        <path class="hc-home-guide" d="M570 178h240M570 422h240" />
+        <path class="hc-home-icon" d="m581 145 10-8 10 8v10h-7v-6h-6v6h-7z" />
+        <text class="hc-home-label" x="608" y="151">AT HOME</text>
+
+        <g class="hc-server">
+          <path class="hc-server-side" d="M764 188h30l23 14v202l-23 14h-30z" />
+          <path class="hc-server-top" d="M610 188h154l30 14H640z" />
+          <path class="hc-server-front" d="M610 188h154v230H610z" />
+          <path class="hc-server-inset" d="M627 207h120v191H627z" />
+          <path class="hc-server-slot" d="M641 222h92v26h-92z" />
+          <path class="hc-server-slot-line" d="M651 231h34m-34 7h59" />
+          <circle class="hc-server-power-ring" cx="718" cy="274" r="8" />
+          <circle class="hc-server-power" cx="718" cy="274" r="3" />
+          <rect class="hc-server-led" x="691" y="271" width="8" height="5" rx="1" />
+          <g class="hc-vent-lines">
+            <path d="M643 314v64m16-64v64m16-64v64m16-64v64m16-64v64m16-64v64" />
+          </g>
+          <path class="hc-server-foot" d="M626 418v7h30v-7m92 0v7h30v-7" />
+        </g>
+
+        <text class="hc-host-name" x="690" y="474" text-anchor="middle">YOUR LINUX HOST</text>
+        <text class="hc-host-state" x="690" y="492" text-anchor="middle">PRIVATE BY DESIGN</text>
+      </g>
+
+      <path class="hc-ground" d="M36 430h382m146 0h298" />
+      <text class="hc-origin" x="40" y="410">ANY BROWSER</text>
+      <text class="hc-origin-detail" x="40" y="426">REMOTE ACCESS</text>
+    </svg>
   </div>
 </section>
 
 <style>
-  .hero-section {
+  .hero {
     position: relative;
-    padding-top: clamp(4rem, 6vw, 7.5rem);
-    padding-bottom: clamp(4rem, 6vw, 6.5rem);
+    min-height: max(620px, 94svh);
     overflow: hidden;
+    background: transparent;
   }
 
-  .hero-container {
+  /* Sparse dot field (atmosphere, not illustration) */
+  .hero-dots {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1.6px);
+    background-size: 28px 28px;
+    -webkit-mask-image: radial-gradient(ellipse 95% 85% at 38% 52%, black 25%, transparent 78%);
+    mask-image: radial-gradient(ellipse 95% 85% at 38% 52%, black 25%, transparent 78%);
+  }
+
+  /* Text block — left-anchored, dominant */
+  .hero-inner {
     position: relative;
-    z-index: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    max-width: 960px;
-    width: 100%;
-    min-width: 0;
+    z-index: 2;
+    max-width: 680px;
+    margin-inline: 0;
+    padding-top: clamp(120px, 15vh, 170px);
+    padding-bottom: clamp(110px, 14vh, 170px);
   }
 
+  .hero-kicker {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: var(--hc-space-5);
+    font-family: var(--hc-font-mono);
+    font-size: 12px;
+    color: var(--hc-text-tertiary);
+  }
 
+  .kicker-mark {
+    width: 7px;
+    height: 7px;
+    flex-shrink: 0;
+    border: 1px solid var(--hc-border-strong);
+  }
 
   .hero-title {
-    font-family: var(--font-display);
-    font-size: clamp(1.85rem, 4.2vw + 0.6rem, 4.2rem);
+    margin-bottom: var(--hc-space-5);
+    font-family: var(--hc-font-display);
+    font-size: var(--hc-text-display-xl);
     font-weight: 600;
-    line-height: 1.14;
-    letter-spacing: -0.035em;
-    color: var(--text-primary);
-    margin-bottom: var(--space-4);
-    word-break: break-word;
+    line-height: 1.02;
+    letter-spacing: -0.025em;
+    color: var(--hc-text-primary);
   }
 
-  .hero-title-accent {
-    color: inherit;
-    font-weight: 500;
-  }
-
-  .hero-lede {
-    font-size: clamp(1.05rem, 1.2vw, 1.25rem);
+  .hero-sub {
+    max-width: 52ch;
+    margin-bottom: var(--hc-space-6);
+    font-size: var(--hc-text-body);
     line-height: 1.6;
-    color: var(--text-secondary);
-    max-width: 680px;
-    margin-bottom: var(--space-6);
+    color: var(--hc-text-secondary);
   }
 
-  .hero-install-box {
-    width: 100%;
-    max-width: 720px;
-    min-width: 0;
-    margin-bottom: var(--space-6);
-  }
-
-  .install-pill {
+  /* Install command — developer tool, not a CTA card */
+  .hero-cmd {
     display: flex;
     align-items: center;
-    background: var(--hc-surface-2);
+    gap: 12px;
+    margin-bottom: var(--hc-space-5);
+    padding: 7px 7px 7px 16px;
+    background: var(--hc-surface-1);
     border: 1px solid var(--hc-border-default);
-    box-shadow: none;
-    border-radius: 12px;
-    padding: 6px 8px 6px 16px;
-    min-width: 0;
-    width: 100%;
-    transition: border-color var(--dur-fast), box-shadow var(--dur-fast);
+    border-radius: var(--hc-radius-md);
   }
 
-  .install-pill:focus-within,
-  .install-pill:hover {
-    border-color: var(--hc-border-strong);
-    box-shadow: none;
-  }
-
-  .pill-prefix {
-    display: flex;
-    align-items: center;
-    margin-right: 12px;
+  .cmd-prompt {
+    font-family: var(--hc-font-mono);
+    font-size: 0.85rem;
+    color: var(--hc-text-tertiary);
+    user-select: none;
     flex-shrink: 0;
   }
 
-  .terminal-prompt {
-    font-family: var(--font-mono);
-    font-size: 0.9rem;
-    font-weight: 700;
-    color: var(--hc-text-tertiary);
-    user-select: none;
-  }
-
-  .pill-code-wrapper {
+  .cmd-code {
     flex: 1;
     min-width: 0;
-    width: 100%;
     overflow-x: auto;
-    text-align: left;
     scrollbar-width: none;
-    -ms-overflow-style: none;
+    font-family: var(--hc-font-mono);
+    font-size: 0.82rem;
+    color: var(--hc-text-primary);
+    white-space: nowrap;
   }
 
-  .pill-code-wrapper::-webkit-scrollbar {
+  .cmd-code::-webkit-scrollbar {
     display: none;
   }
 
-  .pill-code {
-    font-family: var(--font-mono);
-    font-size: 0.88rem;
-    color: var(--hc-text-primary);
-    white-space: nowrap;
-    letter-spacing: -0.01em;
-  }
-
-  .pill-copy-btn {
+  .cmd-copy {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 8px 14px;
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: var(--text-primary);
-    font-size: 0.82rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all var(--dur-fast) var(--ease-out);
     flex-shrink: 0;
+    padding: 9px 14px;
+    border-radius: 6px;
+    background: var(--hc-surface-2);
+    border: 1px solid var(--hc-border-default);
+    color: var(--hc-text-primary);
+    font-size: 0.78rem;
+    font-weight: 550;
+    cursor: pointer;
+    transition: background-color var(--hc-duration-micro) var(--hc-ease-out);
   }
 
-  .pill-copy-btn:hover {
-    background: rgba(255, 255, 255, 0.12);
-    border-color: rgba(255, 255, 255, 0.2);
-    color: #ffffff;
+  .cmd-copy:hover {
+    background: var(--hc-surface-3);
   }
 
-  .pill-copy-btn:active {
-    transform: scale(0.96);
+  .cmd-copy.is-copied {
+    color: var(--hc-success);
+    border-color: var(--hc-success-soft);
   }
 
-  .copy-icon-wrap {
-    position: relative;
-    width: 14px;
-    height: 14px;
+  /* Actions */
+  .hero-actions {
     display: flex;
     align-items: center;
-    justify-content: center;
-  }
-
-  .icon-check {
-    display: none;
-    color: var(--ok);
-  }
-
-  .pill-copy-btn.copied {
-    background: rgba(16, 185, 129, 0.15);
-    border-color: rgba(16, 185, 129, 0.4);
-    color: var(--ok-night);
-  }
-
-  .pill-copy-btn.copied .icon-copy {
-    display: none;
-  }
-
-  .pill-copy-btn.copied .icon-check {
-    display: block;
-  }
-
-  .install-hint {
-    margin-top: 10px;
-    font-size: 0.8rem;
-    color: var(--text-tertiary);
-  }
-
-  .hero-actions-row {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--space-4);
-    margin-bottom: var(--space-7);
+    gap: 12px;
     flex-wrap: wrap;
+    margin-bottom: var(--hc-space-6);
   }
 
-  .btn-secondary-hero {
+  .hero-install {
+    display: inline-flex;
+    align-items: center;
+    min-height: 46px;
+    padding-inline: 26px;
+    border-radius: var(--hc-radius-md);
+    background: var(--hc-text-primary);
+    color: #050505;
+    font-size: 0.92rem;
+    font-weight: 550;
+    letter-spacing: -0.01em;
+    transition: background-color var(--hc-duration-micro) var(--hc-ease-out);
+  }
+
+  .hero-install:hover {
+    background: #ffffff;
+  }
+
+  .hero-install:active {
+    transform: scale(0.98);
+  }
+
+  .hero-github {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 12px 24px;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: var(--text-primary);
-    font-size: 0.95rem;
+    min-height: 46px;
+    padding-inline: 22px;
+    border-radius: var(--hc-radius-md);
+    border: 1px solid var(--hc-border-default);
+    color: var(--hc-text-primary);
+    font-size: 0.92rem;
     font-weight: 500;
-    transition: all var(--dur-fast) var(--ease-out);
+    transition:
+      border-color var(--hc-duration-micro) var(--hc-ease-out),
+      background-color var(--hc-duration-micro) var(--hc-ease-out);
   }
 
-  .btn-secondary-hero:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.2);
-    transform: translateY(-1px);
+  .hero-github:hover {
+    border-color: var(--hc-border-strong);
+    background: rgba(255, 255, 255, 0.03);
   }
 
-  .hero-strip {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--space-4);
-    padding: 12px 20px;
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    border-radius: 999px;
-    flex-wrap: wrap;
-  }
-
-  .strip-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.84rem;
-    color: var(--text-secondary);
-  }
-
-  .strip-icon {
-    display: flex;
-    align-items: center;
+  .hero-meta {
+    font-family: var(--hc-font-mono);
+    font-size: 11px;
     color: var(--hc-text-tertiary);
   }
 
-  .strip-sep {
-    color: rgba(255, 255, 255, 0.15);
+  /* Object sits in the right-hand negative space.
+     In flow under 1280px so it can never cover the type. */
+  .hero-visual {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    padding-inline: var(--hc-gutter);
+    margin-bottom: clamp(72px, 10vh, 120px);
+    pointer-events: none;
+  }
+
+  .hero-visual-svg {
+    display: block;
+    width: min(520px, 100%);
+    height: auto;
+    margin-right: auto;
+    overflow: visible;
+  }
+
+  .hero-visual-svg * {
+    vector-effect: non-scaling-stroke;
+    stroke-linejoin: miter;
+    stroke-linecap: butt;
+  }
+
+  .hc-browser-shell,
+  .hc-server-front,
+  .hc-server-side,
+  .hc-server-top {
+    stroke: rgba(245, 245, 245, 0.58);
+    stroke-width: 1.1;
+  }
+
+  .hc-browser-shell { fill: #0b0b0b; }
+  .hc-browser-top { fill: #101010; stroke: rgba(245, 245, 245, 0.42); stroke-width: 1; }
+  .hc-window-dot { fill: rgba(245, 245, 245, 0.38); }
+  .hc-address { fill: #090909; stroke: rgba(245, 245, 245, 0.12); stroke-width: 0.8; }
+  .hc-lock { fill: none; stroke: rgba(245, 245, 245, 0.62); stroke-width: 0.9; stroke-linecap: round; stroke-linejoin: round; }
+  .hc-browser-url,
+  .hc-screen-brand,
+  .hc-screen-state,
+  .hc-tool text,
+  .hc-tunnel-badge text,
+  .hc-home-label,
+  .hc-host-name,
+  .hc-host-state,
+  .hc-route-note,
+  .hc-origin,
+  .hc-origin-detail { font-family: var(--hc-font-mono); }
+  .hc-browser-url { fill: rgba(245, 245, 245, 0.54); font-size: 8px; }
+  .hc-screen { fill: #0c0c0c; stroke: rgba(245, 245, 245, 0.15); stroke-width: 0.8; }
+  .hc-screen-head { fill: #0d0d0d; stroke: rgba(245, 245, 245, 0.12); stroke-width: 0.8; }
+  .hc-brand-mark { fill: none; stroke: var(--hc-accent); stroke-width: 1; }
+  .hc-screen-brand { fill: rgba(245, 245, 245, 0.88); font-size: 7px; letter-spacing: 1px; }
+  .hc-screen-state { fill: rgba(245, 245, 245, 0.45); font-size: 5.5px; letter-spacing: 0.6px; text-anchor: end; }
+  .hc-screen-live { fill: var(--hc-success); }
+  .hc-tool rect { fill: rgba(255, 255, 255, 0.015); stroke: rgba(245, 245, 245, 0.12); stroke-width: 0.8; }
+  .hc-tool text { fill: rgba(245, 245, 245, 0.57); font-size: 6px; letter-spacing: 0.4px; }
+  .hc-tool .hc-tool-value { fill: rgba(245, 245, 245, 0.84); font-size: 7px; letter-spacing: 0; }
+  .hc-tool-icon,
+  .hc-terminal-prompt { fill: none; stroke: rgba(245, 245, 245, 0.62); stroke-width: 0.9; stroke-linecap: round; stroke-linejoin: round; }
+  .hc-terminal-prompt { stroke: var(--hc-accent); }
+  .hc-laptop-base { fill: #141414; stroke: rgba(245, 245, 245, 0.42); stroke-width: 1; }
+  .hc-laptop-edge { stroke: rgba(245, 245, 245, 0.56); stroke-width: 1; }
+  .hc-trackpad { stroke: rgba(245, 245, 245, 0.15); stroke-width: 0.8; }
+
+  .hc-route-line { fill: none; stroke: rgba(255, 106, 61, 0.28); stroke-width: 2; }
+  .hc-route-dash { fill: none; stroke: var(--hc-accent); stroke-width: 1.3; stroke-dasharray: 3 6; }
+  .hc-route-node { fill: var(--hc-canvas); stroke: var(--hc-accent); stroke-width: 1.3; }
+  .hc-route-node-end { fill: var(--hc-accent); }
+  .hc-tunnel-badge rect { fill: #0b0b0b; stroke: rgba(255, 106, 61, 0.42); stroke-width: 0.9; }
+  .hc-shield,
+  .hc-shield-check { fill: none; stroke: var(--hc-accent); stroke-width: 1.2; stroke-linecap: round; stroke-linejoin: round; }
+  .hc-tunnel-badge text { fill: rgba(245, 245, 245, 0.8); font-size: 6px; letter-spacing: 0.5px; }
+  .hc-tunnel-badge .hc-route-caption { fill: rgba(245, 245, 245, 0.48); font-size: 5px; letter-spacing: 0.35px; }
+  .hc-route-note { fill: rgba(245, 245, 245, 0.46); font-size: 5px; letter-spacing: 0.35px; }
+
+  .hc-home-frame { fill: none; stroke: rgba(245, 245, 245, 0.16); stroke-width: 1; }
+  .hc-home-guide { fill: none; stroke: rgba(245, 245, 245, 0.09); stroke-width: 0.8; }
+  .hc-home-icon { fill: none; stroke: rgba(245, 245, 245, 0.7); stroke-width: 1.1; stroke-linejoin: round; stroke-linecap: round; }
+  .hc-home-label { fill: rgba(245, 245, 245, 0.7); font-size: 7px; letter-spacing: 0.8px; }
+  .hc-server-side { fill: #080808; }
+  .hc-server-top { fill: #1a1a1a; }
+  .hc-server-front { fill: #101010; }
+  .hc-server-inset { fill: none; stroke: rgba(245, 245, 245, 0.12); stroke-width: 0.8; }
+  .hc-server-slot { fill: #070707; stroke: rgba(245, 245, 245, 0.12); stroke-width: 0.7; }
+  .hc-server-slot-line { fill: none; stroke: rgba(245, 245, 245, 0.38); stroke-width: 0.8; stroke-linecap: round; }
+  .hc-server-power-ring { fill: none; stroke: rgba(245, 245, 245, 0.76); stroke-width: 1; }
+  .hc-server-power { fill: rgba(245, 245, 245, 0.82); }
+  .hc-server-led { fill: var(--hc-accent); }
+  .hc-vent-lines { fill: none; stroke: rgba(245, 245, 245, 0.3); stroke-width: 1; }
+  .hc-server-foot { fill: none; stroke: rgba(245, 245, 245, 0.32); stroke-width: 1; }
+  .hc-host-name { fill: rgba(245, 245, 245, 0.84); font-size: 8px; letter-spacing: 0.9px; }
+  .hc-host-state { fill: rgba(245, 245, 245, 0.42); font-size: 6px; letter-spacing: 0.75px; }
+  .hc-ground { fill: none; stroke: rgba(245, 245, 245, 0.12); stroke-width: 0.8; }
+  .hc-origin { fill: rgba(245, 245, 245, 0.63); font-size: 6px; letter-spacing: 0.7px; }
+  .hc-origin-detail { fill: rgba(245, 245, 245, 0.38); font-size: 5px; letter-spacing: 0.6px; }
+
+  @media (min-width: 1280px) {
+    .hero-visual {
+      position: absolute;
+      top: 55%;
+      transform: translateY(-50%);
+      right: clamp(16px, 2.5vw, 64px);
+      width: clamp(520px, calc(100vw - 740px), 720px);
+      padding-inline: 0;
+      margin-bottom: 0;
+    }
+
+    .hero-visual-svg {
+      width: 100%;
+    }
   }
 
   @media (max-width: 640px) {
-    .install-pill {
-      flex-direction: column;
-      align-items: stretch;
-      gap: 10px;
-      padding: 12px;
+    .hero-inner {
+      padding-top: 118px;
     }
-    .pill-prefix {
-      display: none;
+    .hero-cmd {
+      gap: 8px;
+      padding-left: 12px;
     }
-    .pill-code-wrapper {
-      padding-bottom: 4px;
+    .cmd-code {
+      font-size: 0.76rem;
     }
-    .pill-copy-btn {
-      justify-content: center;
-      width: 100%;
-      padding-block: 10px;
+    .cmd-copy {
+      padding: 9px 12px;
     }
-    .hero-actions-row {
-      flex-direction: column;
-      width: 100%;
+    .hero-actions {
       gap: 10px;
     }
-    .btn-secondary-hero {
-      width: 100%;
+    .hero-install,
+    .hero-github {
+      flex: 1;
       justify-content: center;
+      padding-inline: 12px;
     }
-    .hero-strip {
-      border-radius: 16px;
-      gap: 10px 16px;
-    }
-    .strip-sep {
-      display: none;
-    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hc-route-dash { stroke-dasharray: none; }
   }
 </style>
 
 <script>
-  // Tactile copy interaction
+  // Install command copy (preserved behavior + ids)
   const copyBtn = document.getElementById('hero-copy-btn');
   const copyLabel = document.getElementById('hero-copy-label');
   const installCmd = document.getElementById('hero-install-cmd');
@@ -369,16 +491,18 @@
   if (copyBtn && installCmd) {
     copyBtn.addEventListener('click', async () => {
       const textToCopy = copyBtn.getAttribute('data-copy') || installCmd.textContent || '';
-      try {
-        await navigator.clipboard.writeText(textToCopy);
-        copyBtn.classList.add('copied');
+      const markCopied = () => {
+        copyBtn.classList.add('is-copied');
         if (copyLabel) copyLabel.textContent = 'Copied!';
         setTimeout(() => {
-          copyBtn.classList.remove('copied');
+          copyBtn.classList.remove('is-copied');
           if (copyLabel) copyLabel.textContent = 'Copy';
         }, 2200);
+      };
+      try {
+        await navigator.clipboard.writeText(textToCopy);
+        markCopied();
       } catch (err) {
-        // Fallback
         const textarea = document.createElement('textarea');
         textarea.value = textToCopy;
         textarea.style.position = 'fixed';
@@ -387,13 +511,7 @@
         textarea.select();
         document.execCommand('copy');
         document.body.removeChild(textarea);
-
-        copyBtn.classList.add('copied');
-        if (copyLabel) copyLabel.textContent = 'Copied!';
-        setTimeout(() => {
-          copyBtn.classList.remove('copied');
-          if (copyLabel) copyLabel.textContent = 'Copy';
-        }, 2200);
+        markCopied();
       }
     });
   }
